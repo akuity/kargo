@@ -5,6 +5,8 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { TargetUpdateStrategy } from './targetUpdateStrategy';
+import type { TargetVerificaitonSpec } from './targetVerificaitonSpec';
 import type { V1LabelSelector } from './v1LabelSelector';
 
 export interface StageTargets {
@@ -22,4 +24,14 @@ export interface StageTargets {
    * +kubebuilder:validation:Required
    */
   selectors: V1LabelSelector[];
+  /**
+   * UpdateStrategy configures the pace of promoting the targets
+   * +optional
+   */
+  updateStrategy?: TargetUpdateStrategy;
+  /**
+   * Verification configures mode and pace of target promotion verifications
+   * +optional
+   */
+  verification?: TargetVerificaitonSpec;
 }

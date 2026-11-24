@@ -137,7 +137,7 @@ export const StepPolicies = ({ value, stageNames, onChange }: StepPoliciesProps)
         type='warning'
         showIcon
         className='mb-4'
-        message='Pattern and label selectors can match Stages added later. Prefer exact names for production unless you have deliberately governed your Stage labels.'
+        title='Pattern and label selectors can match Stages added later. Prefer exact names for production unless you have deliberately governed your Stage labels.'
       />
       {value.length === 0 ? (
         <div className='flex flex-col items-center py-8 text-center'>

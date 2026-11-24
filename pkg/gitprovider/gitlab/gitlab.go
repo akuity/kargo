@@ -3,7 +3,9 @@ package gitlab
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -69,10 +71,21 @@ type mergeRequestClient interface {
 	) (*gitlab.MergeRequest, *gitlab.Response, error)
 }
 
+// branchesClient is the subset of gitlab.BranchesService methods used by the
+// provider.
+type branchesClient interface {
+	DeleteBranch(
+		pid any,
+		branch string,
+		options ...gitlab.RequestOptionFunc,
+	) (*gitlab.Response, error)
+}
+
 // provider is a GitLab-based implementation of gitprovider.Interface.
 type provider struct { // nolint: revive
 	projectName string
 	client      mergeRequestClient
+	branches    branchesClient
 }
 
 // NewProvider returns a GitLab-based implementation of gitprovider.Interface.
@@ -116,6 +129,7 @@ func NewProvider(
 	return &provider{
 		projectName: projectName,
 		client:      client.MergeRequests,
+		branches:    client.Branches,
 	}, nil
 }
 
@@ -262,6 +276,23 @@ func (p *provider) MergePullRequest(
 	return &pr, true, nil
 }
 
+// DeleteBranch implements gitprovider.Interface.
+func (p *provider) DeleteBranch(_ context.Context, branch string) error {
+	resp, err := p.branches.DeleteBranch(p.projectName, branch)
+	if err == nil {
+		return nil
+	}
+	// A branch that is already gone is not an error. The client reports a 404
+	// as the sentinel gitlab.ErrNotFound rather than as an *ErrorResponse, so
+	// that is the primary signal; the status code is checked as well in case a
+	// future client version changes that.
+	if errors.Is(err, gitlab.ErrNotFound) ||
+		(resp != nil && resp.StatusCode == http.StatusNotFound) {
+		return nil
+	}
+	return fmt.Errorf("error deleting branch %q: %w", branch, err)
+}
+
 // GetCommitURL implements gitprovider.Interface.
 func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
 	normalizedURL := urls.NormalizeGit(repoURL)
@@ -285,6 +316,7 @@ func convertGitlabMR(glMR gitlab.BasicMergeRequest) gitprovider.PullRequest {
 		MergeCommitSHA: glMR.MergeCommitSHA,
 		Object:         glMR,
 		HeadSHA:        glMR.SHA,
+		HeadBranch:     glMR.SourceBranch,
 		CreatedAt:      glMR.CreatedAt,
 	}
 }
@@ -301,10 +333,12 @@ func parseRepoURL(repoURL string) (string, string, string, error) {
 		)
 	}
 
-	scheme := u.Scheme
-	if scheme != "https" && scheme != "http" {
-		scheme = "https"
+	if u.Scheme != "https" && u.Scheme != "http" {
+		return "", "", "", fmt.Errorf(
+			"unsupported gitlab repository URL %q: only HTTP(S) URLs are supported",
+			u.Redacted(),
+		)
 	}
 
-	return scheme, u.Host, strings.TrimPrefix(u.Path, "/"), nil
+	return u.Scheme, u.Host, strings.TrimPrefix(u.Path, "/"), nil
 }

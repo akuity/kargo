@@ -5,8 +5,6 @@ description: Pushes committed changes to a GitHub repository using the GitHub AP
 
 # `github-push`
 
-<span class="tag beta"></span>
-
 `github-push` pushes committed changes from a specified working tree to a GitHub
 repository using the GitHub REST API. It is a drop-in replacement for the
 [`git-push`](git-push.md) step.
@@ -49,15 +47,8 @@ policies are:
 
 - `AlwaysMerge` — Unconditionally create a merge commit. Most conservative.
 
-:::caution
-
 For parity with the `git-push` step, for which this step is a drop-in
-replacement, the current default policy is `AlwaysRebase`.
-
-Starting with v1.12.0, the default will change to `RebaseOrMerge` for both
-steps.
-
-:::
+replacement, the default policy is `RebaseOrMerge`.
 
 When the policy evaluates rebase safety (`RebaseOrMerge` and `RebaseOrFail`),
 the decision to rebase or not is based on the GPG signature status of the local

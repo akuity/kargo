@@ -1,13 +1,19 @@
 package server
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/akuity/kargo/pkg/event"
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/server/request"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 // createAPITokenRequest is the request body for creating an API token.
@@ -37,7 +43,7 @@ func (s *server) createProjectAPIToken(c *gin.Context) {
 	role := c.Param("role")
 
 	var req createAPITokenRequest
-	if !bindJSONOrError(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 	if req.Name == "" {
@@ -56,6 +62,7 @@ func (s *server) createProjectAPIToken(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
+	s.recordAPITokenCreated(ctx, tokenSecret, false)
 
 	c.JSON(http.StatusCreated, tokenSecret)
 }
@@ -80,7 +87,7 @@ func (s *server) createSystemAPIToken(c *gin.Context) {
 	role := c.Param("role")
 
 	var req createAPITokenRequest
-	if !bindJSONOrError(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 	if req.Name == "" {
@@ -98,6 +105,45 @@ func (s *server) createSystemAPIToken(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
+	s.recordAPITokenCreated(ctx, tokenSecret, true)
 
 	c.JSON(http.StatusCreated, tokenSecret)
+}
+
+// recordAPITokenCreated emits an event attributing the new token to whoever
+// minted it, so that credential creation leaves an audit trail.
+func (s *server) recordAPITokenCreated(
+	ctx context.Context,
+	tokenSecret *corev1.Secret,
+	systemLevel bool,
+) {
+	if s.sender == nil {
+		return
+	}
+	msg, actor := apiTokenEventMessage(ctx, tokenSecret, "created for")
+	evt, err := event.NewAPITokenCreated(msg, actor, tokenSecret, systemLevel)
+	if err == nil {
+		err = s.sender.Send(ctx, evt)
+	}
+	if err != nil {
+		logging.LoggerFromContext(ctx).Error(err, "error sending API token created event")
+	}
+}
+
+// apiTokenEventMessage builds the message and actor for an API token event,
+// e.g. `API token "ci" created for Role "promoter" by "email:alice@example.com"`.
+func apiTokenEventMessage(
+	ctx context.Context,
+	tokenSecret *corev1.Secret,
+	verb string,
+) (message, actor string) {
+	message = fmt.Sprintf(
+		"API token %q %s Role %q",
+		tokenSecret.Name, verb, tokenSecret.Annotations[corev1.ServiceAccountNameKey],
+	)
+	if u, ok := user.IdentityFromContext(ctx); ok {
+		actor = u.Actor()
+		message += fmt.Sprintf(" by %q", actor)
+	}
+	return message, actor
 }

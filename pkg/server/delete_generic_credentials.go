@@ -18,10 +18,6 @@ import (
 // @Success 204 "Deleted successfully"
 // @Router /v1beta1/projects/{project}/generic-credentials/{generic-credentials} [delete]
 func (s *server) deleteProjectGenericCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 
 	project := c.Param("project")
@@ -59,10 +55,6 @@ func (s *server) deleteProjectGenericCredentials(c *gin.Context) {
 // @Success 204 "Deleted successfully"
 // @Router /v1beta1/system/generic-credentials/{generic-credentials} [delete]
 func (s *server) deleteSystemGenericCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 	name := c.Param("generic-credentials")
 
@@ -98,10 +90,6 @@ func (s *server) deleteSystemGenericCredentials(c *gin.Context) {
 // @Success 204 "Deleted successfully"
 // @Router /v1beta1/shared/generic-credentials/{generic-credentials} [delete]
 func (s *server) deleteSharedGenericCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 	name := c.Param("generic-credentials")
 

@@ -14,9 +14,9 @@ import (
 
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
-	"github.com/akuity/kargo/pkg/client/watch"
 	"github.com/akuity/kargo/pkg/server"
 	kargogen "github.com/akuity/kargo/pkg/x/client/generated"
+	"github.com/akuity/kargo/pkg/x/client/watch"
 	"github.com/akuity/kargo/pkg/x/version"
 )
 

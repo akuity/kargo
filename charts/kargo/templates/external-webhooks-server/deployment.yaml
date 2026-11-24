@@ -6,13 +6,8 @@ metadata:
   name: kargo-external-webhooks-server
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.componentLabels" (dict "root" . "labels" .Values.externalWebhooksServer.labels) | nindent 4 }}
     {{- include "kargo.externalWebhooksServer.labels" . | nindent 4 }}
-  {{- with (mergeOverwrite (deepCopy .Values.global.labels) .Values.externalWebhooksServer.labels) }}
-    {{- range $key, $value := . }}
-    {{ $key }}: {{ $value | quote }}
-    {{- end }}
-  {{- end }}
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.externalWebhooksServer.annotations) | nindent 2 }}
 spec:
   replicas: {{ .Values.externalWebhooksServer.replicas | default 1 }}
@@ -93,6 +88,11 @@ spec:
         - containerPort: 8080
           name: {{ if .Values.externalWebhooksServer.tls.enabled }}"https"{{ else }}"http"{{ end }}
           protocol: TCP
+        {{- if .Values.externalWebhooksServer.metrics.enabled }}
+        - containerPort: {{ .Values.externalWebhooksServer.metrics.service.servicePort }}
+          name: {{ .Values.externalWebhooksServer.metrics.service.portName }}
+          protocol: TCP
+        {{- end }}
         {{- if .Values.externalWebhooksServer.probes.enabled }}
         startupProbe:
           httpGet:

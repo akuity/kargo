@@ -1,0 +1,255 @@
+suite: migrations/job.yaml
+values:
+  - ../test/values-unittest.yaml
+release:
+  name: kargo
+  namespace: kargo
+templates:
+  - templates/migrations/job.yaml
+  - templates/migrations/configmap.yaml
+tests:
+  - it: renders a Job against the bundled database by default
+    template: templates/migrations/job.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Job
+      - matchRegex:
+          path: metadata.name
+          pattern: ^kargo-migrate-[0-9a-f]{10}$
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: migrations
+      - equal:
+          path: spec.backoffLimit
+          value: 3
+      - notExists:
+          path: spec.ttlSecondsAfterFinished
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Never
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: kargo-migrate
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value: [migrate]
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_HOST
+            value: kargo-postgres.kargo.svc
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: kargo-postgres
+                key: password
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            configMapRef:
+              name: kargo-migrate
+      - matchRegex:
+          path: spec.template.metadata.annotations["configmap/checksum"]
+          pattern: ^[0-9a-f]{64}$
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+          any: true
+
+  - it: sets a TTL when one is configured
+    template: templates/migrations/job.yaml
+    set:
+      database.migrations.ttlSecondsAfterFinished: 3600
+    asserts:
+      - equal:
+          path: spec.ttlSecondsAfterFinished
+          value: 3600
+
+  - it: reads the bundled database's password from an existing Secret when configured
+    set:
+      database.postgres.password: ""
+      database.postgres.existingSecret: my-db-password
+    template: templates/migrations/job.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: my-db-password
+                key: password
+
+  - it: reads the connection string from the external database's Secret
+    set:
+      database.postgres.enabled: false
+      database.external.secretName: my-db
+      database.external.secretKey: url
+    template: templates/migrations/job.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: my-db
+                key: url
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_HOST
+          any: true
+
+  - it: is not rendered when migrations are disabled
+    set:
+      database.migrations.enabled: false
+    template: templates/migrations/job.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is not rendered when there is no database
+    set:
+      database.postgres.enabled: false
+    template: templates/migrations/job.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is not rendered when workloads are not installed
+    set:
+      workloads.install: false
+    template: templates/migrations/job.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: merges labels, env, and falls back to global scheduling settings
+    set:
+      global.labels:
+        team: platform
+      database.migrations.labels:
+        tier: db
+      global.podLabels:
+        sidecar: injected
+      database.migrations.env:
+        - name: PGTZ
+          value: UTC
+      global.envFrom:
+        - secretRef:
+            name: extra
+      global.nodeSelector:
+        disk: ssd
+    template: templates/migrations/job.yaml
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: platform
+      - equal:
+          path: metadata.labels.tier
+          value: db
+      - equal:
+          path: spec.template.metadata.labels.sidecar
+          value: injected
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGTZ
+            value: UTC
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: extra
+      - equal:
+          path: spec.template.spec.nodeSelector.disk
+          value: ssd
+
+---
+suite: migrations/configmap.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/migrations/configmap.yaml
+tests:
+  - it: renders the Job's configuration by default
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: kargo-migrate
+      - equal:
+          path: data.LOG_LEVEL
+          value: INFO
+      - equal:
+          path: data.LOG_FORMAT
+          value: CONSOLE
+      - equal:
+          path: data.DATABASE_CONNECT_TIMEOUT
+          value: 5m
+      - equal:
+          path: data.DATABASE_MIGRATION_LOCK_TIMEOUT
+          value: 1h
+      - notExists:
+          path: data.TRACING_ENABLED
+
+  - it: carries the log and tracing settings
+    set:
+      database.migrations.logLevel: DEBUG
+      database.migrations.logFormat: JSON
+      global.tracing.enabled: true
+      global.tracing.otlp.endpoint: http://otel:4318
+    asserts:
+      - equal:
+          path: data.LOG_LEVEL
+          value: DEBUG
+      - equal:
+          path: data.LOG_FORMAT
+          value: JSON
+      - equal:
+          path: data.TRACING_ENABLED
+          value: "true"
+      - equal:
+          path: data.OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://otel:4318
+
+  - it: is not rendered when migrations are disabled
+    set:
+      database.migrations.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+---
+suite: migrations/service-account.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/migrations/service-account.yaml
+tests:
+  - it: renders a ServiceAccount by default
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ServiceAccount
+      - equal:
+          path: metadata.name
+          value: kargo-migrate
+
+  - it: is not rendered when migrations are disabled
+    set:
+      database.migrations.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0

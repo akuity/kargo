@@ -7,7 +7,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
-	"github.com/akuity/kargo/hack/test/e2e/envfuncs"
+	"github.com/akuity/kargo/hack/test/e2e/framework/envfuncs"
 )
 
 func RequireEnvValue(path []string) features.Func {

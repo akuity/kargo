@@ -14,5 +14,6 @@ export const PromotionRequestPhase = {
   PromotionRequestPhaseRunning: 'Running',
   PromotionRequestPhaseSucceeded: 'Succeeded',
   PromotionRequestPhaseFailed: 'Failed',
-  PromotionRequestPhaseErrored: 'Errored'
+  PromotionRequestPhaseErrored: 'Errored',
+  PromotionRequestPhaseAborted: 'Aborted'
 } as const;

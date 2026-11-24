@@ -27,6 +27,11 @@ func TestParseRepoURL(t *testing.T) {
 			errExpected: true,
 		},
 		{
+			name:        "SSH URL",
+			url:         "ssh://git@github.com/akuity/kargo.git",
+			errExpected: true,
+		},
+		{
 			name:           "standard HTTPS URL",
 			url:            "https://github.com/akuity/kargo",
 			expectedScheme: "https",
@@ -55,14 +60,6 @@ func TestParseRepoURL(t *testing.T) {
 			url:            "http://git@example.com:8080/akuity/kargo",
 			expectedScheme: "http",
 			expectedHost:   "example.com:8080",
-			expectedOwner:  "akuity",
-			expectedRepo:   "kargo",
-		},
-		{
-			name:           "SSH URL",
-			url:            "git@github.com:akuity/kargo",
-			expectedScheme: "https",
-			expectedHost:   "github.com",
 			expectedOwner:  "akuity",
 			expectedRepo:   "kargo",
 		},

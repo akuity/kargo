@@ -5,11 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	stdfs "io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 	"github.com/otiai10/copy"
 	"github.com/xeipuuv/gojsonschema"
@@ -18,7 +18,7 @@ import (
 	"github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindCopy = "copy"
@@ -63,30 +63,48 @@ func (f *fileCopier) Run(
 }
 
 // convert validates fileCopier configuration against a JSON schema and
-// converts it into a builtin.CopyConfig struct.
-func (f *fileCopier) convert(cfg promotion.Config) (builtin.CopyConfig, error) {
-	return validateAndConvert[builtin.CopyConfig](f.schemaLoader, cfg, stepKindCopy)
+// converts it into a stepconfig.CopyConfig struct.
+func (f *fileCopier) convert(cfg promotion.Config) (stepconfig.CopyConfig, error) {
+	return validateAndConvert[stepconfig.CopyConfig](f.schemaLoader, cfg, stepKindCopy)
 }
 
 func (f *fileCopier) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.CopyConfig,
+	cfg stepconfig.CopyConfig,
 ) (promotion.StepResult, error) {
-	// Secure join the paths to prevent path traversal attacks.
-	inPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.InPath)
+	// The copy library skips symlinks, so one at inPath is resolved first and
+	// what it points to is copied.
+	relInPath, err := promotion.WorkspacePath(cfg.InPath)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not secure join inPath %q: %w", cfg.InPath, err)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
-	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
+	if relInPath, err = resolvePath(stepCtx.Root, relInPath); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+	}
+	inPath, err := promotion.ExternalPath(stepCtx, relInPath)
 	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+	}
+	relOutPath, err := promotion.WorkspacePath(cfg.OutPath)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+	}
+	outPath, err := promotion.ExternalPath(stepCtx, cfg.OutPath)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+	}
+
+	// The copy library writes beneath outPath by path and would follow a
+	// symlink it finds there, so nothing already beneath it may lead outside
+	// the workspace. Symlinks beneath inPath are never followed.
+	if err = statTree(stepCtx.Root, relOutPath); err != nil && !errors.Is(err, stdfs.ErrNotExist) {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not secure join outPath %q: %w", cfg.OutPath, err)
+			fmt.Errorf("failed to check outPath %q: %w", cfg.OutPath, err)
 	}
 
 	// Load the ignore rules.
-	matcher, err := f.loadIgnoreRules(inPath, cfg.Ignore)
+	matcher, err := f.loadIgnoreRules(stepCtx, relInPath, cfg.Ignore)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to load ignore rules: %w", err)
@@ -116,10 +134,17 @@ func (f *fileCopier) run(
 // separated by newlines, and comments are allowed with the '#' character.
 // It returns a gitignore.Matcher that can be used to match paths against the
 // rules.
-func (f *fileCopier) loadIgnoreRules(inPath, rules string) (gitignore.Matcher, error) {
+func (f *fileCopier) loadIgnoreRules(
+	stepCtx *promotion.StepContext,
+	relInPath, rules string,
+) (gitignore.Matcher, error) {
+	// The copy library reports paths beneath the absolute inPath, so the
+	// domain for the ignore rules is absolute too.
+	inPath := filepath.Join(stepCtx.WorkDir, relInPath)
+
 	// Determine the domain for the ignore rules. For directories, the domain is
 	// the directory itself. For files, the domain is the parent directory.
-	fi, err := os.Lstat(inPath)
+	fi, err := stepCtx.Root.Stat(relInPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			// Let the error slide if the path does not exist, to allow

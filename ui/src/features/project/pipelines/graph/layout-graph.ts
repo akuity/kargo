@@ -47,7 +47,6 @@ export const layoutGraph = (
   }
 
   const maxStageHeight = 200;
-  const maxSubscriptionHeight = 100;
 
   for (const w of warehouse.warehouses) {
     if (warehouse.ignore?.(w)) {
@@ -57,8 +56,7 @@ export const layoutGraph = (
     const warehouseNodeIndex = warehouseIndexer.index(w);
     graph.setNode(warehouseNodeIndex, {
       ...warehouseLabelling.label(w),
-      ...warehouseSizer.size(),
-      height: maxStageHeight
+      ...warehouseSizer.size()
     });
 
     if (hideSubscriptions?.[w?.metadata?.name || '']) {
@@ -70,11 +68,15 @@ export const layoutGraph = (
 
       graph.setNode(subscriptionNodeIndex, {
         ...repoSubscriptionLabelling.label(w, s),
-        ...repoSubscriptionSizer.size(),
-        height: maxSubscriptionHeight
+        ...repoSubscriptionSizer.size()
       });
 
-      graph.setEdge(subscriptionNodeIndex, warehouseNodeIndex);
+      // the edge carries its subscription so it can be drawn by the state of
+      // the discovery it feeds
+      graph.setEdge(subscriptionNodeIndex, warehouseNodeIndex, {
+        subscription: s,
+        subscriptionWarehouse: w?.metadata?.name
+      });
     }
   }
 

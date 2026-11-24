@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -280,6 +281,60 @@ func TestNormalizePolicyRules(t *testing.T) {
 			rules,
 		)
 	})
+}
+
+func TestNewRESTMapperGroupResolver(t *testing.T) {
+	t.Parallel()
+	// A mapper that knows one served resource and nothing else, standing in
+	// for discovery: Targets and PromotionRollouts have no API resource for
+	// it to find.
+	mapper := meta.NewDefaultRESTMapper(nil)
+	mapper.Add(kargoapi.GroupVersion.WithKind("Stage"), meta.RESTScopeNamespace)
+	resolve := newRESTMapperGroupResolver(mapper)
+	testCases := []struct {
+		name     string
+		resource string
+		assert   func(*testing.T, string, error)
+	}{
+		{
+			name:     "a served resource resolves through discovery",
+			resource: "stages",
+			assert: func(t *testing.T, group string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.GroupVersion.Group, group)
+			},
+		},
+		{
+			name:     "a database-served resource resolves without discovery",
+			resource: "targets",
+			assert: func(t *testing.T, group string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.GroupVersion.Group, group)
+			},
+		},
+		{
+			name:     "a subresource of a database-served resource resolves too",
+			resource: "promotionrollouts/status",
+			assert: func(t *testing.T, group string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.GroupVersion.Group, group)
+			},
+		},
+		{
+			name:     "an unknown resource is refused",
+			resource: "widgets",
+			assert: func(t *testing.T, _ string, err error) {
+				require.ErrorContains(t, err, `unrecognized resource type "widgets"`)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			group, err := resolve(testCase.resource)
+			testCase.assert(t, group, err)
+		})
+	}
 }
 
 func TestResolveRuleGroups(t *testing.T) {

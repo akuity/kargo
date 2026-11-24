@@ -29,11 +29,11 @@ system to access the git repos.
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `repoURL` | `string` | Y | The URL of a remote Git repository to clone. **Deprecated:** Support for SSH URLs (`ssh://` and SCP-style `git@host:path`) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead. |
+| `repoURL` | `string` | Y | The URL of a remote Git repository to clone. Only HTTP(S) URLs are supported. |
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to bypass TLS certificate verification when cloning (and for all subsequent operations involving this clone). Setting this to `true` is highly discouraged in production. |
 | `blobless` | `boolean` | N | Whether to perform a [blobless clone][] (`--filter=blob:none`). Defaults to `false`. Useful for large repositories, especially when combined with sparse checkouts. Requires that the Git server support partial clones; the clone will fail if it does not. |
 | `recurseSubmodules` | `boolean` | N | Whether to recursively initialize and update [Git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) for every checkout. Defaults to `false`. When `true`, the equivalent of `git submodule update --init --recursive` is run for each working tree. Any credentials provided for `repoURL` must also be valid for all submodule repositories, or the step will fail. |
-| `author` | `[]object` | N | Default authorship information for any commits made to the cloned repository. If provided, this overrides any system-level defaults. Note: Configuration of the [`git-commit`](./git-commit.md) step can override this information. |
+| `author` | `[]object` | N | Default authorship information for any commits made to the cloned repository. If provided, this overrides any system-level defaults. |
 | `author.name` | `string` | Y | The committer's name. |
 | `author.email` | `string` | Y | The committer's email address. |
 | `author.signingKey` | `string` | N | The GPG signing key for the author. This field is optional. |

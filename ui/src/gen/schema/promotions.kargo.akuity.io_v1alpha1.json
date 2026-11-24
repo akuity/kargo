@@ -23,6 +23,83 @@
           "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
           "type": "string"
         },
+        "inflatedTasks": {
+          "description": "InflatedTasks records each step of the Stage's PromotionTemplate that\nreferenced a (Cluster)PromotionTask and was inflated into Steps. It is\nset by Kargo when the Promotion is created and any value supplied by\nusers is discarded.",
+          "items": {
+            "description": "InflatedPromotionTask records a step of a Stage's PromotionTemplate that\nreferenced a (Cluster)PromotionTask and was inflated into the steps of a\nPromotion.",
+            "properties": {
+              "alias": {
+                "description": "Alias is the alias of the step that referenced the task. The aliases of\nthe steps inflated from the task are prefixed with it.",
+                "type": "string"
+              },
+              "description": {
+                "description": "Description is the description of the step that referenced the task.",
+                "type": "string"
+              },
+              "steps": {
+                "description": "Steps are the aliases of the Promotion's steps that were inflated from\nthe task, in order.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "task": {
+                "description": "Task is the (Cluster)PromotionTask that was inflated.",
+                "properties": {
+                  "kind": {
+                    "description": "Kind is the type of the PromotionTask. Can be either PromotionTask or\nClusterPromotionTask, default is PromotionTask.",
+                    "enum": [
+                      "PromotionTask",
+                      "ClusterPromotionTask"
+                    ],
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Name is the name of the (Cluster)PromotionTask.",
+                    "maxLength": 253,
+                    "minLength": 1,
+                    "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              },
+              "vars": {
+                "description": "Vars are the variables the task was inflated with: the task's defaults\nand the variables set by the step that referenced the task.",
+                "items": {
+                  "description": "ExpressionVariable describes a single variable that may be referenced by\nexpressions in the context of a ClusterPromotionTask, PromotionTask,\nPromotion, AnalysisRun arguments, or other objects that support expressions.\n\nIt is used to pass information to the expression evaluation engine, and to\nallow for dynamic evaluation of expressions based on the variable values.",
+                  "properties": {
+                    "name": {
+                      "description": "Name is the name of the variable.",
+                      "minLength": 1,
+                      "pattern": "^[a-zA-Z_]\\w*$",
+                      "type": "string"
+                    },
+                    "value": {
+                      "description": "Value is the value of the variable. It is allowed to utilize expressions\nin the value.\nSee https://docs.kargo.io/user-guide/reference-docs/expressions for details.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "alias",
+              "steps",
+              "task"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "origin": {
           "description": "Origin, when set, identifies the FreightOrigin whose auto-promotion\ncandidate should be promoted. The mutating webhook resolves this to the\ncandidate Freight for that origin and fills Freight before the Promotion\nis persisted. Exactly one of Freight or Origin must be set.",
           "properties": {
@@ -43,6 +120,11 @@
             "name"
           ],
           "type": "object"
+        },
+        "promotionRollout": {
+          "description": "PromotionRollout optionally holds the id of the PromotionRollout this\nPromotion was created by, as one part of that rollout's fan-out to\nTargets. The id is the UID the API serves the rollout with. A\nPromotionRollout is not a Kubernetes resource, so it cannot own the\nPromotion; this field is the link in place of an owner reference, and\nthe one the database's record of the Promotion is linked by.\n\nWhen empty (the default), the Promotion was not created by a\nPromotionRollout. When set, Target must be set too, and only the Kargo\ncontrol plane may set it.",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "type": "string"
         },
         "stage": {
           "description": "Stage specifies the name of the Stage to which this Promotion\napplies. The Stage referenced by this field MUST be in the same\nnamespace as the Promotion.",
@@ -67,6 +149,17 @@
               "continueOnError": {
                 "description": "ContinueOnError is a boolean value that, if set to true, will cause the\nPromotion to continue executing the next step even if this step fails. It\nalso will not permit this failure to impact the overall status of the\nPromotion.",
                 "type": "boolean"
+              },
+              "description": {
+                "description": "Description is a detail of the step's purpose.",
+                "minLength": 1,
+                "type": "string",
+                "x-kubernetes-validations": [
+                  {
+                    "message": "description must be 256 characters or fewer",
+                    "rule": "self.size() <= 256"
+                  }
+                ]
               },
               "if": {
                 "description": "If is an optional expression that, if present, must evaluate to a boolean\nvalue. If the expression evaluates to false, the step will be skipped.\nIf the expression does not evaluate to a boolean value, the step will be\nconsidered to have failed.",
@@ -192,6 +285,10 @@
         {
           "message": "exactly one of freight or origin must be set",
           "rule": "has(self.freight) != has(self.origin)"
+        },
+        {
+          "message": "target must be set when promotionRollout is set",
+          "rule": "!has(self.promotionRollout) || has(self.target)"
         }
       ]
     },
@@ -563,6 +660,10 @@
                   "analysisRun": {
                     "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                     "properties": {
+                      "kind": {
+                        "description": "Kind is a string representation of GroupVersionKind describing this run\nFor classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)",
+                        "type": "string"
+                      },
                       "name": {
                         "description": "Name is the name of the AnalysisRun.",
                         "type": "string"
@@ -598,6 +699,10 @@
                   },
                   "phase": {
                     "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                    "type": "string"
+                  },
+                  "promotionName": {
+                    "description": "PromotionName is an optional name of promotion which triggered verification",
                     "type": "string"
                   },
                   "startTime": {

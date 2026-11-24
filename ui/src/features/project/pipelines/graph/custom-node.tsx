@@ -8,6 +8,7 @@ import { useGraphContext } from '../context/graph-context';
 import { StageNode } from '../nodes/stage-node';
 import { SubscriptionNode } from '../nodes/subscription-node';
 import { WarehouseNode } from '../nodes/warehouse-node';
+import { getWarehouseState, isSubscriptionFailing } from '../nodes/warehouse-state';
 
 import { repoSubscriptionIndexer } from './node-indexer';
 import { repoSubscriptionSizer, stageSizer, warehouseSizer } from './node-sizer';
@@ -34,8 +35,12 @@ export const CustomWarehouseNode = (props: {
   const handleId = props.data?.value?.metadata?.name || '';
   const height = warehouseSizer.size().height;
 
+  // The live Warehouse, the one the graph decides discovering from, so that
+  // the node never pairs that with a state a step behind it.
+  const warehouse = graphContext?.warehouseByName?.[handleId] || props.data.value;
+
   const WarehouseNodeBox = graphContext?.ready ? (
-    <WarehouseNode warehouse={props.data.value} />
+    <WarehouseNode warehouse={warehouse} />
   ) : (
     <NodePlaceholder {...warehouseSizer.size()} />
   );
@@ -95,8 +100,19 @@ export const CustomRepoSubscriptionNode = (props: {
     return null;
   }
 
+  // The parent the layout was given goes stale as watch events arrive, so the
+  // failing state is read from the live Warehouse instead.
+  const parentName = props.data.subscriptionParent?.metadata?.name || '';
+  const parent = graphContext?.warehouseByName?.[parentName] || props.data.subscriptionParent;
+
+  // Not failing while the Warehouse is still shown as discovering, which it
+  // can be for a moment after a quick discovery has already failed.
+  const failing =
+    !graphContext?.discoveringWarehouses.has(parentName) &&
+    isSubscriptionFailing(getWarehouseState(parent), props.data.value);
+
   const RepoSubscriptionNodeBox = graphContext?.ready ? (
-    <SubscriptionNode subscription={props.data.value} />
+    <SubscriptionNode subscription={props.data.value} failing={failing} />
   ) : (
     <NodePlaceholder {...repoSubscriptionSizer.size()} />
   );
@@ -159,17 +175,33 @@ export const CustomStageNode = (props: {
 
   const height = stageSizer.size().height;
 
+  const warehouseY = props.data.warehouseY;
+  const requestedFreight = props.data.value.spec?.requestedFreight || [];
+
+  // Filtering a warehouse out of the pipeline takes its edges with it, so the
+  // handles have to be spread over the warehouses still drawn. Spreading them
+  // over every requested warehouse would leave the survivors holding the slots
+  // they had in the full set, and a lone remaining edge would meet the stage
+  // well below its middle. warehouseY is keyed by exactly the warehouses the
+  // layout kept, which makes it the record of what is still drawn.
+  const drawnFreight = warehouseY
+    ? requestedFreight.filter((f) => warehouseY[f?.origin?.name || ''] !== undefined)
+    : requestedFreight;
+
+  // A stage whose warehouses are all filtered out is dropped from the layout
+  // altogether, so an empty result here means the warehouses went missing some
+  // other way. Fall back to the full set rather than strand the edges.
+  const visibleFreight = drawnFreight.length ? drawnFreight : requestedFreight;
+
   // Sort the per-warehouse handles by the y-coordinate of their source
   // warehouse in the dagre layout. This makes the handles' top-to-bottom
   // order match the warehouses' top-to-bottom order, so edges enter the
   // stage without crossing each other.
-  const sortedRequestedFreight = [...(props.data.value.spec?.requestedFreight || [])].sort(
-    (a, b) => {
-      const yA = props.data.warehouseY?.[a?.origin?.name || ''] ?? 0;
-      const yB = props.data.warehouseY?.[b?.origin?.name || ''] ?? 0;
-      return yA - yB;
-    }
-  );
+  const sortedRequestedFreight = [...visibleFreight].sort((a, b) => {
+    const yA = warehouseY?.[a?.origin?.name || ''] ?? 0;
+    const yB = warehouseY?.[b?.origin?.name || ''] ?? 0;
+    return yA - yB;
+  });
 
   const handleTop = (idx: number) =>
     `calc(50% + ${-((sortedRequestedFreight.length - 1) * EDGE_GAP) / 2 + idx * EDGE_GAP}px)`;

@@ -11,6 +11,8 @@ import { ArtifactMetadata } from '@ui/features/freight/artifact-metadata';
 import { flattenFreightOrigin } from '@ui/features/freight/flatten-freight-origin-utils';
 import { Freight } from '@ui/gen/api/v2/models';
 
+import { repoLabel } from '../promotion/freight-comparison-utils';
+
 type FreightTableProps = {
   freight: Freight;
   className?: string;
@@ -59,7 +61,7 @@ export const FreightTable = (props: FreightTableProps) => {
                   return '-';
                 }
 
-                return <span className='break-all'>{record.repoURL}</span>;
+                return <span className='break-all'>{repoLabel(record)}</span>;
               }
             },
             {

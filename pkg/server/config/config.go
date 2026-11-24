@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/server/dex"
 	"github.com/akuity/kargo/pkg/server/oidc"
@@ -29,7 +31,6 @@ type ServerConfig struct {
 	// it). Empty value means the server serves at the root.
 	BasePath                    string
 	SecretManagementEnabled     bool
-	LocalMode                   bool // LocalMode is true if the server is running as a non-containerized process
 	TLSConfig                   *TLSConfig
 	OIDCConfig                  *oidc.Config
 	AdminConfig                 *AdminConfig
@@ -37,18 +38,63 @@ type ServerConfig struct {
 	ArgoCDConfig                ArgoCDConfig
 	PermissiveCORSPolicyEnabled bool
 	RolloutsIntegrationEnabled  bool
-	AnalysisRunLogURLTemplate   string
-	AnalysisRunLogToken         string
-	AnalysisRunLogHTTPHeaders   map[string]string
-	SharedResourcesNamespace    string
-	SystemResourcesNamespace    string
-	KargoNamespace              string
+	// PromotionRolloutsEnabled indicates whether the server creates
+	// PromotionRollouts. Only a build that reconciles them sets it; without
+	// that, a rollout would never progress, so it is deliberately not read
+	// from the environment. When false, creating one is refused with 501.
+	PromotionRolloutsEnabled bool
+	// PromotionRolloutCheck, when set, is asked before a PromotionRollout is
+	// created whether the Stage may be promoted to at this time. An error
+	// from it refuses the rollout, and is what the caller is answered with:
+	// one carrying a client-facing status (libhttp.HTTPError, or a Kubernetes
+	// status error) is answered with that status and its message. This
+	// permits downstream consumers to hold promotions to a Stage back, on a
+	// schedule for example. It is asked for every rollout the server creates,
+	// whichever endpoint the request came through, and is not read from the
+	// environment.
+	PromotionRolloutCheck     func(context.Context, *kargoapi.Stage) error
+	AnalysisRunLogURLTemplate string
+	AnalysisRunLogToken       string
+	// AnalysisRunLogForwardUserToken indicates whether a user's own bearer token
+	// should be available as a value in an authentication header for requests to
+	// the AnalysisRun log service in cases where AnalysisRunLogToken is not set.
+	// This option MUST only be set to true in environments where there is
+	// absolute trust in the service from which AnalysisRun logs are retrieved.
+	// Setting this to true is so discouraged that Kargo's Helm chart deliberately
+	// doesn't directly expose this as an option. In practical terms, the option
+	// exists only for the sake of Kargo EE, whose AnalysisRun log service is for
+	// all intents and purposes an extension of the Kargo API itself.
+	AnalysisRunLogForwardUserToken bool
+	AnalysisRunLogHTTPHeaders      map[string]string
+	SharedResourcesNamespace       string
+	SystemResourcesNamespace       string
+	KargoNamespace                 string
+	// TracingEnabled indicates whether the server should record a span for each
+	// request it handles. It should be true only when the process has set up an
+	// OpenTelemetry tracer provider to export those spans.
+	TracingEnabled bool
 	// DefaultControllerName is the name of the controller that Stages with no
 	// explicit spec.shard are reconciled by. The API server needs to know this
 	// only to include it in a get controller heartbeats response so callers will
 	// know which controller's liveness to associate with such Stages. The default
 	// controller is often unnamed, so an empty string is a valid value.
 	DefaultControllerName string
+	// TrustedProxies are the IP addresses and CIDRs of proxies in front of the
+	// server whose forwarding headers are believed when determining the IP
+	// address a request came from. When empty, no forwarding header is
+	// believed.
+	TrustedProxies []string
+	// ClientIPHeader names a header that every trusted proxy sets to the
+	// client's IP address (e.g. CF-Connecting-IP). It is believed only on
+	// requests arriving from a trusted proxy and takes precedence over
+	// X-Forwarded-For.
+	ClientIPHeader string
+	// RequestLogAllEnabled indicates whether routine requests should be logged
+	// at info level instead of debug level.
+	RequestLogAllEnabled bool
+	// RequestLogSourceIPEnabled indicates whether the IP address each request
+	// came from should be logged.
+	RequestLogSourceIPEnabled bool
 
 	// AdditionalHandlers is a map of path patterns to HTTP handlers that will
 	// be registered on the server's HTTP mux alongside its own handlers. This
@@ -90,6 +136,14 @@ func ServerConfigFromEnv() ServerConfig {
 	if cfg.RolloutsIntegrationEnabled {
 		cfg.AnalysisRunLogURLTemplate = os.GetEnv("ANALYSIS_RUN_LOG_URL_TEMPLATE", "")
 		cfg.AnalysisRunLogToken = os.GetEnv("ANALYSIS_RUN_LOG_TOKEN", "")
+		// IMPORTANT: ANALYSIS_RUN_LOG_FORWARD_USER_TOKEN MUST only be set to true
+		// in environments where there is absolute trust in the service from which
+		// AnalysisRun logs are retrieved. Setting this to true is so discouraged
+		// that Kargo's Helm chart deliberately doesn't directly expose this as an
+		// option. In practical terms, the option exists only for the sake of Kargo
+		// EE, whose AnalysisRun log service is for all intents and purposes an
+		// extension of the Kargo API itself.
+		cfg.AnalysisRunLogForwardUserToken = types.MustParseBool(os.GetEnv("ANALYSIS_RUN_LOG_FORWARD_USER_TOKEN", "false"))
 		if headersStr := os.GetEnv("ANALYSIS_RUN_LOG_HTTP_HEADERS", ""); headersStr != "" {
 			kvPairs := strings.Split(headersStr, ",")
 			cfg.AnalysisRunLogHTTPHeaders = make(map[string]string, len(kvPairs))
@@ -111,8 +165,19 @@ func ServerConfigFromEnv() ServerConfig {
 		"kargo-shared-resources",
 	)
 	cfg.KargoNamespace = os.GetEnv("KARGO_NAMESPACE", "kargo")
+	for proxy := range strings.SplitSeq(os.GetEnv("TRUSTED_PROXIES", ""), ",") {
+		if proxy = strings.TrimSpace(proxy); proxy != "" {
+			cfg.TrustedProxies = append(cfg.TrustedProxies, proxy)
+		}
+	}
+	cfg.ClientIPHeader = os.GetEnv("CLIENT_IP_HEADER", "")
+	cfg.RequestLogAllEnabled =
+		types.MustParseBool(os.GetEnv("REQUEST_LOG_ALL_ENABLED", "false"))
+	cfg.RequestLogSourceIPEnabled =
+		types.MustParseBool(os.GetEnv("REQUEST_LOG_SOURCE_IP_ENABLED", "false"))
 	cfg.DefaultControllerName = os.GetEnv("DEFAULT_CONTROLLER_NAME", "")
 	cfg.BasePath = NormalizeBasePath(os.GetEnv("API_BASE_PATH", ""))
+	cfg.TracingEnabled = types.MustParseBool(os.GetEnv("TRACING_ENABLED", "false"))
 	return cfg
 }
 
@@ -144,7 +209,8 @@ func TLSConfigFromEnv() TLSConfig {
 
 // AdminConfig represents configuration for an admin account.
 type AdminConfig struct {
-	// HashedPassword is a bcrypt hash of the password for the admin account.
+	// HashedPassword is a PBKDF2-HMAC-SHA256 or bcrypt hash of the password for
+	// the admin account.
 	HashedPassword string `envconfig:"ADMIN_ACCOUNT_PASSWORD_HASH" required:"true"`
 	// TokenIssuer is the value to be used in the ISS claim of ID tokens issued for
 	// the admin account.

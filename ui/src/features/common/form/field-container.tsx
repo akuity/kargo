@@ -1,6 +1,6 @@
 import { faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Flex, Form, FormItemProps, Tooltip } from 'antd';
+import { Flex, Form, FormItemProps, Tooltip, TooltipProps } from 'antd';
 import React from 'react';
 import {
   FieldPath,
@@ -21,6 +21,7 @@ interface Props<
   formItemClassName?: string;
   description?: string;
   tooltip?: React.ReactNode;
+  tooltipProps?: Omit<TooltipProps, 'title'>;
   required?: boolean;
 }
 
@@ -32,6 +33,7 @@ export const FieldContainer = <T extends FieldValues, TName extends FieldPath<T>
   formItemClassName,
   description,
   tooltip,
+  tooltipProps,
   required,
   ...props
 }: Props<T, TName>) => {
@@ -46,13 +48,16 @@ export const FieldContainer = <T extends FieldValues, TName extends FieldPath<T>
             <Flex align='center'>
               {label}
               {required && (
-                <Tooltip title='Required' placement='right'>
+                <Tooltip title='Required' placement='top'>
                   <span className='text-red-500 ml-1'>*</span>
                 </Tooltip>
               )}
               {tooltip && (
-                <Tooltip title={tooltip} placement='top'>
-                  <FontAwesomeIcon icon={faInfoCircle} className='ml-2' />
+                <Tooltip title={tooltip} placement='top' {...tooltipProps}>
+                  <FontAwesomeIcon
+                    icon={faInfoCircle}
+                    className='ml-1 text-xs text-gray-500 dark:text-neutral-400'
+                  />
                 </Tooltip>
               )}
             </Flex>

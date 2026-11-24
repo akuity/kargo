@@ -29,25 +29,28 @@ every submission.
 
 ## In Progress
 
-### v1.12.0
+### v2.0.0
 
-The following deprecated features are scheduled for **removal** in v1.12.0:
+There will be no v1.13.0. The next minor release of Kargo is v2.0.0, which
+replaces the plumbing underneath Kargo -- how it stores state and how its
+components learn about changes -- to make room for far larger installations.
+The resources you manage with GitOps today keep working, and promotion
+processes run as they do now.
 
-* The deprecated ConnectRPC (gRPC) API, in favor of the REST API.
-* The `createTargetBranch` option in the `git-open-pr` promotion step.
-* The `author` configuration block on the `git-commit` promotion step. Use
-  `git-clone` instead.
-* The default `git-push` integration policy changes from `AlwaysRebase` to
-  `RebaseOrMerge`. Set the policy explicitly if you rely on unconditional
-  rebase behavior.
-
-## Upcoming
-
-### v1.13.0
-
-Details TBA
+More details, including what to expect when upgrading, are coming soon.
 
 ## Completed
+
+### v1.12.0
+
+Removed the deprecated ConnectRPC (gRPC) API, the `createTargetBranch` option
+of the `git-open-pr` step, and the `author` block of the `git-commit` step, and
+changed the default `git-push` integration policy to `RebaseOrMerge`. Also
+delivered Kargo's own Prometheus metrics, corrected how image creation times
+are discovered, added `tar` and local-artifact `oci-push` steps, and shipped
+the UI's dark theme.
+
+See [release notes](./80-release-notes/87-v1.12.0.md) for full details.
 
 ### v1.11.0
 

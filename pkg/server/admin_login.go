@@ -9,9 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/logging"
+	libpassword "github.com/akuity/kargo/pkg/password"
 )
 
 func init() {
@@ -56,10 +57,12 @@ func (s *server) adminLogin(c *gin.Context) {
 	}
 	password := authHeader[len(bearerPrefix):]
 
-	if err := bcrypt.CompareHashAndPassword(
-		[]byte(s.cfg.AdminConfig.HashedPassword),
-		[]byte(password),
-	); err != nil {
+	ok, err := libpassword.Verify(s.cfg.AdminConfig.HashedPassword, password)
+	if err != nil {
+		_ = c.Error(fmt.Errorf("error verifying admin password: %w", err))
+		return
+	}
+	if !ok {
 		_ = c.Error(libhttp.Error(
 			errors.New("invalid password"),
 			http.StatusForbidden,
@@ -86,6 +89,10 @@ func (s *server) adminLogin(c *gin.Context) {
 		_ = c.Error(fmt.Errorf("error signing ID token: %w", err))
 		return
 	}
+
+	// Failures need no record of their own; the request logging middleware
+	// records them as refused requests.
+	logging.LoggerFromContext(c.Request.Context()).Info("admin login successful")
 
 	c.JSON(http.StatusOK, adminLoginResponse{
 		IDToken: signedToken,

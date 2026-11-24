@@ -2,8 +2,9 @@
 
 /* eslint-disable no-undef */
 
-import { openapiSchemaToJsonSchema } from '@openapi-contrib/openapi-schema-to-json-schema';
 import jsonStringify from 'json-stable-stringify';
+
+import { crdSchemaToJSONSchema } from './crd-to-json-schema.mjs';
 
 const crdDir = path.join(__dirname, '../../charts/kargo/resources/crds');
 const crdFiles = (await $`ls '${crdDir}'`.quiet()).stdout
@@ -18,7 +19,7 @@ for (const crdFile of crdFiles) {
   const name = crd.metadata.name;
   for (const version of crd.spec.versions) {
     const outputPath = path.join(outDir, `${name}_${version.name}.json`);
-    const schema = openapiSchemaToJsonSchema(version.schema.openAPIV3Schema);
+    const schema = crdSchemaToJSONSchema(version.schema.openAPIV3Schema, `${name}/${version.name}`);
     await fs.outputFile(outputPath, jsonStringify(schema, { space: 2 }));
   }
 }

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GitCommitConfig",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["path", "message"],
+  "properties": {
+    "message": {
+      "type": "string",
+      "description": "The commit message.",
+      "minLength": 1
+    },
+    "path": {
+      "type": "string",
+      "description": "The path to a working directory of a local repository.",
+      "minLength": 1
+    }
+  }
+}

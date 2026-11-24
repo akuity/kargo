@@ -1,6 +1,7 @@
 package git
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -56,6 +57,19 @@ func Test_LsRemote(t *testing.T) {
 		require.NoError(t, err)
 		require.Empty(t, refs)
 	})
+}
+
+func Test_LsRemote_removesHomeDirOnSetupFailure(t *testing.T) {
+	// setupDirs creates the home directory under os.TempDir() and then runs
+	// git, which fails because it can't be found.
+	tmpDir := t.TempDir()
+	t.Setenv("TMPDIR", tmpDir)
+	t.Setenv("PATH", "")
+	_, err := LsRemote(t.Context(), "https://github.com/akuity/kargo.git", nil)
+	require.Error(t, err)
+	entries, err := os.ReadDir(tmpDir)
+	require.NoError(t, err)
+	require.Empty(t, entries)
 }
 
 func Test_parseLsRemoteOutput(t *testing.T) {

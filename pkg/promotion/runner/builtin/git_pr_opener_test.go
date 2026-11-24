@@ -19,7 +19,7 @@ import (
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_gitPROpener_convert(t *testing.T) {
@@ -38,6 +38,24 @@ func Test_gitPROpener_convert(t *testing.T) {
 			},
 			expectedProblems: []string{
 				"repoURL: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "repoURL is an SSH URL",
+			config: promotion.Config{
+				"repoURL": "ssh://git@github.com/example/repo.git",
+			},
+			expectedProblems: []string{
+				"repoURL: Does not match pattern '^https?://'",
+			},
+		},
+		{
+			name: "repoURL is an SCP-style URL",
+			config: promotion.Config{
+				"repoURL": "git@github.com:example/repo.git",
+			},
+			expectedProblems: []string{
+				"repoURL: Does not match pattern '^https?://'",
 			},
 		},
 		{
@@ -234,11 +252,11 @@ func Test_gitPROpener_run(t *testing.T) {
 				Stage:   "fake-stage",
 				WorkDir: workDir,
 			},
-			builtin.GitOpenPRConfig{
+			stepconfig.GitOpenPRConfig{
 				RepoURL:      testRepoURL,
 				SourceBranch: testSourceBranch,
 				TargetBranch: testTargetBranch,
-				Provider:     ptr.To(builtin.Provider(fakeGitProviderName)),
+				Provider:     ptr.To(stepconfig.Provider(fakeGitProviderName)),
 			},
 		)
 		require.Error(t, err)
@@ -264,11 +282,11 @@ func Test_gitPROpener_run(t *testing.T) {
 				Stage:   "fake-stage",
 				WorkDir: workDir,
 			},
-			builtin.GitOpenPRConfig{
+			stepconfig.GitOpenPRConfig{
 				RepoURL:      testRepoURL,
 				SourceBranch: testSourceBranch,
 				TargetBranch: testTargetBranch,
-				Provider:     ptr.To(builtin.Provider(fakeGitProviderName)),
+				Provider:     ptr.To(stepconfig.Provider(fakeGitProviderName)),
 			},
 		)
 		require.NoError(t, err)
@@ -295,11 +313,11 @@ func Test_gitPROpener_run(t *testing.T) {
 				Stage:   "fake-stage",
 				WorkDir: workDir,
 			},
-			builtin.GitOpenPRConfig{
+			stepconfig.GitOpenPRConfig{
 				RepoURL:      testRepoURL,
 				SourceBranch: testSourceBranch,
 				TargetBranch: testTargetBranch,
-				Provider:     ptr.To(builtin.Provider(fakeGitProviderName)),
+				Provider:     ptr.To(stepconfig.Provider(fakeGitProviderName)),
 				Title:        "kargo",
 				Description:  "kargo description",
 			},

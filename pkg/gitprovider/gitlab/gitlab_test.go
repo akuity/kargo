@@ -2,6 +2,9 @@ package gitlab
 
 import (
 	"errors"
+	"fmt"
+	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -117,6 +120,7 @@ func TestGetPullRequest(t *testing.T) {
 				MergeCommitSHA: "sha",
 				State:          "merged",
 				WebURL:         "url",
+				SourceBranch:   "feature",
 			},
 		},
 	}
@@ -132,6 +136,7 @@ func TestGetPullRequest(t *testing.T) {
 	require.Equal(t, mockClient.mr.IID, pr.Number)
 	require.Equal(t, mockClient.mr.MergeCommitSHA, pr.MergeCommitSHA)
 	require.Equal(t, mockClient.mr.WebURL, pr.URL)
+	require.Equal(t, mockClient.mr.SourceBranch, pr.HeadBranch)
 	require.False(t, pr.Open)
 }
 
@@ -454,7 +459,12 @@ func TestParseGitLabURL(t *testing.T) {
 		url            string
 		expectedScheme string
 		expectedHost   string
+		errExpected    bool
 	}{
+		{
+			url:         "ssh://git@gitlab.com/akuity/kargo.git",
+			errExpected: true,
+		},
 		{
 			url:            "https://gitlab.com/akuity/kargo",
 			expectedScheme: "https",
@@ -473,11 +483,6 @@ func TestParseGitLabURL(t *testing.T) {
 			expectedHost:   "gitlab.akuity.io",
 		},
 		{
-			url:            "ssh://gitlab.com/akuity/kargo.git",
-			expectedScheme: "https",
-			expectedHost:   "gitlab.com",
-		},
-		{
 			url:            "http://git.example.com/akuity/kargo",
 			expectedScheme: "http",
 			expectedHost:   "git.example.com",
@@ -486,6 +491,10 @@ func TestParseGitLabURL(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.url, func(t *testing.T) {
 			scheme, host, projectName, err := parseRepoURL(testCase.url)
+			if testCase.errExpected {
+				require.ErrorContains(t, err, "only HTTP(S) URLs are supported")
+				return
+			}
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedScheme, scheme)
 			require.Equal(t, testCase.expectedHost, host)
@@ -501,16 +510,6 @@ func TestGetCommitURL(t *testing.T) {
 		expectedCommitURL string
 	}{
 		{
-			repoURL:           "ssh://git@gitlab.com/akuity/kargo.git",
-			sha:               "sha",
-			expectedCommitURL: "https://gitlab.com/akuity/kargo/-/commit/sha",
-		},
-		{
-			repoURL:           "git@gitlab.com:akuity/kargo.git",
-			sha:               "sha",
-			expectedCommitURL: "https://gitlab.com/akuity/kargo/-/commit/sha",
-		},
-		{
 			repoURL:           "http://gitlab.com/akuity/kargo",
 			sha:               "sha",
 			expectedCommitURL: "https://gitlab.com/akuity/kargo/-/commit/sha",
@@ -524,6 +523,90 @@ func TestGetCommitURL(t *testing.T) {
 			commitURL, err := prov.GetCommitURL(testCase.repoURL, testCase.sha)
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedCommitURL, commitURL)
+		})
+	}
+}
+
+type mockBranchesClient struct {
+	pid    any
+	branch string
+	err    error
+}
+
+func (m *mockBranchesClient) DeleteBranch(
+	pid any,
+	branch string,
+	_ ...gitlab.RequestOptionFunc,
+) (*gitlab.Response, error) {
+	m.pid = pid
+	m.branch = branch
+	return nil, m.err
+}
+
+func TestDeleteBranch(t *testing.T) {
+	const testBranch = "kargo/promotion/test"
+
+	glErr := func(status int) *gitlab.ErrorResponse {
+		return &gitlab.ErrorResponse{
+			Response: &http.Response{
+				StatusCode: status,
+				Request:    &http.Request{URL: &url.URL{Path: "/"}},
+			},
+			Message: http.StatusText(status),
+		}
+	}
+
+	testCases := []struct {
+		name      string
+		deleteErr error
+		assert    func(*testing.T, error)
+	}{
+		{
+			name: "branch deleted",
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:      "branch not found",
+			deleteErr: gitlab.ErrNotFound,
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:      "wrapped not found",
+			deleteErr: fmt.Errorf("wrapped: %w", gitlab.ErrNotFound),
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:      "forbidden",
+			deleteErr: glErr(http.StatusForbidden),
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error deleting branch")
+			},
+		},
+		{
+			name:      "non-GitLab error",
+			deleteErr: errors.New("network down"),
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "network down")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			mockClient := &mockBranchesClient{err: testCase.deleteErr}
+			p := provider{
+				projectName: testProjectName,
+				branches:    mockClient,
+			}
+			err := p.DeleteBranch(t.Context(), testBranch)
+			require.Equal(t, testProjectName, mockClient.pid)
+			require.Equal(t, testBranch, mockClient.branch)
+			testCase.assert(t, err)
 		})
 	}
 }

@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { CredentialTypeLabelKey } from '@ui/features/common/settings/secrets/types';
 import { DESCRIPTION_ANNOTATION_KEY } from '@ui/features/common/utils';
+import { stepDescriptionForManifest } from '@ui/features/stage/promotion-steps-wizard/utils';
 import {
   Project,
   ProjectConfig,
@@ -118,9 +119,6 @@ const credentialStringData = (cred: CredentialData): Record<string, string> => {
       data.username = cred.username;
       data.password = cred.password;
       break;
-    case 'ssh':
-      data.sshPrivateKey = cred.sshPrivateKey;
-      break;
     case 'github-app':
       // Kargo prioritizes githubAppClientID (recommended by GitHub) over the
       // deprecated numeric githubAppID; emit whichever the user provided.
@@ -185,6 +183,7 @@ export const stageManifest = (draft: StageDraft, project: string): Manifest<Stag
   const steps = draft.steps.map((s) => ({
     uses: s.identifier,
     as: s.as || '',
+    description: stepDescriptionForManifest(s.description),
     continueOnError: s.continueOnError || false,
     // Always an object: a null/omitted config fails backend validation with a
     // confusing root-type error rather than a useful "field required" one.
@@ -389,9 +388,6 @@ const credentialFromSecret = ({ metadata, stringData: data }: SecretDoc): Creden
     cred.githubAppID = data.githubAppID ?? '';
     cred.githubAppInstallationID = data.githubAppInstallationID ?? '';
     cred.githubAppPrivateKey = data.githubAppPrivateKey ?? '';
-  } else if (data.sshPrivateKey) {
-    cred.auth = 'ssh';
-    cred.sshPrivateKey = data.sshPrivateKey;
   } else if (data.awsRegion || data.awsAccessKeyID || data.awsSecretAccessKey) {
     cred.auth = 'aws-ecr';
     cred.awsRegion = data.awsRegion ?? '';

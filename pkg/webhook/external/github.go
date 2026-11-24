@@ -253,10 +253,7 @@ func (g *githubWebhookReceiver) handlePushEvent(
 	w http.ResponseWriter,
 	e *gh.PushEvent,
 ) {
-	repoURLs := []string{
-		urls.NormalizeGit(e.GetRepo().GetCloneURL()),
-		urls.NormalizeGit(e.GetRepo().GetSSHURL()),
-	}
+	repoURLs := []string{urls.NormalizeGit(e.GetRepo().GetCloneURL())}
 	ref := e.GetRef()
 
 	// GitHub includes a max of 2048 commits in the push event payload. If

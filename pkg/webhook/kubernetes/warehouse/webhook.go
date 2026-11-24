@@ -2,8 +2,10 @@ package warehouse
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -123,7 +125,17 @@ func (w *webhook) ValidateUpdate(
 	_ *kargoapi.Warehouse,
 	warehouse *kargoapi.Warehouse,
 ) (admission.Warnings, error) {
-	if errs := w.validateSpec(ctx, field.NewPath("spec"), &warehouse.Spec); len(errs) > 0 {
+	// An update that changes only metadata (e.g. a refresh annotation) is
+	// permitted even if the spec is invalid. Any other update must leave the
+	// spec valid.
+	if !w.specChanged(ctx) {
+		return nil, nil
+	}
+	if errs := w.validateSpec(
+		ctx,
+		field.NewPath("spec"),
+		&warehouse.Spec,
+	); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(warehouseGroupKind, warehouse.Name, errs)
 	}
 	return nil, nil
@@ -137,6 +149,26 @@ func (w *webhook) ValidateDelete(
 	return nil, nil
 }
 
+// specChanged reports whether the update in the admission request in ctx
+// changes the Warehouse's spec. The raw objects are compared, because decoding
+// a Warehouse silently drops subscription fields that aren't defined by the
+// subscription's type. If ctx carries no admission request, or either object
+// can't be decoded, the spec is assumed to have changed.
+func (w *webhook) specChanged(ctx context.Context) bool {
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return true
+	}
+	var oldObj, newObj struct {
+		Spec any `json:"spec"`
+	}
+	if json.Unmarshal(req.OldObject.Raw, &oldObj) != nil ||
+		json.Unmarshal(req.Object.Raw, &newObj) != nil {
+		return true
+	}
+	return !reflect.DeepEqual(oldObj.Spec, newObj.Spec)
+}
+
 func (w *webhook) validateSpec(
 	ctx context.Context,
 	f *field.Path,
@@ -145,13 +177,44 @@ func (w *webhook) validateSpec(
 	if spec == nil { // nil spec is caught by declarative validations
 		return nil
 	}
-	return w.validateSubs(ctx, f.Child("subscriptions"), spec.InternalSubscriptions)
+	return w.validateSubs(
+		ctx,
+		f.Child("subscriptions"),
+		spec.InternalSubscriptions,
+		rawSubscriptions(ctx),
+	)
 }
 
+// rawSubscriptions returns the raw, JSON-encoded subscriptions of the
+// Warehouse in the admission request in ctx, keyed by their top-level fields.
+// Decoding a Warehouse silently drops subscription fields that aren't defined
+// by the subscription's type, so only the raw subscriptions can be fully
+// validated. If ctx carries no admission request, or its object is malformed
+// (which decoding the Warehouse would already have caught), nil is returned.
+func rawSubscriptions(ctx context.Context) []map[string]json.RawMessage {
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return nil
+	}
+	var obj struct {
+		Spec struct {
+			Subscriptions []map[string]json.RawMessage `json:"subscriptions"`
+		} `json:"spec"`
+	}
+	if err = json.Unmarshal(req.Object.Raw, &obj); err != nil {
+		return nil
+	}
+	return obj.Spec.Subscriptions
+}
+
+// validateSubs validates subs, the typed subscriptions of a Warehouse.
+// rawSubs, if non-nil, are the same subscriptions as raw, JSON-encoded objects
+// keyed by their top-level fields.
 func (w *webhook) validateSubs(
 	ctx context.Context,
 	f *field.Path,
 	subs []kargoapi.RepoSubscription,
+	rawSubs []map[string]json.RawMessage,
 ) field.ErrorList {
 	if len(subs) == 0 {
 		return nil
@@ -160,7 +223,11 @@ func (w *webhook) validateSubs(
 	seen := make(uniqueSubSet, len(subs))
 	seenNames := make(map[string]*field.Path, len(subs))
 	for i, sub := range subs {
-		errs = append(errs, w.validateSub(ctx, f.Index(i), sub, seen)...)
+		var rawSub map[string]json.RawMessage
+		if i < len(rawSubs) {
+			rawSub = rawSubs[i]
+		}
+		errs = append(errs, w.validateSub(ctx, f.Index(i), sub, rawSub, seen)...)
 		namePath := f.Index(i).Child("name")
 		// Generic subscriptions are identified by name alone, so, unlike the
 		// original three subscription types, a name is required.
@@ -189,25 +256,31 @@ func (w *webhook) validateSubs(
 	return errs
 }
 
+// validateSub validates sub, a typed subscription. rawSub, if non-nil, is the
+// same subscription as a raw, JSON-encoded object keyed by its top-level
+// fields.
 func (w *webhook) validateSub(
 	ctx context.Context,
 	f *field.Path,
 	sub kargoapi.RepoSubscription,
+	rawSub map[string]json.RawMessage,
 	seen uniqueSubSet,
 ) field.ErrorList {
 	// A small bit of special-casing is required here because, unlike generic
 	// subscriptions, the original three subscription types do not have a field
 	// that indicates their type.
+	var subType string
 	switch {
 	case sub.Chart != nil:
-		f = f.Child("chart")
+		subType = "chart"
 	case sub.Git != nil:
-		f = f.Child("git")
+		subType = "git"
 	case sub.Image != nil:
-		f = f.Child("image")
+		subType = "image"
 	case sub.Subscription != nil:
-		f = f.Child(sub.Subscription.SubscriptionType)
+		subType = sub.Subscription.SubscriptionType
 	}
+	f = f.Child(subType)
 
 	subReg, err := w.subscriberRegistry.Get(ctx, sub)
 	if err != nil {
@@ -229,12 +302,18 @@ func (w *webhook) validateSub(
 
 	var errs field.ErrorList
 
+	// Validate the raw subscription against the subscriber's schema, if it has
+	// one. This catches fields that decoding the subscription dropped.
+	if subSchema := subReg.Metadata.Schema; subSchema != nil && rawSub[subType] != nil {
+		errs = append(errs, subSchema.Validate(f, rawSub[subType])...)
+	}
+
 	// Validate the common elements of generic subscriptions
 	if sub.Subscription != nil {
 		errs = append(errs, w.validateGenericSub(f, *sub.Subscription)...)
 	}
 
-	// Subscriber-specific validation
+	// Subscriber-specific validation of what the schema can't express
 	errs = append(errs, subscriber.ValidateSubscription(ctx, f, sub)...)
 
 	// Validate uniqueness

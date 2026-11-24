@@ -143,6 +143,7 @@ pullRequests:
     blockingLabels:
     - area/security # Security related issues are are off-limits to all but maintainers.
     - kind/proposal # If this label hasn't been removed, maintainers aren't yet bought into the idea.
+    - needs/kind # Issues opened without going through a template (e.g. through the gh CLI) have no kind until a maintainer sets one. That prevents kind/proposal from blocking a related PR as it should. The solution is to treat needs/kind itself as blocking.
     - maintainer only # Generic indicator that the issue is off-limits to all but maintainers.
     - needs discussion # If this label hasn't been removed, maintainers feel the issue requires more discussion before moving forward.
     - needs research # If this label hasn't been removed, maintainers feel the issue requires more research before moving forward.

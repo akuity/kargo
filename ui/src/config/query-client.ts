@@ -1,4 +1,4 @@
-import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
+import { MutationCache, Query, QueryCache, QueryClient } from '@tanstack/react-query';
 import { notification } from 'antd';
 
 import { ApiError } from '@ui/lib/api/custom-fetch';
@@ -18,6 +18,10 @@ const showErrorNotification = (error: unknown) => {
   notification.error({ message, placement: 'bottomRight' });
 };
 
+// The queries that opted into notifyErrorOnce and have failed since they last
+// succeeded.
+const failing = new WeakSet<Query<unknown, unknown, unknown>>();
+
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error, query) => {
@@ -26,7 +30,18 @@ export const queryClient = new QueryClient({
       if (query.meta?.silent404 && error instanceof ApiError && error.isNotFound()) {
         return;
       }
+      // Allow queries read on a timer to report a failure once rather than on
+      // every tick. The next failure after a successful read is reported anew.
+      if (query.meta?.notifyErrorOnce) {
+        if (failing.has(query)) {
+          return;
+        }
+        failing.add(query);
+      }
       showErrorNotification(error);
+    },
+    onSuccess: (_data, query) => {
+      failing.delete(query);
     }
   }),
   mutationCache: new MutationCache({

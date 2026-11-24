@@ -22,11 +22,6 @@ import (
 // @Success 200 {object} rolloutsapi.AnalysisTemplate "AnalysisTemplate custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.AnalysisTemplate)"
 // @Router /v1beta1/projects/{project}/analysis-templates/{analysis-template} [get]
 func (s *server) getAnalysisTemplate(c *gin.Context) {
-	if !s.cfg.RolloutsIntegrationEnabled {
-		_ = c.Error(errArgoRolloutsIntegrationDisabled)
-		return
-	}
-
 	ctx := c.Request.Context()
 
 	project := c.Param("project")

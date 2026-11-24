@@ -33,7 +33,7 @@ export const StepReview = ({ state, status, items }: StepReviewProps) => {
         <Alert
           type='error'
           showIcon
-          message='Creation failed'
+          title='Creation failed'
           description='One resource could not be created and the rest were halted. Fix the issue (or edit an earlier step) and use Retry — already-created resources are skipped.'
         />
       )}

@@ -25,9 +25,9 @@ func splitResourceType(resourceType string) (resource, subresource string) {
 // already holds every permission described by the provided rules in the given
 // namespace. It is used when creating or replacing a Role's rules, when granting
 // a permission to a Role, and (via verifyBindingNotEscalating) when binding a
-// user to a Role. A nil authorizer (tests, or non-authorizing local mode)
-// disables the check. As a convenience, it also returns the normalized rules to
-// avoid the caller having to normalize them again for storage in the Role.
+// user to a Role. A nil authorizer disables the check. As a convenience, it
+// also returns the normalized rules to avoid the caller having to normalize
+// them again for storage in the Role.
 //
 // The rules are normalized first, which reduces them to atomic permissions -- one
 // API group, one resource, at most one resource name, with "*" verbs expanded --

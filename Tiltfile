@@ -21,17 +21,30 @@ local_resource(
   labels = ['prereqs'],
 )
 
+# Regenerate pgx code from SQL before the back end compiles. sqlc only writes
+# to pkg/database, which back-end-compile watches, so the two chain naturally.
+# It is parallel-safe because it does not touch anything an image build reads.
+local_resource(
+  'codegen-db',
+  cmd = 'make codegen-db',
+  deps = ['db/migrations', 'db/queries', 'sqlc.yaml'],
+  labels = ['native-processes'],
+  trigger_mode = TRIGGER_MODE_AUTO,
+  allow_parallel = True,
+)
 local_resource(
   'back-end-compile',
   'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o bin/controlplane/kargo ./cmd/controlplane',
   deps=[
     'api/',
     'cmd/controlplane/',
+    'db/',
     'internal/',
     'pkg/',
     'go.mod',
     'go.sum'
   ],
+  resource_deps = ['codegen-db'],
   labels = ['native-processes'],
   trigger_mode = TRIGGER_MODE_AUTO
 )
@@ -65,27 +78,40 @@ k8s_resource(
   new_name = 'namespaces',
   objects = [
     'kargo:namespace',
-    'kargo-cluster-secrets:namespace',
     'kargo-shared-resources:namespace',
     'kargo-system-resources:namespace'
   ],
   labels = ['kargo']
 )
 
-kargo_base_path = os.environ.get('KARGO_BASE_PATH', '')
-k8s_yaml(
-  helm(
-    './charts/kargo',
-    name = 'kargo',
-    namespace = 'kargo',
-    values = 'hack/tilt/values.dev.yaml',
-    set = [
-      'externalWebhooksServer.host=' + os.environ.get('KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME', 'localhost:30083'),
-      'externalWebhooksServer.tls.terminatedUpstream=' + os.environ.get('KARGO_EXTERNAL_WEBHOOKS_SERVER_TLS_TERMINATED_UPSTREAM', 'false'),
-      'api.basePath=' + kargo_base_path
-    ]
-  )
+# The chart's dependencies (e.g. NATS) must be present before it can be
+# rendered. Only fetch them when any are missing or out of date.
+# `helm dependency build` requires each dependency's repository to be known to
+# Helm, so they are added to a repository config belonging to this project
+# instead of the developer's own.
+local(
+  "helm dependency list charts/kargo | awk 'NR > 1 && NF && $NF != \"ok\" { exit 1 }' || " +
+  "{ helm repo add nats https://nats-io.github.io/k8s/helm/charts/ && helm dependency build charts/kargo; }",
+  env = {
+    'HELM_REPOSITORY_CONFIG': '.helm/repositories.yaml',
+    'HELM_REPOSITORY_CACHE': '.helm/cache'
+  },
+  quiet = True,
 )
+
+kargo_base_path = os.environ.get('KARGO_BASE_PATH', '')
+chart = helm(
+  './charts/kargo',
+  name = 'kargo',
+  namespace = 'kargo',
+  values = 'hack/tilt/values.dev.yaml',
+  set = [
+    'externalWebhooksServer.host=' + os.environ.get('KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME', 'localhost:30083'),
+    'externalWebhooksServer.tls.terminatedUpstream=' + os.environ.get('KARGO_EXTERNAL_WEBHOOKS_SERVER_TLS_TERMINATED_UPSTREAM', 'false'),
+    'api.basePath=' + kargo_base_path
+  ]
+)
+k8s_yaml(chart)
 # Normally the API server serves up the front end, but we want live updates
 # of the UI, so we're breaking it out into its own separate deployment here.
 # The __KARGO_BASE_PATH__ placeholder in the manifest is substituted so the UI
@@ -94,6 +120,39 @@ k8s_yaml(blob(
   str(read_file('hack/tilt/ui.yaml')).replace('__KARGO_BASE_PATH__', kargo_base_path)
 ))
 k8s_yaml('hack/tilt/gpg-secret.yaml')
+
+# The chart's bundled PostgreSQL, enabled by hack/tilt/values.dev.yaml.
+k8s_resource(
+  workload = 'kargo-postgres',
+  new_name = 'postgres',
+  port_forwards = ['15432:5432'],
+  objects = ['kargo-postgres:secret', 'kargo-postgres:serviceaccount'],
+  resource_deps = ['namespaces'],
+  labels = ['kargo'],
+  trigger_mode = TRIGGER_MODE_AUTO,
+)
+
+# The chart's migration Job runs the `migrate` subcommand from the same image
+# as every other workload, so it goes through the same host compile and image
+# build. Like them it deploys once at startup and then only on a manual
+# trigger, which keeps a migration still being written from being applied
+# early. Its name carries a hash of its pod template, so it is read from the
+# rendered chart rather than hard-coded.
+migrate_job = [
+  o['metadata']['name']
+  for o in decode_yaml_stream(chart)
+  if o['kind'] == 'Job' and o['metadata']['name'].startswith('kargo-migrate-')
+][0]
+k8s_resource(
+  workload = migrate_job,
+  new_name = 'db-migrate',
+  objects = [
+    'kargo-migrate:configmap',
+    'kargo-migrate:serviceaccount',
+  ],
+  resource_deps = ['back-end-compile', 'postgres'],
+  labels = ['kargo'],
+)
 
 k8s_resource(
   new_name = 'common',
@@ -104,10 +163,6 @@ k8s_resource(
     'kargo-admin:role',
     'kargo-admin:rolebinding',
     'kargo-admin:serviceaccount',
-    'kargo-cluster-secrets-admin:role',
-    'kargo-cluster-secrets-admin:rolebinding',
-    'kargo-cluster-secrets-reader:role',
-    'kargo-cluster-secrets-reader:rolebinding',
     'kargo-project-admin:clusterrole',
     'kargo-project-creator:clusterrole',
     'kargo-project-creator:clusterrolebinding',
@@ -133,6 +188,17 @@ k8s_resource(
 )
 
 k8s_resource(
+  workload = 'kargo-nats',
+  new_name = 'nats',
+  labels = ['kargo'],
+  objects = [
+    'kargo-nats-config:configmap',
+    'kargo-nats:poddisruptionbudget'
+  ],
+  resource_deps = ['namespaces']
+)
+
+k8s_resource(
   workload = 'kargo-api',
   new_name = 'api',
   port_forwards = [
@@ -150,7 +216,7 @@ k8s_resource(
     'kargo-api-rollouts:clusterrole',
     'kargo-api-rollouts:clusterrolebinding'
   ],
-  resource_deps=['back-end-compile','dex-server']
+  resource_deps=['back-end-compile', 'dex-server', 'db-migrate', 'nats']
 )
 
 k8s_resource(
@@ -166,7 +232,6 @@ k8s_resource(
     'kargo-controller:serviceaccount',
     'kargo-controller-argocd:clusterrole',
     'kargo-controller-argocd:clusterrolebinding',
-    'kargo-controller-cluster-secrets-reader:rolebinding',
     'kargo-controller-read-secrets:clusterrole',
     'kargo-controller-rollouts:clusterrole',
     'kargo-controller-rollouts:clusterrolebinding',
@@ -175,7 +240,7 @@ k8s_resource(
     'kargo-shared-resources-controller-reader:role',
     'kargo-test-gpg-signing-key:secret'
   ],
-  resource_deps=['back-end-compile', 'credential-helper-compile', ]
+  resource_deps=['back-end-compile', 'credential-helper-compile', 'nats']
 )
 
 k8s_resource(
@@ -228,7 +293,7 @@ k8s_resource(
     'kargo-management-controller:configmap',
     'kargo-management-controller:serviceaccount'
   ],
-  resource_deps=['back-end-compile']
+  resource_deps=['back-end-compile', 'db-migrate', 'nats']
 )
 
 k8s_resource(
@@ -258,7 +323,7 @@ k8s_resource(
     'kargo-webhooks-server-ns-controller:clusterrole',
     'kargo-webhooks-server-ns-controller:clusterrolebinding'
   ],
-  resource_deps=['back-end-compile', 'ensure-cert-manager']
+  resource_deps=['back-end-compile', 'ensure-cert-manager', 'nats']
 )
 
 k8s_resource(

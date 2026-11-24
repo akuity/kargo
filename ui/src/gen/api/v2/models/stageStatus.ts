@@ -9,6 +9,7 @@ import type { FreightCollection } from './freightCollection';
 import type { Health } from './health';
 import type { PromotionReference } from './promotionReference';
 import type { PromotionRequestReference } from './promotionRequestReference';
+import type { PromotionRolloutReference } from './promotionRolloutReference';
 import type { PromotionWindowStatus } from './promotionWindowStatus';
 import type { StageStatusAutoPromotionHolds } from './stageStatusAutoPromotionHolds';
 import type { StageStatusEffectiveAutoPromotionHolds } from './stageStatusEffectiveAutoPromotionHolds';
@@ -55,6 +56,17 @@ export interface StageStatus {
    */
   currentPromotionRequest?: PromotionRequestReference;
   /**
+   * CurrentPromotionRollout is a reference to the PromotionRollout this Stage
+   * is promoting through. A PromotionRollout does not start until its Stage
+   * names it here, and the Stage names the next one only once it has recorded
+   * the one before it and is not still to verify the Freight it is on. The
+   * reference stays until the Stage has recorded how that PromotionRollout
+   * ended. It is absent for a Stage that governs no Targets.
+   *
+   * +optional
+   */
+  currentPromotionRollout?: PromotionRolloutReference;
+  /**
    * EffectiveAutoPromotionHolds is the set of auto-promotion holds in effect
    * right now. It is recomputed every reconciliation from AutoPromotionHolds
    * plus the newest in-flight Promotions, and unlike AutoPromotionHolds is not
@@ -100,6 +112,15 @@ export interface StageStatus {
    * +optional
    */
   lastPromotionRequest?: PromotionRequestReference;
+  /**
+   * LastPromotionRollout is a reference to the last PromotionRollout whose
+   * outcome this Stage has recorded. It is absent for a Stage that governs no
+   * Targets, and only ever moves forward: its number marks how far through
+   * its PromotionRollouts the Stage has read.
+   *
+   * +optional
+   */
+  lastPromotionRollout?: PromotionRolloutReference;
   /**
    * Metadata is a map of arbitrary metadata associated with the Stage.
    * This is useful for storing additional information about the Stage

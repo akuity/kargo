@@ -33,7 +33,6 @@ import { repoUrlError } from './credential-validation';
 // the form itself (matching project settings) is username/password only.
 const authLabels: Record<CredentialAuthMethod, string> = {
   userpass: 'Username + password / PAT',
-  ssh: 'SSH private key (deprecated)',
   'github-app': 'GitHub App',
   'aws-ecr': 'AWS ECR access key',
   'gcp-ar': 'GCP Artifact Registry service account key',
@@ -167,7 +166,7 @@ const RepoCredentialCard = ({ cred, onChange, onRemove }: CredentialCardProps) =
           <Alert
             type='info'
             showIcon
-            message={
+            title={
               <>
                 This credential uses <strong>{authLabels[cred.auth]}</strong> authentication,
                 configured through the YAML editor. Edit it there.

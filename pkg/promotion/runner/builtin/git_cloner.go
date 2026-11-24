@@ -4,15 +4,15 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
-	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindGitClone = "git-clone"
@@ -79,10 +79,10 @@ func (g *gitCloner) Run(
 	return g.run(ctx, stepCtx, cfg)
 }
 
-func (g *gitCloner) convert(cfg promotion.Config) (builtin.GitCloneConfig, error) {
-	typedCfg, err := validateAndConvert[builtin.GitCloneConfig](g.schemaLoader, cfg, stepKindGitClone)
+func (g *gitCloner) convert(cfg promotion.Config) (stepconfig.GitCloneConfig, error) {
+	typedCfg, err := validateAndConvert[stepconfig.GitCloneConfig](g.schemaLoader, cfg, stepKindGitClone)
 	if err != nil {
-		return builtin.GitCloneConfig{}, err
+		return stepconfig.GitCloneConfig{}, err
 	}
 
 	// Ensure any specified aliases are unique across all checkouts
@@ -90,7 +90,7 @@ func (g *gitCloner) convert(cfg promotion.Config) (builtin.GitCloneConfig, error
 	for i, checkout := range typedCfg.Checkout {
 		if checkout.As != "" {
 			if _, exists := seen[checkout.As]; exists {
-				return builtin.GitCloneConfig{},
+				return stepconfig.GitCloneConfig{},
 					fmt.Errorf("duplicate checkout alias %q at checkout[%d]", checkout.As, i)
 			}
 			seen[checkout.As] = struct{}{}
@@ -103,7 +103,7 @@ func (g *gitCloner) convert(cfg promotion.Config) (builtin.GitCloneConfig, error
 func (g *gitCloner) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.GitCloneConfig,
+	cfg stepconfig.GitCloneConfig,
 ) (promotion.StepResult, error) {
 	var repoCreds *git.RepoCredentials
 	creds, err := g.credsDB.Get(
@@ -118,9 +118,8 @@ func (g *gitCloner) run(
 	}
 	if creds != nil {
 		repoCreds = &git.RepoCredentials{
-			Username:      creds.Username,
-			Password:      creds.Password,
-			SSHPrivateKey: creds.SSHPrivateKey,
+			Username: creds.Username,
+			Password: creds.Password,
 		}
 	}
 
@@ -162,7 +161,7 @@ func (g *gitCloner) run(
 		switch {
 		case checkout.Branch != "":
 			ref = checkout.Branch
-			if err = ensureRemoteBranch(ctx, repo, ref, checkout.Create); err != nil {
+			if err = ensureRemoteBranch(ctx, stepCtx.Root, repo, ref, checkout.Create); err != nil {
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("error ensuring existence of remote branch %s: %w", ref, err)
 			}
@@ -171,12 +170,9 @@ func (g *gitCloner) run(
 		case checkout.Tag != "":
 			ref = checkout.Tag
 		}
-		path, err := securejoin.SecureJoin(stepCtx.WorkDir, checkout.Path)
+		path, err := promotion.ExternalPath(stepCtx, checkout.Path)
 		if err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
-				"error joining path %s with work dir %s: %w",
-				checkout.Path, stepCtx.WorkDir, err,
-			)
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 		}
 		worktree, err := repo.AddWorkTree(
 			ctx,
@@ -219,11 +215,12 @@ func (g *gitCloner) run(
 
 // ensureRemoteBranch checks for the existence of a remote branch. If the remote
 // branch exists, no action is taken and nil is returned. If the branch does not
-// exist and create == true, an empty orphaned branch is created and pushed to
-// the remote. If the branch does not exist and create == false, an error is
-// returned.
+// exist and create == true, an empty orphaned branch is created, using a
+// temporary working tree in root, and pushed to the remote. If the branch does
+// not exist and create == false, an error is returned.
 func ensureRemoteBranch(
 	ctx context.Context,
+	root *os.Root,
 	repo git.BareRepo,
 	branch string,
 	create bool,
@@ -247,11 +244,15 @@ func ensureRemoteBranch(
 			repo.URL(),
 		)
 	}
-	tmpDir, err := os.MkdirTemp("", "repo-")
+	tmpDir, err := mkdirTemp(root, ".", "repo-*")
 	if err != nil {
 		return fmt.Errorf("error creating temporary directory: %w", err)
 	}
-	workTree, err := repo.AddWorkTree(ctx, tmpDir, &git.AddWorkTreeOptions{Orphan: true})
+	workTree, err := repo.AddWorkTree(
+		ctx,
+		filepath.Join(root.Name(), tmpDir),
+		&git.AddWorkTreeOptions{Orphan: true},
+	)
 	if err != nil {
 		return fmt.Errorf(
 			"error adding temporary working tree for branch %q of repo %s: %w",

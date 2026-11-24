@@ -7,6 +7,7 @@ import { Link as ReactRouterLink } from 'react-router-dom';
 import { generatePath, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { getAlias, getShortFreightLabel } from '@ui/features/common/utils';
 import { FreightCollection, VerificationInfo } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
@@ -15,6 +16,7 @@ import { AnalysisModal } from '../common/analysis-modal/analysis-modal';
 import { useModal } from '../common/modal/use-modal';
 
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
+import { isAnalysisRun } from './utils/analysis-run-kind';
 import { verificationPhaseIsTerminal } from './utils/verification-phase';
 import { VerificationIcon } from './verification-icon';
 
@@ -27,6 +29,7 @@ export const Verifications = ({ verifications, images }: Props) => {
   const { show } = useModal();
   const { name: projectName } = useParams();
   const freightMap = useGetFreightMap(projectName || '');
+  const { analysisRunExtension } = useExtensionsContext();
 
   const [showImplicitVerifications, setShowImplicitVerifications] = useState(false);
 
@@ -115,21 +118,41 @@ export const Verifications = ({ verifications, images }: Props) => {
         <Table.Column<(typeof verifications)[number]>
           title='AnalysisRun'
           dataIndex=''
-          render={(val, verification) => (
-            <Link
-              onClick={() => {
-                show((p) => (
-                  <AnalysisModal
-                    {...p}
-                    analysisName={val.analysisRun?.name || ''}
-                    images={images}
-                  />
-                ));
-              }}
-            >
-              {verification.analysisRun?.name}
-            </Link>
-          )}
+          render={(val, verification) => {
+            const analysisName = val.analysisRun?.name || '';
+
+            if (isAnalysisRun(val.analysisRun?.kind)) {
+              return (
+                <Link
+                  onClick={() =>
+                    show((p) => (
+                      <AnalysisModal {...p} analysisName={analysisName} images={images} />
+                    ))
+                  }
+                >
+                  {verification.analysisRun?.name}
+                </Link>
+              );
+            }
+
+            if (!analysisRunExtension) {
+              return verification.analysisRun?.name;
+            }
+
+            const AnalysisRunModal = analysisRunExtension.component;
+
+            return (
+              <Link
+                onClick={() =>
+                  show((p) => (
+                    <AnalysisRunModal {...p} analysisName={analysisName} images={images} />
+                  ))
+                }
+              >
+                {verification.analysisRun?.name}
+              </Link>
+            );
+          }}
         />
         <Table.Column<(typeof verifications)[number]>
           title='Freight'

@@ -29,7 +29,7 @@ import (
 
 func TestNewReconciler(t *testing.T) {
 	testCfg := ReconcilerConfig{}
-	r := newReconciler(fake.NewClientBuilder().Build(), testCfg)
+	r := newReconciler(fake.NewClientBuilder().Build(), testCfg, nil)
 	require.Equal(t, testCfg, r.cfg)
 	require.NotNil(t, r.client)
 	require.NotNil(t, r.getProjectFn)
@@ -1995,7 +1995,7 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			r := newReconciler(testCase.client, cfg)
+			r := newReconciler(testCase.client, cfg, nil)
 			err = r.ensureControllerPermissions(t.Context(), testProject)
 			testCase.assertions(t, testCase.client, err)
 		})
@@ -2699,7 +2699,12 @@ func TestReconciler_ensureDefaultUserRoles_PromotionRequestPermissions(t *testin
 		{
 			roleName: "kargo-admin",
 			resource: "targets",
-			verbs:    []string{"*"},
+			verbs:    []string{"get", "list", "watch"},
+		},
+		{
+			roleName: "kargo-promoter",
+			resource: "targets",
+			verbs:    []string{"get", "list", "watch"},
 		},
 		{
 			roleName: "kargo-viewer",
@@ -2722,37 +2727,40 @@ func TestReconciler_ensureDefaultUserRoles_PromotionRequestPermissions(t *testin
 			require.Fail(t, testCase.resource+" permissions not found")
 		})
 	}
-	// PromotionRequests are readable but never writable by a user: only the
-	// Stage controller and the API server create them.
-	for _, roleName := range []string{"kargo-admin", "kargo-viewer"} {
-		t.Run(roleName+"/promotionrequests read-only", func(t *testing.T) {
+	// PromotionRequests and PromotionRollouts are readable but never writable
+	// by a user: only the Stage controller and the API server create them.
+	for _, roleName := range []string{"kargo-admin", "kargo-promoter", "kargo-viewer"} {
+		for _, resource := range []string{"promotionrequests", "promotionrollouts"} {
+			t.Run(roleName+"/"+resource+" read-only", func(t *testing.T) {
+				role := createdRoles[roleName]
+				require.NotNil(t, role)
+				var found bool
+				for _, rule := range role.Rules {
+					if !slices.Contains(rule.Resources, resource) {
+						continue
+					}
+					found = true
+					require.Equal(t, []string{kargoapi.GroupVersion.Group}, rule.APIGroups)
+					require.ElementsMatch(t, []string{"get", "list", "watch"}, rule.Verbs)
+				}
+				require.True(t, found, "no "+resource+" rule found")
+			})
+		}
+	}
+	// Regression test for GHSA-rx5g-3338-f2mf: patch on freights/status let a
+	// holder write status.verifiedIn directly, bypassing verification/soak
+	// requirements without ever needing the promote verb. Freight approval now
+	// goes through the API server's internal client, so no user-facing role
+	// should grant this permission.
+	for _, roleName := range []string{"kargo-admin", "kargo-promoter", "kargo-viewer"} {
+		t.Run(roleName+"/no freights-status patch", func(t *testing.T) {
 			role := createdRoles[roleName]
 			require.NotNil(t, role)
-			var found bool
 			for _, rule := range role.Rules {
-				if !slices.Contains(rule.Resources, "promotionrequests") {
-					continue
-				}
-				found = true
-				require.ElementsMatch(t, []string{"get", "list", "watch"}, rule.Verbs)
+				require.NotContains(t, rule.Resources, "freights/status")
 			}
-			require.True(t, found, "no promotionrequests rule found")
 		})
 	}
-	t.Run("kargo-promoter/no promotionrequests", func(t *testing.T) {
-		role := createdRoles["kargo-promoter"]
-		require.NotNil(t, role)
-		for _, rule := range role.Rules {
-			require.NotContains(t, rule.Resources, "promotionrequests")
-		}
-	})
-	t.Run("kargo-promoter/no targets", func(t *testing.T) {
-		role := createdRoles["kargo-promoter"]
-		require.NotNil(t, role)
-		for _, rule := range role.Rules {
-			require.NotContains(t, rule.Resources, "targets")
-		}
-	})
 }
 
 func TestReconciler_ensureDefaultUserRoles_contributors(t *testing.T) {

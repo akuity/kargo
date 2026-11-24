@@ -2,3 +2,4 @@ allowBuilds:
   esbuild: true
 overrides:
   '@ant-design/icons': 6.1.1
+  dompurify: 3.4.17

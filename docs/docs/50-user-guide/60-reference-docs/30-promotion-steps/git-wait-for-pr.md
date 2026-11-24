@@ -11,9 +11,9 @@ and is commonly followed by an `argocd-update` step.
 
 :::tip[Accelerate with webhooks]
 
-By default, Kargo polls the Git provider every few minutes to check whether the
-PR has been merged or closed. If you configure a webhook receiver that supports
-PR/MR closed events
+By default, Kargo polls the Git provider every 30 seconds (see `pollInterval`
+below) to check whether the PR has been merged or closed. If you configure a
+webhook receiver that supports PR/MR closed events
 ([Azure DevOps](../80-webhook-receivers/azure/index.md),
 [Bitbucket](../80-webhook-receivers/bitbucket/index.md),
 [GitHub](../80-webhook-receivers/github/index.md),
@@ -34,8 +34,8 @@ system to access the git repos.
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `repoURL` | `string` | Y | The URL of a remote Git repository. **Deprecated:** Support for SSH URLs (`ssh://` and SCP-style `git@host:path`) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead. |
-| `provider` | `string` | N | The name of the Git provider to use. Currently `azure`, `bitbucket`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified. |
+| `repoURL` | `string` | Y | The URL of a remote Git repository. Only HTTP(S) URLs are supported. |
+| `provider` | `string` | N | The name of the Git provider to use. Currently `azure`, `bitbucket`, `bitbucket-datacenter`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified. |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production. |
 | `prNumber` | `integer` | Y | The pull request number to wait for. |
 | `pollInterval` | `string` | N | The suggested interval at which to poll the PR's status while waiting (e.g. `30s`, `2m`). This is only a suggestion: Kargo enforces a lower bound of 10 seconds and may reconcile sooner in response to other events, such as the PR-closed webhooks described above. Defaults to `30s`. |
@@ -50,6 +50,45 @@ system to access the git repos.
 | `pr.url` | `string` | The URL of the pull request. |
 | `pr.open` | `boolean` | Whether the pull request is still open. |
 | `pr.merged` | `boolean` | Whether the pull request has been merged. |
+
+## Waiting, Retries, and Timeouts
+
+Each time the step runs, it asks the Git provider for the PR's current state:
+
+- **Open:** The step reports a `Running` status and the PR is checked again
+  after `pollInterval`, or sooner if a webhook or a refresh (see below) prompts
+  it. Waiting on an open PR is not an error and does not count toward the
+  step's [error threshold](../15-promotion-templates.md#step-retries).
+- **Merged:** The step succeeds.
+- **Closed without being merged:** The step fails, and so does the
+  `Promotion`. This is not retried.
+
+If the step cannot learn the PR's state at all, for example because the
+credentials are invalid, the PR does not exist, or the Git provider is
+unavailable, that _is_ an error. As with any other step, a single error fails
+the `Promotion` by default. Use `retry.errorThreshold` to tolerate transient
+errors.
+
+By default, the step waits on an open PR indefinitely. To give up on a PR that
+has gone unmerged for too long, set `retry.timeout`:
+
+```yaml
+- uses: git-wait-for-pr
+  as: wait-for-pr
+  retry:
+    timeout: 48h
+  config:
+    repoURL: https://github.com/example/repo.git
+    prNumber: ${{ outputs['open-pr'].pr.id }}
+```
+
+To check the PR again right away instead of waiting for the next poll, click
+<hlt>Refresh</hlt> on the `Promotion` in the UI, or refresh its `Stage` from the CLI.
+Refreshing a `Stage` also refreshes its current `Promotion`.
+
+```shell
+kargo refresh stage --project=my-project my-stage
+```
 
 ## Examples
 

@@ -276,7 +276,7 @@ func (s *server) queryFreight(c *gin.Context) {
 
 	// Validate groupBy and orderBy
 	if err := validateGroupByOrderBy(group, groupBy, orderBy); err != nil {
-		_ = c.Error(libhttp.Error(err, http.StatusBadRequest))
+		_ = c.Error(err)
 		return
 	}
 

@@ -9,11 +9,13 @@ export const RulesModal = ({
   name,
   rules,
   hide,
+  visible,
   ...props
 }: { rules: V1PolicyRule[]; name?: string; hide: () => void } & ModalComponentProps) => {
   return (
     <Modal
       {...props}
+      open={visible}
       title={name ? `Rules: ${name}` : 'Rules'}
       width={800}
       onCancel={() => {

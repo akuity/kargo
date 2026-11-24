@@ -38,7 +38,8 @@ export const APITokensList = ({ project = '', systemLevel = false }: Props) => {
       }
     >
       <Table<V1Secret>
-        className='my-2 overflow-x-auto'
+        className='my-2'
+        scroll={{ x: 'max-content' }}
         dataSource={listAPITokensQuery.data?.data?.items || []}
         rowKey={(record: V1Secret) => record?.metadata?.name || ''}
         pagination={{ defaultPageSize: 5, hideOnSinglePage: true }}

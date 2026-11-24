@@ -18,6 +18,7 @@ import (
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 type RolesDatabaseConfig struct {
@@ -124,13 +125,14 @@ type RolesDatabase interface {
 		roleName string,
 		tokenName string,
 	) (*corev1.Secret, error)
-	// DeleteAPIToken deletes a bearer token associated with a Kargo Role.
+	// DeleteAPIToken deletes a bearer token associated with a Kargo Role and
+	// returns the Secret as it was before deletion.
 	DeleteAPIToken(
 		ctx context.Context,
 		systemLevel bool,
 		project string,
 		name string,
-	) error
+	) (*corev1.Secret, error)
 	// GetAPIToken returns a bearer token associated with a Kargo Role.
 	GetAPIToken(
 		ctx context.Context,
@@ -1193,7 +1195,12 @@ func (c *rolesDatabase) CreateAPIToken(
 		},
 		Type: corev1.SecretTypeServiceAccountToken,
 	}
-	fmt.Println(tokenSecret.OwnerReferences)
+	// Record who minted the token. Requests made with it are attributed to the
+	// role's ServiceAccount, so this is the only link from the credential back
+	// to a person.
+	if u, ok := user.IdentityFromContext(ctx); ok {
+		tokenSecret.Annotations[kargoapi.AnnotationKeyCreateActor] = u.Actor()
+	}
 	if err = c.client.Create(ctx, tokenSecret); err != nil {
 		return nil, fmt.Errorf(
 			"error creating token Secret %q for ServiceAccount %q in namespace %q: %w",
@@ -1284,7 +1291,7 @@ func (c *rolesDatabase) DeleteAPIToken(
 	systemLevel bool,
 	project string,
 	name string,
-) error {
+) (*corev1.Secret, error) {
 	namespace := project
 	if systemLevel {
 		namespace = c.cfg.KargoNamespace
@@ -1298,12 +1305,12 @@ func (c *rolesDatabase) DeleteAPIToken(
 		},
 		tokenSecret,
 	); err != nil {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"error getting token Secret %q in namespace %q: %w", name, namespace, err,
 		)
 	}
 	if tokenSecret.Type != corev1.SecretTypeServiceAccountToken {
-		return apierrors.NewConflict(
+		return nil, apierrors.NewConflict(
 			corev1.SchemeGroupVersion.WithResource("secrets").GroupResource(),
 			name,
 			fmt.Errorf( // nolint: staticcheck
@@ -1314,7 +1321,7 @@ func (c *rolesDatabase) DeleteAPIToken(
 		)
 	}
 	if _, ok := tokenSecret.Annotations["kubernetes.io/service-account.name"]; !ok {
-		return apierrors.NewConflict(
+		return nil, apierrors.NewConflict(
 			corev1.SchemeGroupVersion.WithResource("secrets").GroupResource(),
 			name,
 			fmt.Errorf( // nolint: staticcheck
@@ -1325,7 +1332,7 @@ func (c *rolesDatabase) DeleteAPIToken(
 		)
 	}
 	if !isKargoAPIToken(tokenSecret) {
-		return apierrors.NewConflict(
+		return nil, apierrors.NewConflict(
 			corev1.SchemeGroupVersion.WithResource("secrets").GroupResource(),
 			name,
 			fmt.Errorf( // nolint: staticcheck
@@ -1336,7 +1343,7 @@ func (c *rolesDatabase) DeleteAPIToken(
 		)
 	}
 	if !isKargoManaged(tokenSecret) {
-		return apierrors.NewConflict(
+		return nil, apierrors.NewConflict(
 			corev1.SchemeGroupVersion.WithResource("secrets").GroupResource(),
 			name,
 			fmt.Errorf( // nolint: staticcheck
@@ -1346,12 +1353,12 @@ func (c *rolesDatabase) DeleteAPIToken(
 		)
 	}
 	if err := c.client.Delete(ctx, tokenSecret); err != nil {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"error deleting token Secret %q in namespace %q: %w",
 			tokenSecret.Name, tokenSecret.Namespace, err,
 		)
 	}
-	return nil
+	return tokenSecret, nil
 }
 
 // GetAPIToken implements RolesDatabase.

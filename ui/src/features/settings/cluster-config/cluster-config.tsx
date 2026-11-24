@@ -1,19 +1,14 @@
-import { faPlus } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Flex, message, notification } from 'antd';
 import Card from 'antd/es/card/Card';
 import { JSONSchema4 } from 'json-schema';
 import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import { useParams } from 'react-router-dom';
-import { parse, stringify } from 'yaml';
+import { stringify } from 'yaml';
 import { z } from 'zod';
 
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
-import { useModal } from '@ui/features/common/modal/use-modal';
-import { Webhooks } from '@ui/features/project/settings/views/project-config/webhooks';
 import { useCreateResource, useUpdateResource } from '@ui/gen/api/v2/resources/resources';
 import { useGetClusterConfig } from '@ui/gen/api/v2/system/system';
 import clusterConfigSchema from '@ui/gen/schema/clusterconfigs.kargo.akuity.io_v1alpha1.json';
@@ -21,15 +16,12 @@ import { zodValidators } from '@ui/utils/validators';
 
 import { clusterConfigYAMLExample } from './cluster-config-yaml-example';
 import { Refresh } from './refresh';
-import { CreateWebhookModal } from './webhook/create-webhook-modal';
 
 const formSchema = z.object({
   value: zodValidators.requiredString
 });
 
 export const ClusterConfig = () => {
-  const { name } = useParams();
-
   const getClusterConfigQuery = useGetClusterConfig({
     query: { meta: { silent404: true } }
   });
@@ -49,22 +41,6 @@ export const ClusterConfig = () => {
       return '';
     }
   }, [clusterConfigObject]);
-
-  const clusterConfig = useMemo(() => {
-    if (!clusterConfigYAML) {
-      return undefined;
-    }
-    try {
-      return parse(clusterConfigYAML);
-    } catch (e) {
-      notification.error({
-        message: (e as Error)?.message || 'Failed to parse ClusterConfig YAML',
-        placement: 'bottomRight'
-      });
-    }
-  }, [clusterConfigYAML]);
-
-  const webhookReceivers = clusterConfig?.status?.webhookReceivers || [];
 
   const creation = !clusterConfigYAML;
 
@@ -91,49 +67,30 @@ export const ClusterConfig = () => {
 
   const createOrUpdateMutation = creation ? createMutation : updateMutation;
 
-  const createWebhookModal = useModal((props) => (
-    <CreateWebhookModal clusterConfigYAML={clusterConfigYAML} project={name || ''} {...props} />
-  ));
-
   const onSubmitConfig = clusterConfigForm.handleSubmit((data) =>
     createOrUpdateMutation.mutate({ data: data.value })
   );
 
   return (
-    <Flex gap={16} vertical>
-      <Card title='Cluster Config' type='inner' extra={clusterConfigYAML !== '' && <Refresh />}>
-        <FieldContainer control={clusterConfigForm.control} name='value'>
-          {({ field }) => (
-            <YamlEditor
-              label='YAML'
-              isLoading={getClusterConfigQuery.isLoading}
-              height='500px'
-              value={field.value}
-              onChange={(e) => field.onChange(e || '')}
-              placeholder={stringify(clusterConfigYAMLExample)}
-              schema={clusterConfigSchema as JSONSchema4}
-            />
-          )}
-        </FieldContainer>
-        <Flex>
-          <Button
-            icon={<FontAwesomeIcon icon={faPlus} />}
-            onClick={() => createWebhookModal.show()}
-          >
-            Add Webhook
-          </Button>
-          <Button
-            className='ml-auto'
-            type='primary'
-            onClick={onSubmitConfig}
-            loading={createOrUpdateMutation.isPending}
-          >
-            {creation ? 'Create' : 'Update'}
-          </Button>
-        </Flex>
-      </Card>
-
-      <Webhooks webhookReceivers={webhookReceivers} className='mt-5' />
-    </Flex>
+    <Card title='Cluster Config' type='inner' extra={clusterConfigYAML !== '' && <Refresh />}>
+      <FieldContainer control={clusterConfigForm.control} name='value'>
+        {({ field }) => (
+          <YamlEditor
+            label='YAML'
+            isLoading={getClusterConfigQuery.isLoading}
+            height='500px'
+            value={field.value}
+            onChange={(e) => field.onChange(e || '')}
+            placeholder={stringify(clusterConfigYAMLExample)}
+            schema={clusterConfigSchema as JSONSchema4}
+          />
+        )}
+      </FieldContainer>
+      <Flex justify='end'>
+        <Button type='primary' onClick={onSubmitConfig} loading={createOrUpdateMutation.isPending}>
+          {creation ? 'Create' : 'Update'}
+        </Button>
+      </Flex>
+    </Card>
   );
 };

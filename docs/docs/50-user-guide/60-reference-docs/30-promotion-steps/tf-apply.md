@@ -3,9 +3,6 @@ sidebar_label: tf-apply
 description: Applies an OpenTofu configuration or saved plan to create, update, or delete infrastructure.
 ---
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
-
 # `tf-apply`
 
 :::info

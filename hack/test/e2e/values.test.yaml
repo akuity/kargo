@@ -1,8 +1,6 @@
 image:
   repository: docker.io/library/kargo
   tag: dev
-global:
-  clusterSecretsNamespace: kargo-cluster-secrets
 api:
   logLevel: DEBUG
   tls:
@@ -42,6 +40,9 @@ controller:
       cacheByTagPolicy: Force
 crds:
   install: true
+database:
+  postgres:
+    password: kargo
 externalWebhooksServer:
   logLevel: DEBUG
   host: localhost:30083

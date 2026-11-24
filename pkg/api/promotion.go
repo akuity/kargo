@@ -2,10 +2,12 @@ package api
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
-	"time"
+	"sync"
 
 	"github.com/oklog/ulid/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,6 +16,14 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/server/user"
+)
+
+// promotionULIDMu serializes the clock read with promotionULIDEntropy.
+// ulid.Make does not, so concurrent callers can reorder names minted within
+// one millisecond.
+var (
+	promotionULIDMu      sync.Mutex
+	promotionULIDEntropy = ulid.Monotonic(rand.Reader, 0)
 )
 
 // PromotionAliasSeparator is the separator used in the alias of an inflated
@@ -27,6 +37,9 @@ const (
 	// promotionShortHashLength is the length of the short Freight hash
 	// embedded in a generated Promotion name.
 	promotionShortHashLength = 7
+
+	kindPromotionTask        = "PromotionTask"
+	kindClusterPromotionTask = "ClusterPromotionTask"
 
 	// maxPrefixForPromotionName is the maximum length of the descriptive prefix
 	// of a generated Promotion name -- the Stage name, or the Stage and Target
@@ -116,7 +129,11 @@ func generatePromotionStyleName(prefix, freight string) string {
 		)
 	}
 
-	parts := []string{prefix, ulid.Make().String(), shortHash}
+	promotionULIDMu.Lock()
+	id := ulid.MustNew(ulid.Now(), promotionULIDEntropy)
+	promotionULIDMu.Unlock()
+
+	parts := []string{prefix, id.String(), shortHash}
 	return strings.ToLower(strings.Join(parts, promotionNameSeparator))
 }
 
@@ -158,7 +175,7 @@ func RefreshPromotion(
 			Name:      namespacedName.Name,
 		},
 	}
-	if err := patchAnnotation(ctx, c, promo, kargoapi.AnnotationKeyRefresh, time.Now().Format(time.RFC3339)); err != nil {
+	if err := RefreshObject(ctx, c, promo); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return promo, nil
@@ -196,8 +213,8 @@ func AbortPromotion(
 		Action: action,
 	}
 	// Put actor information to track on the controller side
-	if u, ok := user.InfoFromContext(ctx); ok {
-		ar.Actor = FormatEventUserActor(u)
+	if u, ok := user.IdentityFromContext(ctx); ok {
+		ar.Actor = u.Actor()
 	}
 	return patchAnnotation(ctx, c, promotion, kargoapi.AnnotationKeyAbort, ar.String())
 }
@@ -218,10 +235,20 @@ const promotionRequestKind = "PromotionRequest"
 // Target, so Promotions to distinct Targets run in parallel and Promotions
 // to the same Target never contend -- while the children of a queued
 // request wait for the current round of fan-out to end.
+//
+// A PromotionRollout's child is admitted as soon as it exists. The Stage
+// records nothing about rollouts: they are serialized where they live, in the
+// database, which allows one Running rollout per Stage, and the reconciler
+// that progresses them creates children only for that rollout, at most one
+// per Target, and ends it only once every child has finished. The Stage would
+// only repeat a decision that has already been made.
 func StageAwaitsPromotion(
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
 ) bool {
+	if promo.Spec.PromotionRollout != "" {
+		return true
+	}
 	if promo.Spec.Target != "" {
 		owner := PromotionRequestOwner(promo)
 		return owner != "" &&
@@ -323,11 +350,12 @@ func InflateSteps(
 	promo *kargoapi.Promotion,
 ) error {
 	steps := make([]kargoapi.PromotionStep, 0, len(promo.Spec.Steps))
+	var inflatedTasks []kargoapi.InflatedPromotionTask
 	for i, step := range promo.Spec.Steps {
 		switch {
 		case step.Task != nil:
 			alias := step.GetAlias(i)
-			taskSteps, err := inflateTaskSteps(
+			taskSteps, inflatedTask, err := inflateTaskSteps(
 				ctx,
 				c,
 				promo.Namespace,
@@ -342,12 +370,14 @@ func InflateSteps(
 				)
 			}
 			steps = append(steps, taskSteps...)
+			inflatedTasks = append(inflatedTasks, inflatedTask)
 		default:
 			step.As = step.GetAlias(i)
 			steps = append(steps, step)
 		}
 	}
 	promo.Spec.Steps = steps
+	promo.Spec.InflatedTasks = inflatedTasks
 	return nil
 }
 
@@ -360,15 +390,26 @@ func inflateTaskSteps(
 	project, taskAlias string,
 	promoVars []kargoapi.ExpressionVariable,
 	taskStep kargoapi.PromotionStep,
-) ([]kargoapi.PromotionStep, error) {
+) ([]kargoapi.PromotionStep, kargoapi.InflatedPromotionTask, error) {
 	task, err := getPromotionTaskSpec(ctx, c, project, taskStep.Task)
 	if err != nil {
-		return nil, err
+		return nil, kargoapi.InflatedPromotionTask{}, err
 	}
 
 	vars, err := promotionTaskVarsToStepVars(task.Vars, promoVars, taskStep.Vars)
 	if err != nil {
-		return nil, err
+		return nil, kargoapi.InflatedPromotionTask{}, err
+	}
+
+	inflatedTask := kargoapi.InflatedPromotionTask{
+		Alias:       taskAlias,
+		Task:        *taskStep.Task,
+		Description: taskStep.Description,
+		Vars:        slices.Clone(vars),
+		Steps:       make([]string, 0, len(task.Steps)),
+	}
+	if inflatedTask.Task.Kind == "" {
+		inflatedTask.Task.Kind = kindPromotionTask
 	}
 
 	var steps []kargoapi.PromotionStep
@@ -386,8 +427,9 @@ func inflateTaskSteps(
 
 		// Append the inflated step to the list of steps.
 		steps = append(steps, *step)
+		inflatedTask.Steps = append(inflatedTask.Steps, step.As)
 	}
-	return steps, nil
+	return steps, inflatedTask, nil
 }
 
 // getPromotionTaskSpec retrieves the PromotionTaskSpec for the given
@@ -405,13 +447,13 @@ func getPromotionTaskSpec(
 	}
 
 	switch ref.Kind {
-	case "PromotionTask", "":
+	case kindPromotionTask, "":
 		task := &kargoapi.PromotionTask{}
 		if err := c.Get(ctx, client.ObjectKey{Namespace: project, Name: ref.Name}, task); err != nil {
 			return nil, err
 		}
 		spec = task.Spec
-	case "ClusterPromotionTask":
+	case kindClusterPromotionTask:
 		task := &kargoapi.ClusterPromotionTask{}
 		if err := c.Get(ctx, client.ObjectKey{Name: ref.Name}, task); err != nil {
 			return nil, err

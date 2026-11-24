@@ -1,6 +1,8 @@
 import {
   faBarsStaggered,
+  faBullseye,
   faCircleCheck,
+  faCircleExclamation,
   faCircleUp,
   faGear,
   faHistory,
@@ -20,7 +22,10 @@ import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { useStageControllerStatus } from '@ui/features/common/stage-status/use-stage-controller-status';
 import { getCurrentFreightByWarehouse } from '@ui/features/common/utils';
-import { getLastPromotionRef } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
+import {
+  getLastPromotionRef,
+  isStageTargetAware
+} from '@ui/features/project/pipelines/nodes/stage-meta-utils';
 import { getAutoPromotionHoldEntries } from '@ui/features/project/pipelines/promotion/auto-promotion';
 import { ResumeAutoPromotionDrawer } from '@ui/features/project/pipelines/promotion/resume-auto-promotion-drawer';
 import { useGetStage } from '@ui/gen/api/v2/core/core';
@@ -37,10 +42,14 @@ import { StageActions } from './stage-actions';
 import { FreightHistory } from './tabs/freight-history/freight-history';
 import { useGetFreightMap } from './tabs/freight-history/use-get-freight-map';
 import { StageSettings } from './tabs/settings/stage-settings';
+import { StageTargets } from './tabs/targets/targets';
+import { useCurrentRound } from './use-current-round';
 import { useImages } from './use-images';
+import { roundBlock } from './utils/promotion-request';
 import { Verifications } from './verifications';
 
 enum TabsTypes {
+  TARGETS = 'Targets',
   PROMOTION = 'Promotion',
   VERIFICATIONS = 'Verification',
   LIVE_MANIFEST = 'Live Manifest',
@@ -49,7 +58,15 @@ enum TabsTypes {
 }
 
 export const StageDetails = ({ stage }: { stage: Stage }) => {
-  const { name: projectName, stageName } = useParams();
+  const {
+    name: projectName,
+    stageName,
+    promotionRequestName,
+    promotionRolloutNumber
+  } = useParams();
+  // The round the route names, if it names one: a PromotionRequest by name or
+  // a PromotionRollout by number.
+  const openRound = promotionRequestName || promotionRolloutNumber;
   const navigate = useNavigate();
 
   const images = useImages([stage]);
@@ -83,7 +100,31 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
   const stageQuery = useGetStage(projectName || '', stage?.metadata?.name || '');
 
-  const [activeTab, setActiveTab] = useState(TabsTypes.PROMOTION);
+  // The tab a user picks sticks; until then a target-aware Stage opens on its
+  // Targets tab and a classic Stage on Promotions. A link to one round of
+  // promotion opens on Promotions whatever the Stage is, since that is the tab
+  // the round is read in.
+  const [pickedTab, setActiveTab] = useState<TabsTypes>();
+  const targetAware = isStageTargetAware(stage);
+  const defaultTab = targetAware && !openRound ? TabsTypes.TARGETS : TabsTypes.PROMOTION;
+  const activeTab = pickedTab ?? defaultTab;
+
+  // Opening a round counts as picking the Promotions tab, so stepping back out
+  // of the round lands on the list it was opened from. Without this, a reader
+  // who arrived by link rather than by clicking the tab has picked nothing, and
+  // leaving the round would drop a target-aware Stage back to its Targets tab --
+  // somewhere they have never been.
+  useEffect(() => {
+    if (openRound) {
+      setActiveTab(TabsTypes.PROMOTION);
+    }
+  }, [openRound]);
+
+  // When a target-aware Stage's latest round cannot progress, say so once,
+  // above the tabs, so the Targets and Promotions tabs both sit under the
+  // explanation rather than each hinting at it.
+  const round = useCurrentRound(projectName || '', stage);
+  const block = roundBlock(round);
 
   useEffect(() => {
     if (activeTab === TabsTypes.LIVE_MANIFEST) {
@@ -101,15 +142,13 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
   const { stageTabs } = useExtensionsContext();
 
-  const stageConditions = useMemo(() => stage.status?.conditions || [], [stage.status?.conditions]);
-
   const { controllerName, isControllerDead } = useStageControllerStatus(stage);
 
   return (
     <Drawer
       open={!!stageName}
       onClose={onClose}
-      width='80%'
+      size='80%'
       title={
         <Flex justify='space-between' className='font-normal'>
           <div>
@@ -119,7 +158,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
               </Typography.Title>
               <Flex gap={4}>
                 <StageConditionIcon
-                  conditions={stageConditions}
+                  stage={stage}
                   isControllerDead={isControllerDead}
                   controllerName={controllerName}
                 />
@@ -151,13 +190,45 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
               currentFreight={currentFreight}
             />
             <AutoPromotionHolds stage={stage} />
+            {block && (
+              <Alert
+                type='warning'
+                showIcon
+                icon={<FontAwesomeIcon icon={faCircleExclamation} />}
+                title={block.title}
+                description={block.description}
+              />
+            )}
             <Tabs
               className='flex-1'
               defaultActiveKey='1'
               style={{ minHeight: 'fit-content' }}
               activeKey={activeTab}
-              onChange={(newActiveTab) => setActiveTab(newActiveTab as TabsTypes)}
+              onChange={(newActiveTab) => {
+                setActiveTab(newActiveTab as TabsTypes);
+                // Leaving the Promotions tab leaves the round that was open in
+                // it, so the URL stops naming one it is no longer showing.
+                if (openRound && newActiveTab !== TabsTypes.PROMOTION) {
+                  navigate(generatePath(paths.stage, { name: projectName, stageName }));
+                }
+              }}
               items={[
+                ...(targetAware
+                  ? [
+                      {
+                        key: TabsTypes.TARGETS,
+                        label: 'Targets',
+                        icon: <FontAwesomeIcon icon={faBullseye} />,
+                        children: (
+                          <StageTargets
+                            projectName={projectName || ''}
+                            stage={stage}
+                            round={round}
+                          />
+                        )
+                      }
+                    ]
+                  : []),
                 {
                   key: TabsTypes.PROMOTION,
                   label: 'Promotions',
@@ -231,7 +302,7 @@ const AutoPromotionHolds = ({ stage }: { stage: Stage }) => {
   return (
     <Alert
       type='warning'
-      message='Auto-promotion paused'
+      title='Auto-promotion paused'
       description={
         <div className='flex flex-col gap-1'>
           {holds.map(({ key, hold }) => (

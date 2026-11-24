@@ -14,40 +14,63 @@ permissions:
   contents: read
 
 jobs:
+  test-db:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.6
+        env:
+          POSTGRES_USER: kargo
+          POSTGRES_PASSWORD: kargo
+          POSTGRES_DB: kargo
+        ports:
+        - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kargo -d kargo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://kargo:kargo@127.0.0.1:5432/kargo?sslmode=disable
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+      with:
+        egress-policy: audit
+    - name: Checkout code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Set up Go
+      uses: ./.github/actions/setup-go
+    - name: Test PostgreSQL migrations and storage
+      run: make test-db
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
   test-unit:
     runs-on: ubuntu-latest
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
       with:
         egress-policy: audit
 
     - name: Checkout code
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Set up Go
-      # This is the Go minor version that unit tests, linters, and codegen run
-      # against. It is capped by the golangci-lint version pinned in
-      # hack/tools.mk: a linter binary built with go1.X panics under go1.(X+1),
-      # so raising Go here requires a linter upgrade, which typically surfaces
-      # new findings requiring code or configuration changes.
-      #
-      # It must match the base image in Dockerfile.dev. Everything else,
-      # including anything we ship, uses the default that the setup-go action
-      # defines.
       uses: ./.github/actions/setup-go
-      with:
-        go-version: &goTestVersion "1.27.1"
     - name: Run unit tests
       run: make test-unit
     - name: Remove generated code from report
       run: |
-        for report in $(find . -maxdepth 4 -type f -name 'coverage.txt'); do
+        for report in $(find . -maxdepth 5 -type f -name 'coverage.txt'); do
           tmp_file=$(dirname $report)/coverage.tmp
           grep -v .pb.go $report | grep -v zz_ | grep -v .connect.go | grep -v 'pkg/x/client/generated/' > $tmp_file
           mv $tmp_file $report
         done
     - name: Upload coverage reports
-      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+      uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
   
@@ -55,7 +78,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
       with:
         egress-policy: audit
 
@@ -68,11 +91,11 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pnpm-
     - name: Install pnpm
-      uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       with:
         package_json_file: ui/package.json
     - name: Install nodejs
-      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
         node-version: "24.15.0"
         cache: "pnpm"
@@ -91,7 +114,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
       with:
         egress-policy: audit
 
@@ -99,8 +122,6 @@ jobs:
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Set up Go
       uses: ./.github/actions/setup-go
-      with:
-        go-version: *goTestVersion
     - name: Cache golangci-lint
       id: cache-golangci-lint
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -119,7 +140,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
       with:
         egress-policy: audit
 
@@ -144,7 +165,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
       with:
         egress-policy: audit
 
@@ -181,7 +202,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
       with:
         egress-policy: audit
 
@@ -189,20 +210,18 @@ jobs:
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Set up Go
       uses: ./.github/actions/setup-go
-      with:
-        go-version: *goTestVersion
     - name: Install java
-      uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+      uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
       with:
         distribution: temurin
         java-version: "21"
         java-package: jre
     - name: Install pnpm
-      uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       with:
         package_json_file: ui/package.json
     - name: Install nodejs
-      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
         node-version: "24.15.0"
         cache: "pnpm"
@@ -222,8 +241,35 @@ jobs:
     - name: Check nothing has changed
       run: git diff --exit-code -- .
 
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+      with:
+        egress-policy: audit
+
+    - name: Checkout code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Install pnpm
+      uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      with:
+        package_json_file: docs/package.json
+    - name: Install nodejs
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: "22.23.1"
+        cache: "pnpm"
+        cache-dependency-path: "docs/**/pnpm-lock.yaml"
+    - name: Install nodejs dependencies
+      run: pnpm install
+      working-directory: ./docs
+    - name: Build docs
+      run: pnpm build
+      working-directory: ./docs
+
   build-image:
-    needs: [test-unit, lint-go, lint-charts, lint-and-typecheck-ui, check-codegen]
+    needs: [test-unit, test-db, lint-go, lint-charts, lint-and-typecheck-ui, check-codegen, build-docs]
     runs-on: ubuntu-latest
     services:
       registry:
@@ -232,14 +278,14 @@ jobs:
         - 5000:5000
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
       with:
         egress-policy: audit
 
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
+      uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+      uses: docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003 # v4.4.0
       with:
         driver-opts: network=host
     - name: Checkout code
@@ -250,7 +296,7 @@ jobs:
         docker push localhost:5000/kargo-base:latest-arm64
         docker push localhost:5000/kargo-base:latest-amd64
     - name: Build final image
-      uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
       with:
         platforms: linux/amd64,linux/arm64
         build-args: |
@@ -280,11 +326,11 @@ jobs:
       run: ./hack/cve-scan.sh "registry:localhost:5000/kargo:scan"
 
   build-cli:
-    needs: [test-unit, lint-go, lint-charts, lint-and-typecheck-ui, check-codegen]
+    needs: [test-unit, test-db, lint-go, lint-charts, lint-and-typecheck-ui, check-codegen, build-docs]
     runs-on: ubuntu-latest
     steps:
     - name: Harden the runner (Audit all outbound calls)
-      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
       with:
         egress-policy: audit
 

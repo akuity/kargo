@@ -1,5 +1,5 @@
-import { Alert, Collapse } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { Alert, Collapse, CollapseProps } from 'antd';
+import { Dispatch, SetStateAction, useEffect, useMemo } from 'react';
 
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { Promotion } from '@ui/gen/api/v2/models';
@@ -7,7 +7,8 @@ import { Promotion } from '@ui/gen/api/v2/models';
 import {
   getPromotionDirectiveStepStatus,
   isFailedStep,
-  PromotionDirectiveStepStatus
+  isProgressingStep,
+  isRetryingStep
 } from '../common/promotion-directive-step-status/utils';
 import {
   getPromotionStatusPhase,
@@ -16,16 +17,30 @@ import {
 } from '../common/promotion-status/utils';
 
 import { Step } from './promotion-step';
+import { PromotionTaskGroupHeader } from './promotion-task-group-header';
 import { getPromotionOutputsByStepAlias } from './utils/promotion';
+import {
+  getStepKey,
+  groupPromotionSteps,
+  IndexedPromotionStep,
+  PromotionTaskGroup
+} from './utils/promotion-step-groups';
+
+type CollapseItem = NonNullable<CollapseProps['items']>[number];
 
 type PromotionStepsProps = {
   promotion: Promotion;
+  activeKeys: string[];
+  setActiveKeys: Dispatch<SetStateAction<string[]>>;
 };
 
 export const PromotionSteps = (props: PromotionStepsProps) => {
   const { promotionStepExtensions } = useExtensionsContext();
 
-  const [activeKeys, setActiveKeys] = useState<string[]>([]);
+  const { activeKeys, setActiveKeys } = props;
+
+  const onActiveKeysChange = (keys: string | string[]) =>
+    setActiveKeys(typeof keys === 'string' ? [keys] : keys);
 
   const outputsByStepAlias: Record<string, object> = useMemo(
     () => getPromotionOutputsByStepAlias(props.promotion) || {},
@@ -63,14 +78,17 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
   const hasExtension = (step: (typeof steps)[number]) =>
     promotionStepExtensions.some((ext) => ext.identifier === step.uses);
 
+  const entries = groupPromotionSteps(steps, props.promotion?.spec?.inflatedTasks);
+
   // The first interactive step that's currently running, if any.
   let runningKey: string | undefined;
+  let runningTaskKey: string | undefined;
 
-  const items = steps.flatMap((step, i) => {
+  const toStepItems = ({ step, index: i }: IndexedPromotionStep): CollapseItem[] => {
     const result = getPromotionDirectiveStepStatus(i, props.promotion.status);
-    const key = step.as || `step-${i}`;
+    const key = getStepKey(step, i);
 
-    if (!runningKey && result === PromotionDirectiveStepStatus.RUNNING && hasExtension(step)) {
+    if (!runningKey && isProgressingStep(i, props.promotion.status) && hasExtension(step)) {
       runningKey = key;
     }
 
@@ -82,48 +100,83 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
         promotion: props.promotion,
         stepIndex: i
       }),
-      key
+      key,
+      id: `promotion-entry-${key}`
     };
 
-    if (!isFailedStep(i, props.promotion.status)) {
-      return [item];
+    let alertType: 'error' | 'warning' | undefined;
+
+    if (isFailedStep(i, props.promotion.status)) {
+      alertType = 'error';
+    } else if (isRetryingStep(i, props.promotion.status)) {
+      alertType = 'warning';
     }
 
     const stepMessage = props.promotion.status?.stepExecutionMetadata?.[i]?.message;
 
-    if (!stepMessage) {
+    if (!alertType || !stepMessage) {
       return [item];
     }
 
     return [
       { ...item, className: `${item.className || ''} !border-none` },
       {
-        key: `${key}-error`,
-        label: <Alert message={stepMessage} type='error' />,
+        key: `${key}-${alertType}`,
+        label: <Alert title={stepMessage} type={alertType} />,
         showArrow: false,
         collapsible: 'disabled' as const,
         styles: { header: { paddingTop: 0 } }
       }
     ];
-  });
+  };
+
+  const toTaskItem = (group: PromotionTaskGroup): CollapseItem => {
+    const stepItems = group.steps.flatMap(toStepItems);
+
+    if (!runningTaskKey && stepItems.some((item) => item.key === runningKey)) {
+      runningTaskKey = group.key;
+    }
+
+    return {
+      key: group.key,
+      id: `promotion-entry-${group.key}`,
+      className: 'border-gray-200 dark:border-neutral-700',
+      label: <PromotionTaskGroupHeader group={group} promotion={props.promotion} />,
+      children: (
+        <Collapse
+          expandIconPlacement='end'
+          bordered={false}
+          className='[&_.ant-collapse-title]:min-w-0'
+          items={stepItems}
+          activeKey={activeKeys}
+          onChange={onActiveKeysChange}
+        />
+      )
+    };
+  };
+
+  const items = entries.flatMap((entry) =>
+    entry.type === 'task' ? [toTaskItem(entry)] : toStepItems(entry)
+  );
 
   useEffect(() => {
-    const key = runningKey;
-    if (key) {
-      setActiveKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
-    }
-  }, [runningKey]);
+    const keys = [runningTaskKey, runningKey].filter((key) => key !== undefined);
+    setActiveKeys((prev) => [...prev, ...keys.filter((key) => !prev.includes(key))]);
+  }, [runningKey, runningTaskKey]);
 
   return (
     <>
       <Collapse
-        expandIconPosition='end'
+        expandIconPlacement='end'
         bordered={false}
+        // antd sizes the header text `flex: auto` with no min-width, so a long
+        // step description can't truncate unless the wrapper may shrink.
+        className='[&_.ant-collapse-title]:min-w-0'
         items={items}
         activeKey={activeKeys}
-        onChange={(keys) => setActiveKeys(typeof keys === 'string' ? [keys] : keys)}
+        onChange={onActiveKeysChange}
       />
-      {shouldShowMessage && !!message && <Alert message={message} type='error' className='mt-4' />}
+      {shouldShowMessage && !!message && <Alert title={message} type='error' className='mt-4' />}
     </>
   );
 };

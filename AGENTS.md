@@ -12,7 +12,7 @@ domain is needed.
 
 | Path | Description |
 |------|-------------|
-| `api/v1alpha1/` | CRD types (Warehouse, Freight, Stage, Promotion, Project, etc.). Separate Go module |
+| `api/v1alpha1/` | CRD types (Warehouse, Freight, Stage, Promotion, Project, etc.) |
 | `cmd/controlplane/` | Back end entry point -- single binary with subcommands: `api`, `controller`, `management-controller`, `kubernetes-webhooks`, `external-webhooks`, `garbage-collector` |
 | `cmd/cli/` | CLI entry point |
 | `pkg/server/` | API server handlers, exposing Kargo's REST API (used by both the CLI and UI). |
@@ -51,6 +51,7 @@ make lint-go              # Lint Go code (golangci-lint)
 make lint                 # Lint everything (Go, charts, UI)
 make format-go            # Auto-format Go code
 make test-unit            # Run unit tests (with -race)
+make test-db              # Run PostgreSQL integration tests against DATABASE_URL (defaults to the dev database)
 make build-cli            # Build CLI binary
 make codegen              # Run all code generation
 make hack-build-dev-tools # Build dev container with all tools
@@ -93,6 +94,10 @@ installing prerequisites (cert-manager, Argo CD, Argo Rollouts) idempotently.
 - API: localhost:30081, UI: localhost:30082, External webhooks: localhost:30083
 - Argo CD: localhost:30080 (admin/admin)
 - Kargo admin password: `admin`
+- PostgreSQL: localhost:15432 (kargo/kargo). `make db-shell` opens `psql` in
+  the pod; `make db-migrate` applies the embedded migrations via the control
+  plane's `migrate` subcommand; `make test-db` runs the database integration
+  tests
 - `make hack-tilt-down` to undeploy Kargo (preserves prerequisites)
 - `make hack-kind-down` / `make hack-k3d-down` to destroy the cluster entirely
 
@@ -260,11 +265,11 @@ func TestGetAuthorizedClient(t *testing.T) {
     testInternalClient := fake.NewClientBuilder().Build()
     testCases := []struct {
         name     string
-        userInfo *user.Info
+        identity user.Identity
         assert   func(*testing.T, libClient.Client, error)
     }{
         {
-            name: "no context-bound user.Info",
+            name: "no context-bound identity",
             assert: func(t *testing.T, _ libClient.Client, err error) {
                 require.Error(t, err)
                 require.Equal(t, "not allowed", err.Error())
@@ -272,7 +277,7 @@ func TestGetAuthorizedClient(t *testing.T) {
         },
         {
             name: "admin user",
-            userInfo: &user.Info{IsAdmin: true},
+            identity: user.Admin{},
             assert: func(t *testing.T, c libClient.Client, err error) {
                 require.NoError(t, err)
                 require.Same(t, testInternalClient, c)
@@ -282,10 +287,10 @@ func TestGetAuthorizedClient(t *testing.T) {
     for _, testCase := range testCases {
         t.Run(testCase.name, func(t *testing.T) {
             ctx := context.Background()
-            if testCase.userInfo != nil {
-                ctx = user.ContextWithInfo(ctx, *testCase.userInfo)
+            if testCase.identity != nil {
+                ctx = user.ContextWithIdentity(ctx, testCase.identity)
             }
-            client, err := getAuthorizedClient(nil)(
+            client, err := getAuthorizedClient()(
                 ctx, testInternalClient, "",
                 schema.GroupVersionResource{}, "",
                 libClient.ObjectKey{},
@@ -410,19 +415,15 @@ collisions:
 
 ```go
 // pkg/server/user/user.go
-type userInfoKey struct{}
+type identityKey struct{}
 
-func ContextWithInfo(ctx context.Context, u Info) context.Context {
-    return context.WithValue(ctx, userInfoKey{}, u)
+func ContextWithIdentity(ctx context.Context, id Identity) context.Context {
+    return context.WithValue(ctx, identityKey{}, id)
 }
 
-func InfoFromContext(ctx context.Context) (Info, bool) {
-    val := ctx.Value(userInfoKey{})
-    if val == nil {
-        return Info{}, false
-    }
-    u, ok := val.(Info)
-    return u, ok
+func IdentityFromContext(ctx context.Context) (Identity, bool) {
+    id, ok := ctx.Value(identityKey{}).(Identity)
+    return id, ok && id != nil
 }
 ```
 
@@ -471,8 +472,10 @@ discovery loops.
 #### REST API structure
 
 The REST API (`pkg/server/`) uses Gin. Routes are defined in
-`rest_router.go` under `/v1beta1`. Gin middleware handles authentication,
-error formatting, and request body limits.
+`rest_router.go` under `/v1beta1`. Gin middleware in `pkg/server/middleware/`
+handles error formatting, panic recovery, body limits, and gating of optional
+features; the authentication and request logging middleware live beside the
+router in `pkg/server/`.
 
 Project-scoped routes live under `/v1beta1/projects/:project`. Middleware on
 this group confirms the project exists before any handler runs, so individual
@@ -490,7 +493,13 @@ any data is read or written.
 Because this is not a standard Kubernetes CRUD verb, the authorizing client
 cannot check it implicitly. Endpoints that require promote permission
 (promote-to-stage, promote-downstream, approve-freight) must test for permission
-using the wrapper's `Authorize()` method explicitly.
+explicitly, describing the operation with `pkg/server/auth/can`:
+
+```go
+if err := s.authorize(ctx, can.Promote().Stage(project, stage)); err != nil {
+    return err
+}
+```
 
 **Internal client bypass:** In rare cases the API server uses its own
 (non-authorizing) internal client to act on behalf of a user. **Any code that

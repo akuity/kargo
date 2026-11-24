@@ -384,6 +384,155 @@ func (a *CoreAPIService) CreateProjectConfigMapExecute(r ApiCreateProjectConfigM
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiCreatePromotionRolloutRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	stage string
+	body *CreatePromotionRolloutRequest
+}
+
+// Create request
+func (r ApiCreatePromotionRolloutRequest) Body(body CreatePromotionRolloutRequest) ApiCreatePromotionRolloutRequest {
+	r.body = &body
+	return r
+}
+
+func (r ApiCreatePromotionRolloutRequest) Execute() (*PromotionRollout, *http.Response, error) {
+	return r.ApiService.CreatePromotionRolloutExecute(r)
+}
+
+/*
+CreatePromotionRollout Create a PromotionRollout
+
+Create a PromotionRollout, which promotes the Freight named
+in the body to each of the Targets the Stage governs, or to
+the ones the body names among them. PromotionRollouts are
+managed through this API rather than as Kubernetes
+resources. The Stage must select Targets: its selectors are
+resolved against the project's Targets as the rollout is
+created, narrowed to the Targets named if any are, and its
+update strategy, or the one the body gives in its place, is
+resolved against how many that leaves; both are recorded
+with the rollout for good. A Target the Stage does not
+govern is refused. So is a rollout to no Targets: while the
+Stage governs none, the response is a 409, and the same
+request succeeds once its selectors match a Target.
+Everything else about the rollout is assigned by the server.
+This is a promotion: it requires the promote verb on the
+Stage. A server that does not create PromotionRollouts
+responds 501.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @param stage Stage name
+ @return ApiCreatePromotionRolloutRequest
+*/
+func (a *CoreAPIService) CreatePromotionRollout(ctx context.Context, project string, stage string) ApiCreatePromotionRolloutRequest {
+	return ApiCreatePromotionRolloutRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+		stage: stage,
+	}
+}
+
+// Execute executes the request
+//  @return PromotionRollout
+func (a *CoreAPIService) CreatePromotionRolloutExecute(r ApiCreatePromotionRolloutRequest) (*PromotionRollout, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodPost
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *PromotionRollout
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.CreatePromotionRollout")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/stages/{stage}/promotion-rollouts"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"stage"+"}", url.PathEscape(parameterValueToString(r.stage, "stage")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.body == nil {
+		return localVarReturnValue, nil, reportError("body is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.body
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiCreateSharedConfigMapRequest struct {
 	ctx context.Context
 	ApiService *CoreAPIService
@@ -558,6 +707,139 @@ func (a *CoreAPIService) CreateSystemConfigMapExecute(r ApiCreateSystemConfigMap
 	}
 
 	localVarPath := localBasePath + "/v1beta1/system/configmaps"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.body == nil {
+		return localVarReturnValue, nil, reportError("body is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.body
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiCreateTargetRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	body *Target
+}
+
+// Target resource
+func (r ApiCreateTargetRequest) Body(body Target) ApiCreateTargetRequest {
+	r.body = &body
+	return r
+}
+
+func (r ApiCreateTargetRequest) Execute() (*Target, *http.Response, error) {
+	return r.ApiService.CreateTargetExecute(r)
+}
+
+/*
+CreateTarget Create a Target
+
+Create a Target in a project. Targets are managed through
+this API rather than as Kubernetes resources. The body's
+metadata.name is required; its metadata.namespace, if given,
+must be the project. Status and server-managed metadata are
+ignored.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @return ApiCreateTargetRequest
+*/
+func (a *CoreAPIService) CreateTarget(ctx context.Context, project string) ApiCreateTargetRequest {
+	return ApiCreateTargetRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+	}
+}
+
+// Execute executes the request
+//  @return Target
+func (a *CoreAPIService) CreateTargetExecute(r ApiCreateTargetRequest) (*Target, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodPost
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *Target
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.CreateTarget")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/targets"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
@@ -1328,6 +1610,116 @@ func (a *CoreAPIService) DeleteSystemConfigMapExecute(r ApiDeleteSystemConfigMap
 
 	localVarPath := localBasePath + "/v1beta1/system/configmaps/{configmap}"
 	localVarPath = strings.Replace(localVarPath, "{"+"configmap"+"}", url.PathEscape(parameterValueToString(r.configmap, "configmap")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
+}
+
+type ApiDeleteTargetRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	targetName string
+}
+
+func (r ApiDeleteTargetRequest) Execute() (*http.Response, error) {
+	return r.ApiService.DeleteTargetExecute(r)
+}
+
+/*
+DeleteTarget Delete a Target
+
+Delete one of a project's Targets.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @param targetName Target name
+ @return ApiDeleteTargetRequest
+*/
+func (a *CoreAPIService) DeleteTarget(ctx context.Context, project string, targetName string) ApiDeleteTargetRequest {
+	return ApiDeleteTargetRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+		targetName: targetName,
+	}
+}
+
+// Execute executes the request
+func (a *CoreAPIService) DeleteTargetExecute(r ApiDeleteTargetRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodDelete
+		localVarPostBody     interface{}
+		formFiles            []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.DeleteTarget")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/targets/{target-name}"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"target-name"+"}", url.PathEscape(parameterValueToString(r.targetName, "targetName")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
@@ -2462,6 +2854,132 @@ func (a *CoreAPIService) GetPromotionRequestExecute(r ApiGetPromotionRequestRequ
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiGetPromotionRolloutRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	stage string
+	number int64
+}
+
+func (r ApiGetPromotionRolloutRequest) Execute() (*PromotionRollout, *http.Response, error) {
+	return r.ApiService.GetPromotionRolloutExecute(r)
+}
+
+/*
+GetPromotionRollout Retrieve a PromotionRollout
+
+Retrieve one of a Stage's PromotionRollouts by its number
+among them.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @param stage Stage name
+ @param number PromotionRollout number
+ @return ApiGetPromotionRolloutRequest
+*/
+func (a *CoreAPIService) GetPromotionRollout(ctx context.Context, project string, stage string, number int64) ApiGetPromotionRolloutRequest {
+	return ApiGetPromotionRolloutRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+		stage: stage,
+		number: number,
+	}
+}
+
+// Execute executes the request
+//  @return PromotionRollout
+func (a *CoreAPIService) GetPromotionRolloutExecute(r ApiGetPromotionRolloutRequest) (*PromotionRollout, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *PromotionRollout
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.GetPromotionRollout")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/stages/{stage}/promotion-rollouts/{number}"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"stage"+"}", url.PathEscape(parameterValueToString(r.stage, "stage")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"number"+"}", url.PathEscape(parameterValueToString(r.number, "number")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiGetPromotionTaskRequest struct {
 	ctx context.Context
 	ApiService *CoreAPIService
@@ -2993,6 +3511,263 @@ func (a *CoreAPIService) GetSystemConfigMapExecute(r ApiGetSystemConfigMapReques
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
 
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiGetTargetRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	targetName string
+}
+
+func (r ApiGetTargetRequest) Execute() (*Target, *http.Response, error) {
+	return r.ApiService.GetTargetExecute(r)
+}
+
+/*
+GetTarget Retrieve a Target
+
+Retrieve one of a project's Targets.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @param targetName Target name
+ @return ApiGetTargetRequest
+*/
+func (a *CoreAPIService) GetTarget(ctx context.Context, project string, targetName string) ApiGetTargetRequest {
+	return ApiGetTargetRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+		targetName: targetName,
+	}
+}
+
+// Execute executes the request
+//  @return Target
+func (a *CoreAPIService) GetTargetExecute(r ApiGetTargetRequest) (*Target, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *Target
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.GetTarget")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/targets/{target-name}"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"target-name"+"}", url.PathEscape(parameterValueToString(r.targetName, "targetName")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiGetTargetStatusSummaryRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	stage *string
+}
+
+// Only count the Targets this Stage governs
+func (r ApiGetTargetStatusSummaryRequest) Stage(stage string) ApiGetTargetStatusSummaryRequest {
+	r.stage = &stage
+	return r
+}
+
+func (r ApiGetTargetStatusSummaryRequest) Execute() (*TargetStatusSummary, *http.Response, error) {
+	return r.ApiService.GetTargetStatusSummaryExecute(r)
+}
+
+/*
+GetTargetStatusSummary Summarize Target statuses
+
+Count a project's Targets by where they stand with the
+Stages that govern them: for each Stage, how many of the
+Targets it governs are in each state; and for the project,
+how many Targets are in each state, a Target governed by
+several Stages counted once, under the worst state any of
+them reports. The states and the entries counted are those
+the Target status list serves, and are counted in the
+database rather than read. Targets behind their Stage's
+current Freight are counted as well, whatever their state.
+Target health is not recorded, so nothing here reports it.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @return ApiGetTargetStatusSummaryRequest
+*/
+func (a *CoreAPIService) GetTargetStatusSummary(ctx context.Context, project string) ApiGetTargetStatusSummaryRequest {
+	return ApiGetTargetStatusSummaryRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+	}
+}
+
+// Execute executes the request
+//  @return TargetStatusSummary
+func (a *CoreAPIService) GetTargetStatusSummaryExecute(r ApiGetTargetStatusSummaryRequest) (*TargetStatusSummary, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *TargetStatusSummary
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.GetTargetStatusSummary")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/target-statuses/summary"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.stage != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "stage", r.stage, "", "")
+	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
 
@@ -3826,6 +4601,194 @@ func (a *CoreAPIService) ListPromotionRequestsExecute(r ApiListPromotionRequests
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiListPromotionRolloutsRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	stage *string
+	freight *string
+	latest *bool
+	after *int64
+	continue_ *string
+	limit *int32
+}
+
+// Only PromotionRollouts of this Stage
+func (r ApiListPromotionRolloutsRequest) Stage(stage string) ApiListPromotionRolloutsRequest {
+	r.stage = &stage
+	return r
+}
+
+// Only PromotionRollouts of this Freight; requires stage
+func (r ApiListPromotionRolloutsRequest) Freight(freight string) ApiListPromotionRolloutsRequest {
+	r.freight = &freight
+	return r
+}
+
+// Each Stage&#39;s latest rollouts, or the named Stage&#39;s; takes only stage besides
+func (r ApiListPromotionRolloutsRequest) Latest(latest bool) ApiListPromotionRolloutsRequest {
+	r.latest = &latest
+	return r
+}
+
+// Only the Stage&#39;s PromotionRollouts numbered above this, oldest first; requires stage
+func (r ApiListPromotionRolloutsRequest) After(after int64) ApiListPromotionRolloutsRequest {
+	r.after = &after
+	return r
+}
+
+// Previous page&#39;s metadata.continue; with stage, one of the Stage&#39;s; resend after
+func (r ApiListPromotionRolloutsRequest) Continue_(continue_ string) ApiListPromotionRolloutsRequest {
+	r.continue_ = &continue_
+	return r
+}
+
+// The page size, at most 500; 50 if omitted
+func (r ApiListPromotionRolloutsRequest) Limit(limit int32) ApiListPromotionRolloutsRequest {
+	r.limit = &limit
+	return r
+}
+
+func (r ApiListPromotionRolloutsRequest) Execute() (*PromotionRolloutList, *http.Response, error) {
+	return r.ApiService.ListPromotionRolloutsExecute(r)
+}
+
+/*
+ListPromotionRollouts List PromotionRollouts
+
+List a project's PromotionRollouts, one page at a time, as
+a PromotionRolloutList resource. A Project or a Stage may
+have had any number of rollouts, so a list is never more
+than one page, newest first: the Project's, or a Stage's,
+or a Stage's of one piece of Freight. When a page is full,
+the list's metadata.continue names where the next page
+starts; pass it as continue to read on. With after, a
+Stage's rollouts numbered above it are listed oldest first
+instead. With latest, the list is instead each Stage's
+latest rollouts -- the one it is promoting through, if any,
+and the newest that has finished, if any -- which is what a
+reader of a Stage's state wants without reading its history.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @return ApiListPromotionRolloutsRequest
+*/
+func (a *CoreAPIService) ListPromotionRollouts(ctx context.Context, project string) ApiListPromotionRolloutsRequest {
+	return ApiListPromotionRolloutsRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+	}
+}
+
+// Execute executes the request
+//  @return PromotionRolloutList
+func (a *CoreAPIService) ListPromotionRolloutsExecute(r ApiListPromotionRolloutsRequest) (*PromotionRolloutList, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *PromotionRolloutList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.ListPromotionRollouts")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/promotion-rollouts"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.stage != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "stage", r.stage, "", "")
+	}
+	if r.freight != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "freight", r.freight, "", "")
+	}
+	if r.latest != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "latest", r.latest, "", "")
+	}
+	if r.after != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "after", r.after, "", "")
+	}
+	if r.continue_ != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "continue", r.continue_, "", "")
+	}
+	if r.limit != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "limit", r.limit, "", "")
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiListPromotionTasksRequest struct {
 	ctx context.Context
 	ApiService *CoreAPIService
@@ -4360,6 +5323,488 @@ func (a *CoreAPIService) ListSystemConfigMapsExecute(r ApiListSystemConfigMapsRe
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
 
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiListTargetPromotionsRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	targetName string
+	stage *string
+	continue_ *string
+	limit *int32
+}
+
+// Only Promotions of this Stage
+func (r ApiListTargetPromotionsRequest) Stage(stage string) ApiListTargetPromotionsRequest {
+	r.stage = &stage
+	return r
+}
+
+// The previous page&#39;s continue, to read the page after it; resend stage
+func (r ApiListTargetPromotionsRequest) Continue_(continue_ string) ApiListTargetPromotionsRequest {
+	r.continue_ = &continue_
+	return r
+}
+
+// The page size, at most 500; 100 if omitted
+func (r ApiListTargetPromotionsRequest) Limit(limit int32) ApiListTargetPromotionsRequest {
+	r.limit = &limit
+	return r
+}
+
+func (r ApiListTargetPromotionsRequest) Execute() (*TargetPromotionList, *http.Response, error) {
+	return r.ApiService.ListTargetPromotionsExecute(r)
+}
+
+/*
+ListTargetPromotions List a Target's Promotions
+
+List the Promotions to one of a project's Targets, newest
+first, one page at a time: those of every Stage, or of one.
+They are read from the database's record of Promotions,
+which outlives the Promotions themselves, so the list
+reaches further back than the project's Promotions do. A
+Target is recorded by name, so this is the history of the
+name: a Target that has had no Promotion, or that does not
+exist, has an empty one.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @param targetName Target name
+ @return ApiListTargetPromotionsRequest
+*/
+func (a *CoreAPIService) ListTargetPromotions(ctx context.Context, project string, targetName string) ApiListTargetPromotionsRequest {
+	return ApiListTargetPromotionsRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+		targetName: targetName,
+	}
+}
+
+// Execute executes the request
+//  @return TargetPromotionList
+func (a *CoreAPIService) ListTargetPromotionsExecute(r ApiListTargetPromotionsRequest) (*TargetPromotionList, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *TargetPromotionList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.ListTargetPromotions")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/targets/{target-name}/promotions"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"target-name"+"}", url.PathEscape(parameterValueToString(r.targetName, "targetName")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.stage != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "stage", r.stage, "", "")
+	}
+	if r.continue_ != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "continue", r.continue_, "", "")
+	}
+	if r.limit != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "limit", r.limit, "", "")
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiListTargetStatusesRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	stage *string
+	state *[]string
+	continue_ *string
+	limit *int32
+}
+
+// Only entries for this Stage
+func (r ApiListTargetStatusesRequest) Stage(stage string) ApiListTargetStatusesRequest {
+	r.stage = &stage
+	return r
+}
+
+// Only entries in one of these states; repeat to give several
+func (r ApiListTargetStatusesRequest) State(state []string) ApiListTargetStatusesRequest {
+	r.state = &state
+	return r
+}
+
+// The previous page&#39;s continue, to read the page after it; resend stage and state
+func (r ApiListTargetStatusesRequest) Continue_(continue_ string) ApiListTargetStatusesRequest {
+	r.continue_ = &continue_
+	return r
+}
+
+// The page size, at most 500; 100 if omitted
+func (r ApiListTargetStatusesRequest) Limit(limit int32) ApiListTargetStatusesRequest {
+	r.limit = &limit
+	return r
+}
+
+func (r ApiListTargetStatusesRequest) Execute() (*TargetStatusList, *http.Response, error) {
+	return r.ApiService.ListTargetStatusesExecute(r)
+}
+
+/*
+ListTargetStatuses List Target statuses
+
+List where a project's Targets stand with the Stages that
+govern them, one page at a time: one entry per Target and
+governing Stage, ordered by Target name and then Stage name.
+Nothing records a Target's status. Each entry is derived, on
+request, from the Promotions and PromotionRollouts on record,
+and which Stages govern a Target from the Stages' selectors
+as they are now. A Target no Stage governs has no entry.
+
+Each entry has one state, the first of these that holds:
+Promoting -- the last Promotion to the Target is running.
+Pending -- the last Promotion has yet to start, or a
+PromotionRollout that has not finished names the Target and
+has not reached it yet.
+NotAttempted -- a PromotionRollout that names the Target
+ended, without succeeding, before creating a Promotion to it,
+and there has been no Promotion to it since. A later rollout
+that does not name the Target changes nothing.
+NeverPromoted -- there has never been a Promotion to the
+Target.
+Failed -- the last Promotion failed, errored or was aborted.
+Behind -- the last Promotion succeeded, and the Freight it
+left on the Target is not the Stage's current Freight.
+UpToDate -- the last Promotion succeeded and the Target is
+not known to be behind.
+
+A state says how promotion went, not how the Target is
+doing: Target health is not recorded, so nothing here
+reports it. Entries are read from the database's mirror of
+Promotions, so they trail the cluster by its sync.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @return ApiListTargetStatusesRequest
+*/
+func (a *CoreAPIService) ListTargetStatuses(ctx context.Context, project string) ApiListTargetStatusesRequest {
+	return ApiListTargetStatusesRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+	}
+}
+
+// Execute executes the request
+//  @return TargetStatusList
+func (a *CoreAPIService) ListTargetStatusesExecute(r ApiListTargetStatusesRequest) (*TargetStatusList, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *TargetStatusList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.ListTargetStatuses")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/target-statuses"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.stage != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "stage", r.stage, "", "")
+	}
+	if r.state != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "state", r.state, "form", "csv")
+	}
+	if r.continue_ != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "continue", r.continue_, "", "")
+	}
+	if r.limit != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "limit", r.limit, "", "")
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiListTargetsRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	stage *string
+	labelSelector *string
+}
+
+// Only Targets governed by this Stage, i.e. selected by its targets.selectors
+func (r ApiListTargetsRequest) Stage(stage string) ApiListTargetsRequest {
+	r.stage = &stage
+	return r
+}
+
+// Kubernetes label selector to filter Targets by, e.g. region&#x3D;us,tier!&#x3D;canary
+func (r ApiListTargetsRequest) LabelSelector(labelSelector string) ApiListTargetsRequest {
+	r.labelSelector = &labelSelector
+	return r
+}
+
+func (r ApiListTargetsRequest) Execute() (*TargetList, *http.Response, error) {
+	return r.ApiService.ListTargetsExecute(r)
+}
+
+/*
+ListTargets List Targets
+
+List a project's Targets, optionally narrowed to those a
+particular Stage governs or those matching a label selector.
+Returns a TargetList resource.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @return ApiListTargetsRequest
+*/
+func (a *CoreAPIService) ListTargets(ctx context.Context, project string) ApiListTargetsRequest {
+	return ApiListTargetsRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+	}
+}
+
+// Execute executes the request
+//  @return TargetList
+func (a *CoreAPIService) ListTargetsExecute(r ApiListTargetsRequest) (*TargetList, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *TargetList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.ListTargets")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/targets"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.stage != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "stage", r.stage, "", "")
+	}
+	if r.labelSelector != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "labelSelector", r.labelSelector, "", "")
+	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
 
@@ -5086,8 +6531,18 @@ func (r ApiPromoteDownstreamRequest) Execute() (*any, *http.Response, error) {
 PromoteDownstream Promote downstream
 
 Creates a Promotion resource for each of a Stage's immediately
-downstream Stages. Downstream Stages that select Targets yield a
-PromotionRequest each, returned separately under "promotionRequests".
+downstream Stages, returned under "promotions". Downstream
+Stages that select Targets each yield, in place of a
+Promotion, a PromotionRollout on a server that creates
+PromotionRollouts, returned under "promotionRollouts", or a
+PromotionRequest otherwise, returned under
+"promotionRequests"; each key is present only when it has
+entries. Each promotes to every Target its Stage governs, at
+the Stage's pace. A Stage that could not be promoted to is
+reported under "errors", with a 207 status, and the rest
+are still promoted to. On a server that creates
+PromotionRollouts, that includes a Stage that governs no
+Targets.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param project Project name
@@ -5222,8 +6677,14 @@ PromoteToStage Promote to Stage
 
 Create a Promotion resource to transition a specified Stage into
 the state represented by the specified Freight.
-A Stage that selects Targets yields a PromotionRequest, which fans
-the Freight out to each of them, in place of a single Promotion.
+A Stage that selects Targets yields, in place of a single
+Promotion, something that fans the Freight out to each of
+them: a PromotionRollout on a server that creates
+PromotionRollouts, and a PromotionRequest otherwise. Either
+way, the body's targets and updateStrategy narrow which
+Targets are promoted to and at what pace. A PromotionRollout
+is not created for a Stage that governs no Targets: the
+response is a 409 until its selectors match one.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param project Project name
@@ -6272,6 +7733,144 @@ func (a *CoreAPIService) UpdateSystemConfigMapExecute(r ApiUpdateSystemConfigMap
 
 	localVarPath := localBasePath + "/v1beta1/system/configmaps/{configmap}"
 	localVarPath = strings.Replace(localVarPath, "{"+"configmap"+"}", url.PathEscape(parameterValueToString(r.configmap, "configmap")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.body == nil {
+		return localVarReturnValue, nil, reportError("body is required and must be specified")
+	}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.body
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiUpdateTargetRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	targetName string
+	body *Target
+}
+
+// Target resource
+func (r ApiUpdateTargetRequest) Body(body Target) ApiUpdateTargetRequest {
+	r.body = &body
+	return r
+}
+
+func (r ApiUpdateTargetRequest) Execute() (*Target, *http.Response, error) {
+	return r.ApiService.UpdateTargetExecute(r)
+}
+
+/*
+UpdateTarget Update a Target
+
+Replace a Target's labels and params. The body's metadata.name,
+if given, must match the name in the URL, and its spec.targetSet
+must name the TargetSet that manages the Target, which cannot
+change. A metadata.uid or metadata.resourceVersion in the body
+is a precondition: the update is refused if the Target no
+longer matches it.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @param targetName Target name
+ @return ApiUpdateTargetRequest
+*/
+func (a *CoreAPIService) UpdateTarget(ctx context.Context, project string, targetName string) ApiUpdateTargetRequest {
+	return ApiUpdateTargetRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+		targetName: targetName,
+	}
+}
+
+// Execute executes the request
+//  @return Target
+func (a *CoreAPIService) UpdateTargetExecute(r ApiUpdateTargetRequest) (*Target, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodPut
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *Target
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.UpdateTarget")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/targets/{target-name}"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"target-name"+"}", url.PathEscape(parameterValueToString(r.targetName, "targetName")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}

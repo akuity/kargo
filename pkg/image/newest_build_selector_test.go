@@ -79,3 +79,31 @@ func Test_newestBuildSelector_sort(t *testing.T) {
 		images,
 	)
 }
+
+func Test_newestBuildSelector_Select(t *testing.T) {
+	older := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	newer := older.Add(time.Hour)
+	s, err := newNewestBuildSelector(
+		kargoapi.ImageSubscription{
+			RepoURL:          "example/image",
+			ExpressionFilter: `annotations["approved"] == "true"`,
+		},
+		nil,
+	)
+	require.NoError(t, err)
+	n, ok := s.(*newestBuildSelector)
+	require.True(t, ok)
+	withFakeImages(
+		n.repoClient,
+		image{
+			Tag:         "approved",
+			CreatedAt:   &older,
+			Annotations: map[string]string{"approved": "true"},
+		},
+		image{Tag: "not-approved", CreatedAt: &newer},
+	)
+	imgs, err := s.Select(t.Context())
+	require.NoError(t, err)
+	require.Len(t, imgs, 1)
+	require.Equal(t, "approved", imgs[0].Tag)
+}

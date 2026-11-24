@@ -11,7 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_tomlParser_convert(t *testing.T) {
@@ -98,16 +98,16 @@ func Test_tomlParser_run(t *testing.T) {
 	tests := []struct {
 		name       string
 		stepCtx    *promotion.StepContext
-		cfg        builtin.TOMLParseConfig
+		cfg        stepconfig.TOMLParseConfig
 		files      map[string]string
 		assertions func(*testing.T, string, promotion.StepResult, error)
 	}{
 		{
 			name:    "successful run with outputs",
 			stepCtx: &promotion.StepContext{Project: "test-project"},
-			cfg: builtin.TOMLParseConfig{
+			cfg: stepconfig.TOMLParseConfig{
 				Path: "config.toml",
-				Outputs: []builtin.TomlParse{
+				Outputs: []stepconfig.TomlParse{
 					{Name: "appVersion", FromExpression: "app.version"},
 					{Name: "featureStatus", FromExpression: "features.newFeature"},
 				},
@@ -129,9 +129,9 @@ func Test_tomlParser_run(t *testing.T) {
 		{
 			name:    "failed to extract outputs",
 			stepCtx: &promotion.StepContext{Project: "test-project"},
-			cfg: builtin.TOMLParseConfig{
+			cfg: stepconfig.TOMLParseConfig{
 				Path:    "config.toml",
-				Outputs: []builtin.TomlParse{{Name: "invalidField", FromExpression: "nonexistent.path"}},
+				Outputs: []stepconfig.TomlParse{{Name: "invalidField", FromExpression: "nonexistent.path"}},
 			},
 			files: map[string]string{"config.toml": "[app]\nversion = \"1.0.0\"\n"},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
@@ -143,7 +143,7 @@ func Test_tomlParser_run(t *testing.T) {
 		{
 			name:    "no outputs provided",
 			stepCtx: &promotion.StepContext{Project: "test-project"},
-			cfg:     builtin.TOMLParseConfig{Path: "config.toml", Outputs: []builtin.TomlParse{}},
+			cfg:     stepconfig.TOMLParseConfig{Path: "config.toml", Outputs: []stepconfig.TomlParse{}},
 			files:   map[string]string{"config.toml": "[app]\nversion = \"1.0.0\"\n"},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
@@ -154,9 +154,9 @@ func Test_tomlParser_run(t *testing.T) {
 		{
 			name:    "handle empty TOML file",
 			stepCtx: &promotion.StepContext{Project: "test-project"},
-			cfg: builtin.TOMLParseConfig{
+			cfg: stepconfig.TOMLParseConfig{
 				Path:    "config.toml",
-				Outputs: []builtin.TomlParse{{Name: "key", FromExpression: "app.key"}},
+				Outputs: []stepconfig.TomlParse{{Name: "key", FromExpression: "app.key"}},
 			},
 			files: map[string]string{"config.toml": ""},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
@@ -168,9 +168,9 @@ func Test_tomlParser_run(t *testing.T) {
 		{
 			name:    "path is empty",
 			stepCtx: &promotion.StepContext{Project: "test-project"},
-			cfg: builtin.TOMLParseConfig{
+			cfg: stepconfig.TOMLParseConfig{
 				Path:    "",
-				Outputs: []builtin.TomlParse{{Name: "key", FromExpression: "app.key"}},
+				Outputs: []stepconfig.TomlParse{{Name: "key", FromExpression: "app.key"}},
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
@@ -181,9 +181,9 @@ func Test_tomlParser_run(t *testing.T) {
 		{
 			name:    "path is a directory instead of a file",
 			stepCtx: &promotion.StepContext{Project: "test-project"},
-			cfg: builtin.TOMLParseConfig{
+			cfg: stepconfig.TOMLParseConfig{
 				Path:    "config",
-				Outputs: []builtin.TomlParse{{Name: "key", FromExpression: "app.key"}},
+				Outputs: []stepconfig.TomlParse{{Name: "key", FromExpression: "app.key"}},
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
@@ -199,6 +199,7 @@ func Test_tomlParser_run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			stepCtx := tt.stepCtx
 			stepCtx.WorkDir = t.TempDir()
+			stepCtx.Root = newTestRoot(t, stepCtx.WorkDir)
 			for p, c := range tt.files {
 				require.NoError(t, os.MkdirAll(path.Join(stepCtx.WorkDir, path.Dir(p)), 0o700))
 				require.NoError(t, os.WriteFile(path.Join(stepCtx.WorkDir, p), []byte(c), 0o600))
@@ -252,7 +253,7 @@ func Test_tomlParser_readAndParseTOML(t *testing.T) {
 			err := os.WriteFile(filePath, []byte(tt.content), 0o600)
 			require.NoError(t, err)
 
-			result, err := tp.readAndParseTOML(tempDir, "test.toml")
+			result, err := tp.readAndParseTOML(newTestRoot(t, tempDir), "test.toml")
 
 			if tt.expectedErrMsg != "" {
 				assert.Error(t, err)
@@ -264,4 +265,20 @@ func Test_tomlParser_readAndParseTOML(t *testing.T) {
 			assert.EqualValues(t, tt.expected, result)
 		})
 	}
+}
+
+func Test_tomlParser_run_escapingSymlink(t *testing.T) {
+	workDir, outside := escapingWorkspace(t)
+	require.NoError(t, os.WriteFile(
+		filepath.Join(outside, "secret.toml"), []byte("k = \"v\"\n"), 0o600,
+	))
+	_, err := (&tomlParser{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		stepconfig.TOMLParseConfig{
+			Path:    "out/secret.toml",
+			Outputs: []stepconfig.TomlParse{{Name: "k", FromExpression: "k"}},
+		},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
 }

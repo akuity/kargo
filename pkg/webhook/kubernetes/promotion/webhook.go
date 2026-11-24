@@ -21,9 +21,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/kubernetes"
-	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
 	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
 )
@@ -44,10 +42,10 @@ var (
 )
 
 type webhook struct {
-	client  client.Client
-	decoder admission.Decoder
-
-	sender kargoEvent.Sender
+	client    client.Client
+	decoder   admission.Decoder
+	apiReader client.Reader
+	sender    kargoEvent.Sender
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -104,17 +102,44 @@ type webhook struct {
 }
 
 func SetupWebhookWithManager(
-	ctx context.Context,
 	cfg libWebhook.Config,
 	mgr ctrl.Manager,
+	sender kargoEvent.Sender,
 ) error {
 	w := newWebhook(
 		cfg,
 		mgr.GetClient(),
 		admission.NewDecoder(mgr.GetScheme()),
-		k8sevent.NewEventSender(libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "promotion-webhook")),
+		sender,
 	)
+	w.apiReader = mgr.GetAPIReader()
 	return libWebhook.SetupValidatingAndDefaultingWebhook(mgr, &kargoapi.Promotion{}, w)
+}
+
+// getUncached reads the Promotion's Stage and Freight from the API server. A missing
+// Freight is nil, as api.GetFreight returns it.
+func (w *webhook) getUncached(
+	ctx context.Context,
+	promo *kargoapi.Promotion,
+) (*kargoapi.Stage, *kargoapi.Freight, error) {
+	stage := &kargoapi.Stage{}
+	if err := w.apiReader.Get(ctx, types.NamespacedName{
+		Namespace: promo.Namespace,
+		Name:      promo.Spec.Stage,
+	}, stage); err != nil {
+		return nil, nil, fmt.Errorf("get stage from the API server: %w", err)
+	}
+	freight := &kargoapi.Freight{}
+	if err := w.apiReader.Get(ctx, types.NamespacedName{
+		Namespace: promo.Namespace,
+		Name:      promo.Spec.Freight,
+	}, freight); err != nil {
+		if apierrors.IsNotFound(err) {
+			return stage, nil, nil
+		}
+		return nil, nil, fmt.Errorf("get freight from the API server: %w", err)
+	}
+	return stage, freight, nil
 }
 
 func newWebhook(
@@ -222,13 +247,25 @@ func (w *webhook) Default(ctx context.Context, promo *kargoapi.Promotion) error 
 		// than by when they were created. Deterministic either way, and they are
 		// created within milliseconds of each other, but it is not what the
 		// comparator's doc comment claims.
-		if promo.Spec.Target != "" {
+		//
+		// A PromotionRollout's child goes further and carries no ULID at all: its
+		// name is a function of the rollout and the Target, so that creating it
+		// twice yields AlreadyExists rather than two Promotions running against
+		// one Target. Nothing on a target-aware Stage sorts Promotions by name.
+		switch {
+		case promo.Spec.PromotionRollout != "" && promo.Spec.Target != "":
+			promo.Name = api.GenerateRolloutChildPromotionName(
+				stage.Name,
+				promo.Spec.Target,
+				promo.Spec.PromotionRollout,
+			)
+		case promo.Spec.Target != "":
 			promo.Name = api.GenerateChildPromotionName(
 				stage.Name,
 				promo.Spec.Target,
 				promo.Spec.Freight,
 			)
-		} else {
+		default:
 			promo.Name = api.GeneratePromotionName(stage.Name, promo.Spec.Freight)
 		}
 
@@ -340,6 +377,13 @@ func (w *webhook) Default(ctx context.Context, promo *kargoapi.Promotion) error 
 	// Stage-based garbage collection entirely, whereas a PromotionRequest is
 	// itself owned by its Stage, so deleting the Stage still cascades to the
 	// Promotion through it.
+	//
+	// A PromotionRollout's child is owned by the Stage like any other
+	// Promotion: a rollout is not a Kubernetes resource, so it cannot own
+	// anything, and it recognizes its children by spec.promotionRollout
+	// instead. The database's record of the Promotion outlives the Promotion
+	// itself, so the rollout's history survives the Stage's garbage
+	// collection of it.
 	if !isPromotionRequestChild(promo) {
 		ownerRef := metav1.NewControllerRef(stage, kargoapi.GroupVersion.WithKind("Stage"))
 		promo.OwnerReferences = []metav1.OwnerReference{*ownerRef}
@@ -361,6 +405,19 @@ func isPromotionRequestChild(promo *kargoapi.Promotion) bool {
 	return owner != nil &&
 		owner.APIVersion == kargoapi.GroupVersion.String() &&
 		owner.Kind == promotionRequestKind
+}
+
+// isFanOutChild returns true if the Promotion was created as one part of a
+// fan-out to Targets, by either a PromotionRequest or a PromotionRollout.
+//
+// A PromotionRequest's child is recognized by its owner reference. A
+// PromotionRollout's child names its rollout in spec.promotionRollout, which
+// is the whole link: a rollout is not a Kubernetes resource and cannot own
+// anything. That field is trusted here because
+// validatePromotionRolloutIsSetByControlPlane has already confirmed that only
+// the control plane can set it.
+func isFanOutChild(promo *kargoapi.Promotion) bool {
+	return isPromotionRequestChild(promo) || promo.Spec.PromotionRollout != ""
 }
 
 // resolveOriginToFreight resolves promo's origin to the Freight that the
@@ -539,7 +596,7 @@ func (w *webhook) ValidateCreate(
 	}
 
 	if err := w.authorizeFn(ctx, promo, "create"); err != nil {
-		return nil, apierrors.NewInternalError(err)
+		return nil, err
 	}
 
 	if (promo.Spec.Freight == "") == (promo.Spec.Origin == nil) {
@@ -572,10 +629,15 @@ func (w *webhook) ValidateCreate(
 	}
 
 	var errs field.ErrorList
-	if fieldErr := validateTargetIsPromotionRequestChild(promo); fieldErr != nil {
+	// The rollout check comes first: the two fan-out checks trust
+	// spec.promotionRollout, and this is what makes it trustworthy.
+	if fieldErr := w.validatePromotionRolloutIsSetByControlPlane(req, promo); fieldErr != nil {
 		errs = append(errs, fieldErr)
 	}
-	if fieldErr := validateTargetAwareStageIsPromotedByRequest(promo, stage); fieldErr != nil {
+	if fieldErr := validateTargetIsFanOutChild(promo); fieldErr != nil {
+		errs = append(errs, fieldErr)
+	}
+	if fieldErr := validateTargetAwareStageIsPromotedByFanOut(promo, stage); fieldErr != nil {
 		errs = append(errs, fieldErr)
 	}
 	if len(errs) > 0 {
@@ -588,6 +650,24 @@ func (w *webhook) ValidateCreate(
 	})
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("get freight: %w", err))
+	}
+
+	if !stage.IsFreightAvailable(freight) && w.apiReader != nil {
+		// The cache can trail the writer that just made the Freight available, so
+		// confirm with the API server. If it can't answer, keep the cached decision.
+		logger := logging.LoggerFromContext(ctx)
+		if s, f, err := w.getUncached(ctx, promo); err != nil {
+			logger.Error(err, "confirming Freight availability; using the cached result",
+				"stage", promo.Spec.Stage, "freight", promo.Spec.Freight)
+		} else {
+			stage, freight = s, f
+			if stage.IsFreightAvailable(freight) {
+				logger.Debug(
+					"Freight available on the API server but not yet in the cache",
+					"stage", promo.Spec.Stage, "freight", promo.Spec.Freight,
+				)
+			}
+		}
 	}
 
 	if !stage.IsFreightAvailable(freight) {
@@ -612,53 +692,55 @@ func (w *webhook) ValidateCreate(
 	return nil, nil
 }
 
-// validateTargetIsPromotionRequestChild enforces that a Promotion naming a
-// Target is a child of a PromotionRequest.
+// validateTargetIsFanOutChild enforces that a Promotion naming a Target is
+// a child of a PromotionRequest or a PromotionRollout.
 //
-// spec.target is not a field a user fills in. A Target belongs to the fan-out a
-// PromotionRequest describes: the request resolves the Stage's selectors once,
-// records the result in its own spec.targets, and each of its Promotions
-// carries one of those names. Letting a Promotion name a Target on its own
-// would produce work no PromotionRequest is counting, so a Stage's Targets
-// could advance without any record of it having been requested.
+// spec.target is not a field a user fills in. A Target belongs to the fan-out
+// a PromotionRequest or PromotionRollout describes: it resolves the Stage's
+// selectors once, records the result in its own targets, and each of its
+// Promotions carries one of those names. Letting a Promotion name a Target on
+// its own would produce work nothing is counting, so a Stage's Targets could
+// advance without any record of it having been requested.
 //
 // Note this deliberately does not check that the Stage currently governs the
-// named Target. The Target came from a snapshot the PromotionRequest took when
-// it was created, and re-resolving selectors here would let a label edit
-// invalidate a Promotion already in flight -- the same reasoning that keeps the
+// named Target. The Target came from a snapshot taken when the fan-out was
+// created, and re-resolving selectors here would let a label edit invalidate
+// a Promotion already in flight -- the same reasoning that keeps the
 // PromotionRequest webhook from re-checking its own spec.targets.
-func validateTargetIsPromotionRequestChild(
+func validateTargetIsFanOutChild(
 	promo *kargoapi.Promotion,
 ) *field.Error {
-	if promo.Spec.Target == "" || isPromotionRequestChild(promo) {
+	if promo.Spec.Target == "" || isFanOutChild(promo) {
 		return nil
 	}
 	return field.Invalid(
 		field.NewPath("spec", "target"),
 		promo.Spec.Target,
-		"a Promotion may name a Target only when created by a PromotionRequest",
+		"a Promotion may name a Target only when created by a PromotionRequest "+
+			"or a PromotionRollout",
 	)
 }
 
-// validateTargetAwareStageIsPromotedByRequest enforces the converse: a Stage
-// that governs Targets is promoted to only through a PromotionRequest.
+// validateTargetAwareStageIsPromotedByFanOut enforces the converse: a Stage
+// that governs Targets is promoted to only through a PromotionRequest or a
+// PromotionRollout.
 //
 // A Stage promotes Freight either to itself or to the Targets it governs, never
 // both, so a Promotion created directly against a target-aware Stage would
 // promote to a destination the Stage does not have. Every in-tree caller -- the
 // promote-to-stage and promote-downstream endpoints, and the auto-promotion
-// loop -- already routes such a Stage to a PromotionRequest; this closes the
-// path a client can still reach by creating the Promotion itself.
+// loop -- already routes such a Stage to a fan-out; this closes the path a
+// client can still reach by creating the Promotion itself.
 //
 // Only creates are checked. A Stage can gain a targets block while Promotions
 // created before it are still running, and those must remain updatable -- an
 // abort request is an update, and refusing it would leave a running Promotion
 // with no way to stop.
-func validateTargetAwareStageIsPromotedByRequest(
+func validateTargetAwareStageIsPromotedByFanOut(
 	promo *kargoapi.Promotion,
 	stage *kargoapi.Stage,
 ) *field.Error {
-	if !api.IsTargetAware(stage) || isPromotionRequestChild(promo) {
+	if !stage.IsTargetAware() || isFanOutChild(promo) {
 		return nil
 	}
 	return field.Invalid(
@@ -666,9 +748,34 @@ func validateTargetAwareStageIsPromotedByRequest(
 		promo.Spec.Stage,
 		fmt.Sprintf(
 			"Stage %q selects Targets; it is promoted to with a PromotionRequest "+
-				"rather than a Promotion",
+				"or a PromotionRollout rather than a Promotion",
 			promo.Spec.Stage,
 		),
+	)
+}
+
+// validatePromotionRolloutIsSetByControlPlane enforces that only the Kargo
+// control plane creates a Promotion naming a PromotionRollout.
+//
+// spec.promotionRollout is not a field a user fills in. A PromotionRollout is
+// not a Kubernetes resource, so unlike a PromotionRequest it cannot own the
+// Promotions it creates, and there is no owner reference to check. The field
+// is the whole link, and the database keeps it once recorded. Letting any
+// client with rights to create Promotions set it would let that client attach
+// work to a rollout's history that the rollout never asked for.
+//
+// Only creates are checked. spec is immutable, so a Promotion admitted with a
+// rollout keeps it, and one admitted without can never gain one.
+func (w *webhook) validatePromotionRolloutIsSetByControlPlane(
+	req admission.Request,
+	promo *kargoapi.Promotion,
+) *field.Error {
+	if promo.Spec.PromotionRollout == "" || w.isRequestFromKargoControlplaneFn(req) {
+		return nil
+	}
+	return field.Forbidden(
+		field.NewPath("spec", "promotionRollout"),
+		"only the Kargo control plane may create a Promotion naming a PromotionRollout",
 	)
 }
 
@@ -678,7 +785,7 @@ func (w *webhook) ValidateUpdate(
 	promo *kargoapi.Promotion,
 ) (admission.Warnings, error) {
 	if err := w.authorizeFn(ctx, promo, "update"); err != nil {
-		return nil, apierrors.NewInternalError(err)
+		return nil, err
 	}
 
 	// PromotionSpecs are meant to be immutable
@@ -700,8 +807,10 @@ func (w *webhook) ValidateUpdate(
 	// justifies it is metadata and is not. Re-check it so a Promotion cannot be
 	// severed from the PromotionRequest that created it -- by an apply whose
 	// manifest simply omits ownerReferences, if nothing else -- and go on
-	// promoting to a Target as an orphan.
-	if fieldErr := validateTargetIsPromotionRequestChild(promo); fieldErr != nil {
+	// promoting to a Target as an orphan. A PromotionRollout's child has no
+	// such exposure: its link is spec.promotionRollout, immutable with the
+	// rest of spec.
+	if fieldErr := validateTargetIsFanOutChild(promo); fieldErr != nil {
 		return nil, apierrors.NewInvalid(
 			promotionGroupKind,
 			promo.Name,
@@ -794,10 +903,13 @@ func (w *webhook) recordPromotionCreatedEvent(
 	f *kargoapi.Freight,
 ) {
 	actor := api.FormatEventKubernetesUserActor(req.UserInfo)
-	evt := kargoEvent.NewPromotionCreated(fmt.Sprintf("Promotion created for Stage %q by %q",
+	evt, err := kargoEvent.NewPromotionCreated(fmt.Sprintf("Promotion created for Stage %q by %q",
 		p.Spec.Stage,
 		actor), actor, p, f)
-	if err := w.sender.Send(ctx, evt); err != nil {
+	if err == nil {
+		err = w.sender.Send(ctx, evt)
+	}
+	if err != nil {
 		logging.LoggerFromContext(ctx).Error(
 			err,
 			"failed to send Promotion created event",

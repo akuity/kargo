@@ -1,0 +1,129 @@
+suite: _helpers.tpl/kargo.componentLabels
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/api/deployment.yaml
+  - templates/api/configmap.yaml
+  - templates/api/secret.yaml
+  - templates/management-controller/deployment.yaml
+  - templates/management-controller/configmap.yaml
+  - templates/garbage-collector/cron-job.yaml
+  - templates/garbage-collector/configmap.yaml
+  - templates/postgres/statefulset.yaml
+  - templates/postgres/secret.yaml
+tests:
+  # Regression: global.labels used to be emitted twice on resources that also
+  # merge a component's labels, once through kargo.labels and again through
+  # the merge. A key set in both places was then repeated, which YAML forbids.
+  - it: emits a global label once on the api Deployment
+    template: templates/api/deployment.yaml
+    set:
+      global.labels:
+        team: platform
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: platform
+      - exists:
+          path: metadata.labels["helm.sh/chart"]
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: api
+
+  - it: lets a component label override a global label on the api Deployment
+    template: templates/api/deployment.yaml
+    set:
+      global.labels:
+        team: platform
+        env: dev
+      api.labels:
+        team: api-team
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: api-team
+      - equal:
+          path: metadata.labels.env
+          value: dev
+      # The pod template only merges podLabels, so it carries the global label
+      # untouched.
+      - equal:
+          path: spec.template.metadata.labels.team
+          value: platform
+
+  - it: lets a component label override a global label on the management controller Deployment
+    template: templates/management-controller/deployment.yaml
+    set:
+      global.labels:
+        team: platform
+      managementController.labels:
+        team: mc-team
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: mc-team
+
+  - it: lets a component label override a global label on the garbage collector CronJob
+    template: templates/garbage-collector/cron-job.yaml
+    set:
+      global.labels:
+        team: platform
+      garbageCollector.labels:
+        team: gc-team
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: gc-team
+
+  - it: lets a component label override a global label on the postgres StatefulSet
+    template: templates/postgres/statefulset.yaml
+    set:
+      global.labels:
+        team: platform
+      database.postgres.labels:
+        team: db-team
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: db-team
+
+  - it: quotes non-string label values
+    template: templates/api/deployment.yaml
+    set:
+      global.labels:
+        enabled: true
+      api.labels:
+        tier: 1
+    asserts:
+      - equal:
+          path: metadata.labels.enabled
+          value: "true"
+      - equal:
+          path: metadata.labels.tier
+          value: "1"
+
+---
+suite: _helpers.tpl/kargo.componentLabels (namespaces)
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/system-resources-namespace/namespace.yaml
+  - templates/shared-resources-namespace/namespace.yaml
+tests:
+  - it: lets extra namespace labels override global labels
+    set:
+      global.labels:
+        team: platform
+      global.systemResources.extraNamespaceLabels:
+        team: system
+      global.sharedResources.extraNamespaceLabels:
+        team: shared
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: system
+        template: templates/system-resources-namespace/namespace.yaml
+      - equal:
+          path: metadata.labels.team
+          value: shared
+        template: templates/shared-resources-namespace/namespace.yaml

@@ -16,7 +16,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_gitCloner_convert(t *testing.T) {
@@ -35,6 +35,24 @@ func Test_gitCloner_convert(t *testing.T) {
 			},
 			expectedProblems: []string{
 				"repoURL: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "repoURL is an SSH URL",
+			config: promotion.Config{
+				"repoURL": "ssh://git@github.com/example/repo.git",
+			},
+			expectedProblems: []string{
+				"repoURL: Does not match pattern '^https?://'",
+			},
+		},
+		{
+			name: "repoURL is an SCP-style URL",
+			config: promotion.Config{
+				"repoURL": "git@github.com:example/repo.git",
+			},
+			expectedProblems: []string{
+				"repoURL: Does not match pattern '^https?://'",
 			},
 		},
 		{
@@ -345,16 +363,14 @@ func Test_gitCloner_run(t *testing.T) {
 	runner, ok := r.(*gitCloner)
 	require.True(t, ok)
 
-	stepCtx := &promotion.StepContext{
-		WorkDir: t.TempDir(),
-	}
+	stepCtx := newTestStepContext(t, t.TempDir())
 
 	res, err := runner.run(
 		t.Context(),
 		stepCtx,
-		builtin.GitCloneConfig{
+		stepconfig.GitCloneConfig{
 			RepoURL: fmt.Sprintf("%s/test.git", server.URL),
-			Checkout: []builtin.Checkout{
+			Checkout: []stepconfig.Checkout{
 				{
 					Commit: srcBranchCommitID,
 					Path:   "src",
@@ -398,6 +414,20 @@ func Test_gitCloner_run(t *testing.T) {
 		},
 		res.Output["commits"],
 	)
+
+	// A checkout path that resolves outside the working directory is refused.
+	escapingWorkDir, outside := escapingWorkspace(t)
+	res, err = runner.run(
+		t.Context(),
+		newTestStepContext(t, escapingWorkDir),
+		stepconfig.GitCloneConfig{
+			RepoURL:  fmt.Sprintf("%s/test.git", server.URL),
+			Checkout: []stepconfig.Checkout{{Commit: srcBranchCommitID, Path: "out/escaped"}},
+		},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+	require.NoDirExists(t, filepath.Join(outside, "escaped"))
 }
 
 func Test_gitCloner_run_with_submodules(t *testing.T) {
@@ -457,16 +487,14 @@ func Test_gitCloner_run_with_submodules(t *testing.T) {
 	runner, ok := r.(*gitCloner)
 	require.True(t, ok)
 
-	stepCtx := &promotion.StepContext{
-		WorkDir: t.TempDir(),
-	}
+	stepCtx := newTestStepContext(t, t.TempDir())
 
 	res, err := runner.run(
 		t.Context(),
 		stepCtx,
-		builtin.GitCloneConfig{
+		stepconfig.GitCloneConfig{
 			RepoURL:           mainRepoURL,
-			Checkout:          []builtin.Checkout{{Commit: mainCommitID, Path: "src"}},
+			Checkout:          []stepconfig.Checkout{{Commit: mainCommitID, Path: "src"}},
 			RecurseSubmodules: true,
 		},
 	)

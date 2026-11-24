@@ -1025,7 +1025,7 @@ func TestStepEvaluator_Vars(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			evaluator := NewStepEvaluator(testClient, nil)
+			evaluator := NewStepEvaluator(testClient, nil, nil)
 			vars, err := evaluator.Vars(
 				t.Context(),
 				tt.promoCtx,
@@ -1188,6 +1188,7 @@ func TestStepEvaluator_ShouldSkip(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			evaluator := NewStepEvaluator(
 				fake.NewClientBuilder().Build(),
+				nil,
 				nil,
 			)
 			got, err := evaluator.ShouldSkip(
@@ -1765,7 +1766,7 @@ func TestStepEvaluator_Config(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			evaluator := NewStepEvaluator(testClient, nil)
+			evaluator := NewStepEvaluator(testClient, nil, nil)
 			stepCfg, err := evaluator.Config(
 				t.Context(),
 				tt.promoCtx,
@@ -1900,7 +1901,7 @@ func TestStepEvaluator_BuildStepContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			evaluator := NewStepEvaluator(testClient, nil)
+			evaluator := NewStepEvaluator(testClient, nil, nil)
 			stepCtx, err := evaluator.BuildStepContext(
 				t.Context(),
 				tt.promoCtx,
@@ -1977,7 +1978,7 @@ func TestStepEvaluator_Config_target(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			evaluator := NewStepEvaluator(testClient, nil)
+			evaluator := NewStepEvaluator(testClient, nil, nil)
 			cfg, err := evaluator.Config(t.Context(), tt.promoCtx, tt.step)
 			tt.assert(t, cfg, err)
 		})

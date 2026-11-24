@@ -15,8 +15,9 @@ export interface DeepLink {
    */
   description?: string;
   /**
-   * If is an optional expression condition. When set, the link is only shown
-   * when the expression evaluates to true.
+   * If is an optional expr-lang expression, offset by ${{ }}, that must
+   * evaluate to a boolean. When set, the link is shown only when it
+   * evaluates to true.
    *
    * +optional
    */
@@ -28,7 +29,8 @@ export interface DeepLink {
    */
   title?: string;
   /**
-   * URL is an expression that resolves to the link's href.
+   * URL is the link's href. It may contain expr-lang expressions offset by
+   * ${{ }}, evaluated against the resource as freight or stage.
    *
    * +kubebuilder:validation:MinLength=1
    */

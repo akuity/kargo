@@ -3,9 +3,9 @@ include $(CURDIR)/hack/tools.mk
 SHELL	      ?= /bin/bash
 EXTENDED_PATH ?= $(CURDIR)/hack/bin:$(PATH)
 
-ARGO_CD_CHART_VERSION		:= 9.4.3
-ARGO_ROLLOUTS_CHART_VERSION := 2.40.6
-CERT_MANAGER_CHART_VERSION 	:= 1.19.3
+ARGO_CD_CHART_VERSION		:= 10.10.5
+ARGO_ROLLOUTS_CHART_VERSION := 2.43.8
+CERT_MANAGER_CHART_VERSION 	:= 1.21.2
 
 GO_LINT_EXTRA_FLAGS 	?= --output.text.print-issued-lines --output.text.colors
 
@@ -145,7 +145,7 @@ test-unit: install-helm
 		for mod in $$(find . -maxdepth 5 -type f -name 'go.mod' | grep -v tools); do \
 			echo "Testing $$(dirname $${mod}) ..."; \
 			cd $$(dirname $${mod}); \
-			PATH=$(EXTENDED_PATH) go test \
+			PATH="$(EXTENDED_PATH)" go test \
 				-v \
 				-timeout=300s \
 				-race \
@@ -156,6 +156,23 @@ test-unit: install-helm
 			cd - > /dev/null; \
 		done; \
 	}
+
+# The development database, which db-migrate and test-db target by default.
+DATABASE_URL ?= postgres://kargo:kargo@127.0.0.1:15432/kargo?sslmode=disable
+
+# Runs the database integration tests against DATABASE_URL. Each test creates
+# and drops its own database on that server. Coverage spans every package under
+# pkg/database, since much of it (sqlc queries, stores) is only reachable here.
+.PHONY: test-db
+test-db:
+	DATABASE_URL=$(DATABASE_URL) go test \
+		-race \
+		-count=1 \
+		-tags=integration,db \
+		-coverprofile=coverage.txt \
+		-covermode=atomic \
+		-coverpkg=./pkg/database/... \
+		./pkg/database/...
 
 ################################################################################
 # Builds                                                                       #
@@ -231,23 +248,11 @@ build-nightly-cli:
 
 
 ################################################################################
-# Used to build the CLI with the UI embedded                                   #
-################################################################################
-
-.PHONY: build-ui
-build-ui:
-	cd ui && NODE_ENV=production BUILD_TARGET_PATH=../pkg/server/ui pnpm run build --emptyOutDir
-	touch pkg/server/ui/.keep
-
-.PHONY: build-cli-with-ui
-build-cli-with-ui: build-ui build-cli
-
-################################################################################
 # Code generation: To be run after modifications to API types                  #
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-openapi codegen-controller codegen-schema-to-go codegen-ui codegen-docs
+codegen: codegen-openapi codegen-controller codegen-schema-to-go codegen-ui codegen-docs codegen-db
 
 .PHONY: codegen-openapi
 codegen-openapi: install-jq install-openapi-generator-cli
@@ -282,6 +287,7 @@ codegen-controller:
 .PHONY: codegen-bitbucket-client
 codegen-bitbucket-client:
 	cd pkg/gitprovider/bitbucket/cloud && go tool oapi-codegen --config spec/oapi-codegen.yaml spec/bitbucket.gen.json
+	cd pkg/gitprovider/bitbucket/datacenter && go tool oapi-codegen --config spec/oapi-codegen.yaml spec/bitbucket-datacenter.gen.json
 
 .PHONY: codegen-schema-to-go
 codegen-schema-to-go:
@@ -299,6 +305,12 @@ codegen-docs:
 	npm install -g @bitnami/readme-generator-for-helm
 	pnpm install --dir docs
 	bash hack/helm-docs/helm-docs.sh
+
+.PHONY: codegen-db
+codegen-db:
+ifneq ($(wildcard db/queries/*.sql),)
+	go tool sqlc generate
+endif
 
 ################################################################################
 # Hack: Targets to help you hack                                               #
@@ -414,30 +426,43 @@ hack-kind-up:
 	# ctlptl shells out to the `kind` binary, so build it (pinned via go.mod)
 	# onto PATH before invoking ctlptl.
 	go build -o hack/bin/kind sigs.k8s.io/kind
-	PATH=$(EXTENDED_PATH) go tool ctlptl apply -f hack/kind/cluster.yaml
+	PATH="$(EXTENDED_PATH)" go tool ctlptl apply -f hack/kind/cluster.yaml
 
 .PHONY: hack-k3d-up
 hack-k3d-up: install-k3d
-	PATH=$(EXTENDED_PATH) go tool ctlptl apply -f hack/k3d/cluster.yaml
+	PATH="$(EXTENDED_PATH)" go tool ctlptl apply -f hack/k3d/cluster.yaml
 
 .PHONY: hack-tilt-up
 hack-tilt-up: install-tilt install-helm
-	PATH=$(EXTENDED_PATH) $(TILT) up
+	PATH="$(EXTENDED_PATH)" $(TILT) up
 
 .PHONY: hack-tilt-down
 hack-tilt-down: install-tilt
-	PATH=$(EXTENDED_PATH) $(TILT) down
+	PATH="$(EXTENDED_PATH)" $(TILT) down
+
+# Applies pending migrations to the development database through the same
+# subcommand the chart's migration Job runs, so development exercises the
+# production path. Override DATABASE_URL to target another database.
+.PHONY: db-migrate
+db-migrate:
+	DATABASE_URL=$(DATABASE_URL) go run ./cmd/controlplane migrate
+
+# Opens psql inside the development PostgreSQL pod, so no client needs to be
+# installed locally and the client always matches the server.
+.PHONY: db-shell
+db-shell:
+	kubectl exec -it -n kargo kargo-postgres-0 -- psql -U kargo -d kargo
 
 .PHONY: hack-kind-down
 hack-kind-down:
 	# ctlptl shells out to the `kind` binary, so build it (pinned via go.mod)
 	# onto PATH before invoking ctlptl.
 	go build -o hack/bin/kind sigs.k8s.io/kind
-	PATH=$(EXTENDED_PATH) go tool ctlptl delete -f hack/kind/cluster.yaml
+	PATH="$(EXTENDED_PATH)" go tool ctlptl delete -f hack/kind/cluster.yaml
 
 .PHONY: hack-k3d-down
 hack-k3d-down: install-k3d
-	PATH=$(EXTENDED_PATH) go tool ctlptl delete -f hack/k3d/cluster.yaml
+	PATH="$(EXTENDED_PATH)" go tool ctlptl delete -f hack/k3d/cluster.yaml
 
 .PHONY: hack-install-prereqs
 hack-install-prereqs: hack-install-cert-manager hack-install-argocd hack-install-argo-rollouts
@@ -465,10 +490,6 @@ hack-install-argocd: install-helm
 		--set 'configs.params."application\.namespaces"=*' \
 		--set server.service.type=NodePort \
 		--set server.service.nodePortHttp=30080 \
-		--set server.extensions.enabled=true \
-		--set server.extensions.extensionList[0].name=argo-rollouts \
-		--set server.extensions.extensionList[0].env[0].name=EXTENSION_URL \
-		--set server.extensions.extensionList[0].env[0].value=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.7/extension.tar \
 		--wait
 
 .PHONY: hack-install-argo-rollouts

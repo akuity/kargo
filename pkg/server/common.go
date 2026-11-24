@@ -13,11 +13,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/yaml"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/api"
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/server/auth/can"
 	"github.com/akuity/kargo/pkg/server/rbac"
 	"github.com/akuity/kargo/pkg/server/user"
 )
@@ -81,6 +80,12 @@ var (
 		Kind:    "Freight",
 	}
 
+	targetGVK = schema.GroupVersionKind{
+		Group:   kargoapi.GroupVersion.Group,
+		Version: kargoapi.GroupVersion.Version,
+		Kind:    "Target",
+	}
+
 	errSecretManagementDisabled = libhttp.ErrorStr(
 		"secret management is not enabled",
 		http.StatusNotImplemented,
@@ -93,6 +98,15 @@ var (
 
 	errEmptySecret = libhttp.ErrorStr(
 		"cannot have empty secret",
+		http.StatusBadRequest,
+	)
+
+	// errTargetNotKubernetesResource is returned when a Target reaches the
+	// generic resource endpoints, which only speak Kubernetes. Targets live
+	// in the database and have endpoints of their own.
+	errTargetNotKubernetesResource = libhttp.ErrorStr(
+		"Targets are not Kubernetes resources; "+
+			"use /v1beta1/projects/{project}/targets instead",
 		http.StatusBadRequest,
 	)
 )
@@ -186,12 +200,12 @@ func annotateResourceWithCreator(
 	if gvk := obj.GroupVersionKind(); gvk != projectGVK && gvk != promotionGVK {
 		return
 	}
-	if userInfo, found := user.InfoFromContext(ctx); found {
+	if userInfo, found := user.IdentityFromContext(ctx); found {
 		annotations := obj.GetAnnotations()
 		if annotations == nil {
 			annotations = map[string]string{}
 		}
-		annotations[kargoapi.AnnotationKeyCreateActor] = api.FormatEventUserActor(userInfo)
+		annotations[kargoapi.AnnotationKeyCreateActor] = userInfo.Actor()
 		obj.SetAnnotations(annotations)
 	}
 }
@@ -218,13 +232,7 @@ func (s *server) authorizeResourceCreate(
 		// rejection of the malformed resource to normal validation.
 		return nil
 	}
-	return s.authorizeFn(
-		ctx,
-		"promote",
-		kargoapi.GroupVersion.WithResource("stages"),
-		"",
-		client.ObjectKey{Namespace: obj.GetNamespace(), Name: stage},
-	)
+	return s.authorize(ctx, can.Promote().Stage(obj.GetNamespace(), stage))
 }
 
 // verifyNoEscalation blocks a generic resource create or update from conferring

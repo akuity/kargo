@@ -62,7 +62,7 @@ tests:
         isKind:
           of: ClusterRole
 
-  - it: grants admins full PromotionRequest access
+  - it: grants admins full PromotionRequest and PromotionRollout access
     documentSelector:
       path: metadata.name
       value: kargo-admin
@@ -79,9 +79,9 @@ tests:
               - projects
               - projectconfigs
               - promotionrequests
+              - promotionrollouts
               - promotiontasks
               - stages
-              - targets
               - warehouses
             verbs:
               - create
@@ -93,7 +93,24 @@ tests:
               - update
               - watch
 
-  - it: grants viewers read-only PromotionRequest access
+  - it: grants admins read-only Target access
+    documentSelector:
+      path: metadata.name
+      value: kargo-admin
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - kargo.akuity.io
+            resources:
+              - targets
+            verbs:
+              - get
+              - list
+              - watch
+
+  - it: grants viewers read-only PromotionRequest and PromotionRollout access
     documentSelector:
       path: metadata.name
       value: kargo-viewer
@@ -111,6 +128,7 @@ tests:
               - projectconfigs
               - promotions
               - promotionrequests
+              - promotionrollouts
               - promotiontasks
               - stages
               - targets

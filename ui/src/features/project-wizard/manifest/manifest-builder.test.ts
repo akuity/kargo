@@ -507,6 +507,38 @@ test('stageManifest maps color, requested freight, and promotion steps', () => {
   });
 });
 
+const stageWithStepDescriptions = (descriptions: (string | undefined)[]) =>
+  stageManifest(
+    {
+      name: 'dev',
+      requestedFreight: [],
+      steps: descriptions.map((description, i) => ({
+        identifier: 'git-clone',
+        config: {},
+        state: { repoURL: 'x' },
+        as: `step${i}`,
+        description
+      }))
+    },
+    'my-project'
+  );
+
+test('stageManifest carries a step description into the manifest', () => {
+  const manifest = stageWithStepDescriptions(['  clones the repo  ']);
+  // trimmed, so surrounding whitespace never reaches the API
+  expect(manifest.spec?.promotionTemplate?.spec?.steps?.[0]?.description).toBe('clones the repo');
+});
+
+test('stageManifest leaves out blank step descriptions', () => {
+  // the API rejects description: "" (minLength 1), so the key must not exist
+  const manifest = stageWithStepDescriptions([undefined, '', '   ']);
+  const steps = manifest.spec?.promotionTemplate?.spec?.steps ?? [];
+  expect(steps).toHaveLength(3);
+  for (const step of steps) {
+    expect(step).not.toHaveProperty('description');
+  }
+});
+
 test('stageManifest omits promotionTemplate when there are no steps', () => {
   const manifest = stageManifest(
     {

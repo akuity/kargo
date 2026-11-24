@@ -66,6 +66,21 @@ func Test_server_updateResources(t *testing.T) {
 				},
 			},
 			{
+				name: "Targets are not Kubernetes resources",
+				// A Target manifest, as a user would hand to kargo apply; the Go
+				// type carries no TypeMeta since Targets are not custom resources.
+				body: mustJSONBody(map[string]any{
+					"apiVersion": kargoapi.GroupVersion.String(),
+					"kind":       "Target",
+					"metadata":   map[string]any{"namespace": testProject.Name, "name": "us-east-1"},
+				}),
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+					require.Contains(t, w.Body.String(), "/v1beta1/projects/{project}/targets")
+				},
+			},
+			{
 				name: "resource does not exist",
 				body: mustJSONBody(testWarehouse),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
@@ -502,15 +517,15 @@ func Test_server_updateResources(t *testing.T) {
 func Test_server_updateResources_clusterScopedNamespaceSpoofing(t *testing.T) {
 	const projectName = "ghsa-mmqq-repro"
 
-	projectCreatorUser := user.Info{
-		KubernetesUserInfo: &authnv1.UserInfo{
+	projectCreatorUser := user.KubernetesUser{
+		UserInfo: authnv1.UserInfo{
 			Username: "system:serviceaccount:kargo:kargo-project-creator",
 		},
 	}
 
 	// capturedClient is reassigned by each serverSetup before assertions reads
 	// it. Test cases are run sequentially, so this is safe (see the same
-	// pattern used for the freight event recorder in create_resource_test.go).
+	// pattern used for the freight event sender in create_resource_test.go).
 	var capturedClient client.WithWatch
 
 	testRESTEndpoint(
@@ -524,7 +539,7 @@ func Test_server_updateResources_clusterScopedNamespaceSpoofing(t *testing.T) {
 					s.authorizeFn = s.client.Authorize
 				},
 				ctxSetup: func(ctx context.Context) context.Context {
-					return user.ContextWithInfo(ctx, projectCreatorUser)
+					return user.ContextWithIdentity(ctx, projectCreatorUser)
 				},
 				body: mustJSONBody(&kargoapi.ClusterPromotionTask{
 					TypeMeta: metav1.TypeMeta{
@@ -547,7 +562,7 @@ func Test_server_updateResources_clusterScopedNamespaceSpoofing(t *testing.T) {
 					s.authorizeFn = s.client.Authorize
 				},
 				ctxSetup: func(ctx context.Context) context.Context {
-					return user.ContextWithInfo(ctx, projectCreatorUser)
+					return user.ContextWithIdentity(ctx, projectCreatorUser)
 				},
 				body: mustJSONArrayBody(
 					&kargoapi.Project{

@@ -1,0 +1,19 @@
+{{- include "kargo.database.validate" . }}
+{{- if include "kargo.migrations.enabled" . }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "kargo.migrations.jobName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.componentLabels" (dict "root" . "labels" .Values.database.migrations.labels) | nindent 4 }}
+    {{- include "kargo.migrations.labels" . | nindent 4 }}
+  {{- include "kargo.annotations" (dict "root" . "annotations" .Values.database.migrations.annotations) | nindent 2 }}
+spec:
+  backoffLimit: {{ .Values.database.migrations.backoffLimit }}
+  {{- with .Values.database.migrations.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ . }}
+  {{- end }}
+  template:
+    {{- include "kargo.migrations.podTemplate" . | nindent 4 }}
+{{- end }}

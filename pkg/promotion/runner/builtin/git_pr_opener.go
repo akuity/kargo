@@ -14,13 +14,14 @@ import (
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 
-	_ "github.com/akuity/kargo/pkg/gitprovider/azure"           // Azure provider registration
-	_ "github.com/akuity/kargo/pkg/gitprovider/bitbucket/cloud" // Bitbucket Cloud provider registration
-	_ "github.com/akuity/kargo/pkg/gitprovider/gitea"           // Gitea provider registration
-	_ "github.com/akuity/kargo/pkg/gitprovider/github"          // GitHub provider registration
-	_ "github.com/akuity/kargo/pkg/gitprovider/gitlab"          // GitLab provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/azure"                // Azure provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/bitbucket/cloud"      // Bitbucket Cloud provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/bitbucket/datacenter" // Bitbucket Data Center provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/gitea"                // Gitea provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/github"               // GitHub provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/gitlab"               // GitLab provider registration
 )
 
 const stepKindGitOpenPR = "git-open-pr"
@@ -70,15 +71,15 @@ func (g *gitPROpener) Run(
 }
 
 // convert validates the configuration against a JSON schema and converts it
-// into a builtin.GitOpenPRConfig struct.
-func (g *gitPROpener) convert(cfg promotion.Config) (builtin.GitOpenPRConfig, error) {
-	return validateAndConvert[builtin.GitOpenPRConfig](g.schemaLoader, cfg, stepKindGitOpenPR)
+// into a stepconfig.GitOpenPRConfig struct.
+func (g *gitPROpener) convert(cfg promotion.Config) (stepconfig.GitOpenPRConfig, error) {
+	return validateAndConvert[stepconfig.GitOpenPRConfig](g.schemaLoader, cfg, stepKindGitOpenPR)
 }
 
 func (g *gitPROpener) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.GitOpenPRConfig,
+	cfg stepconfig.GitOpenPRConfig,
 ) (promotion.StepResult, error) {
 	sourceBranch := cfg.SourceBranch
 
@@ -114,9 +115,8 @@ func (g *gitPROpener) run(
 	}
 	if creds != nil {
 		repoCreds = &git.RepoCredentials{
-			Username:      creds.Username,
-			Password:      creds.Password,
-			SSHPrivateKey: creds.SSHPrivateKey,
+			Username: creds.Username,
+			Password: creds.Password,
 		}
 	}
 

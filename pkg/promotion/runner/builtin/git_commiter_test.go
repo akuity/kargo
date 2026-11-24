@@ -13,7 +13,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 func Test_gitCommitter_convert(t *testing.T) {
@@ -55,100 +55,8 @@ func Test_gitCommitter_convert(t *testing.T) {
 			},
 		},
 		{
-			name: "author is not specified",
-			config: promotion.Config{ // Should be completely valid
-				"path":    "/tmp/foo",
-				"message": "fake commit message",
-			},
-		},
-		{
-			name: "author email is not specified",
-			config: promotion.Config{ // If author is specified, email must be specified
-				"author": promotion.Config{
-					"name": "Tony Stark",
-				},
-				"path":    "/tmp/foo",
-				"message": "fake commit message",
-			},
-			expectedProblems: []string{
-				"invalid git-commit config: author: email is required",
-			},
-		},
-		{
-			name: "author email is empty string",
-			config: promotion.Config{
-				"author": promotion.Config{
-					"name":  "Tony Stark",
-					"email": "",
-				},
-				"path":    "/tmp/foo",
-				"message": "fake commit message",
-			},
-			expectedProblems: []string{
-				"invalid git-commit config: author.email: Does not match format 'email'",
-			},
-		},
-		{
-			name: "author name is not specified",
-			config: promotion.Config{ // If author is specified, name must be specified
-				"author": promotion.Config{
-					"email": "example@example.com",
-				},
-				"path":    "/tmp/foo",
-				"message": "fake commit message",
-			},
-			expectedProblems: []string{
-				"invalid git-commit config: author: name is required",
-			},
-		},
-		{
-			name: "author name is empty string",
-			config: promotion.Config{
-				"author": promotion.Config{
-					"name":  "",
-					"email": "example@example.com",
-				},
-				"path":    "/tmp/foo",
-				"message": "fake commit message",
-			},
-			expectedProblems: []string{
-				"invalid git-commit config: author.name: String length must be greater than or equal to 1",
-			},
-		},
-		{
-			name: "author signingKey is empty string",
-			config: promotion.Config{
-				"author": promotion.Config{
-					"name":       "Tony Stark",
-					"email":      "tony@starkindustries.com",
-					"signingKey": "",
-				},
-				"path":    "/tmp/foo",
-				"message": "fake commit message",
-			},
-			// No expected problems because signingKey is optional
-		},
-		{
-			name: "author signingKey is missing",
-			config: promotion.Config{
-				"author": promotion.Config{
-					"name":  "Tony Stark",
-					"email": "tony@starkindustries.com",
-					// signingKey is absent
-				},
-				"path":    "/tmp/foo",
-				"message": "fake commit message",
-			},
-			// No expected problems because signingKey is optional
-		},
-		{
 			name: "valid kitchen sink",
-			config: promotion.Config{
-				"author": promotion.Config{
-					"email":      "tony@starkindustries.com",
-					"name":       "Tony Stark",
-					"signingKey": "valid-signing-key",
-				},
+			config: promotion.Config{ // Should be completely valid
 				"path":    "/tmp/foo",
 				"message": "fake commit message",
 			},
@@ -218,14 +126,12 @@ func Test_gitCommitter_run(t *testing.T) {
 	runner, ok := r.(*gitCommitter)
 	require.True(t, ok)
 
-	stepCtx := &promotion.StepContext{
-		WorkDir: workDir,
-	}
+	stepCtx := newTestStepContext(t, workDir)
 
 	res, err := runner.run(
 		t.Context(),
 		stepCtx,
-		builtin.GitCommitConfig{
+		stepconfig.GitCommitConfig{
 			Path:    "master",
 			Message: "Initial commit",
 		},
@@ -246,7 +152,7 @@ func Test_gitCommitter_run(t *testing.T) {
 	res, err = runner.run(
 		t.Context(),
 		stepCtx,
-		builtin.GitCommitConfig{
+		stepconfig.GitCommitConfig{
 			Path:    "master",
 			Message: "No-Op commit",
 		},
@@ -259,4 +165,15 @@ func Test_gitCommitter_run(t *testing.T) {
 	actualCommit, ok = res.Output[stateKeyCommit]
 	require.True(t, ok)
 	require.Equal(t, expectedCommit, actualCommit)
+}
+
+func Test_gitCommitter_run_escapingSymlink(t *testing.T) {
+	workDir, _ := escapingWorkspace(t)
+	res, err := (&gitCommitter{}).run(
+		t.Context(),
+		newTestStepContext(t, workDir),
+		stepconfig.GitCommitConfig{Path: "out/repo", Message: "msg"},
+	)
+	require.ErrorContains(t, err, "path escapes from parent")
+	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
 }

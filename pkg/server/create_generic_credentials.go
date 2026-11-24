@@ -10,6 +10,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/server/request"
 )
 
 type genericCredentials struct {
@@ -48,15 +49,11 @@ type createGenericCredentialsRequest struct {
 // @Success 201 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/projects/{project}/generic-credentials [post]
 func (s *server) createProjectGenericCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 	project := c.Param("project")
 
 	var req createGenericCredentialsRequest
-	if !bindJSONOrError(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
@@ -95,14 +92,10 @@ func (s *server) createProjectGenericCredentials(c *gin.Context) {
 // @Success 201 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/system/generic-credentials [post]
 func (s *server) createSystemGenericCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 
 	var req createGenericCredentialsRequest
-	if !bindJSONOrError(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 
@@ -141,14 +134,10 @@ func (s *server) createSystemGenericCredentials(c *gin.Context) {
 // @Success 201 {object} corev1.Secret "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/shared/generic-credentials [post]
 func (s *server) createSharedGenericCredentials(c *gin.Context) {
-	if !s.requireSecretManagement(c) {
-		return
-	}
-
 	ctx := c.Request.Context()
 
 	var req createGenericCredentialsRequest
-	if !bindJSONOrError(c, &req) {
+	if !request.BindJSON(c, &req) {
 		return
 	}
 

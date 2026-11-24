@@ -40,7 +40,7 @@ export const FreightArtifact = (props: FreightArtifactProps) => {
       : props.artifact.id?.slice(0, 7);
 
     const TagComponent = (
-      <Tag title={props.artifact.repoURL} bordered={false} color='geekblue' key={props.artifact.id}>
+      <Tag title={props.artifact.repoURL} variant='filled' color='geekblue' key={props.artifact.id}>
         <ArtifactIcon artifact={props.artifact} className='mr-1' />
 
         {displayId}
@@ -69,7 +69,7 @@ export const FreightArtifact = (props: FreightArtifactProps) => {
     return (
       <Tag
         title={`${props.artifact.repoURL}:${props.artifact.version}`}
-        bordered={false}
+        variant='filled'
         color='geekblue'
         key={props.artifact.repoURL}
       >
@@ -92,7 +92,7 @@ export const FreightArtifact = (props: FreightArtifactProps) => {
     const TagComponent = (
       <Tag
         title={`${props.artifact.repoURL}:${props.artifact.tag}`}
-        bordered={false}
+        variant='filled'
         color='geekblue'
         key={props.artifact?.repoURL}
         className='hover:cursor-default'
@@ -122,7 +122,7 @@ export const FreightArtifact = (props: FreightArtifactProps) => {
   }
 
   return (
-    <Tag color='geekblue' bordered={false}>
+    <Tag color='geekblue' variant='filled'>
       {shortVersion(props.artifact.version)}
     </Tag>
   );

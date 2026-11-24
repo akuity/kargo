@@ -2,25 +2,27 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
+	"time"
 
-	authnv1 "k8s.io/api/authentication/v1"
 	authv1 "k8s.io/api/authorization/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	flowcontrolv1 "k8s.io/api/flowcontrol/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/cli-utils/pkg/flowcontrol"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -42,15 +44,8 @@ type ClientOptions struct {
 	// unconditionally executed using the implementation's own internal client.
 	// This does NOT bypass authorization entirely. The Kargo API server will
 	// still be constrained by the permissions of the Kubernetes user from whose
-	// configuration the internal client was constructed. This option is useful
-	// for scenarios where the Kargo API server is executed locally on a user's
-	// system and the user wished to provide the API server with their own
-	// Kubernetes client configuration. This is used, for instance, by the
-	// `kargo server` command.
+	// configuration the internal client was constructed.
 	SkipAuthorization bool
-	// GlobalServiceAccountNamespaces is a list of namespaces in which we should
-	// always look for ServiceAccounts when attempting to authorize a user.
-	GlobalServiceAccountNamespaces []string
 	// KargoNamespace is the namespace where Kargo itself is installed. Defaults
 	// to "kargo" when unspecified.
 	KargoNamespace string
@@ -166,9 +161,10 @@ type client struct {
 //  1. The Client interface combines the familiar controller-runtime Client
 //     interface with a helpful Watch function that is absent from that
 //     interface.
-//  2. The implementation enforces RBAC by retrieving context-bound user.Info
-//     and using it to conduct a SubjectAccessReview or SelfSubjectAccessReview
-//     before (if successful) performing the desired operation. This permits
+//  2. The implementation enforces RBAC by retrieving the context-bound
+//     user.Identity and reviewing the access of the Kubernetes subjects that
+//     stand in for it before (if successful) performing the desired
+//     operation. This permits
 //     this client to retain the benefits of using a single underlying client
 //     (typically with a built-in cache), while still enforcing RBAC as if the
 //     operation had been performed with a user-specific client constructed
@@ -234,10 +230,9 @@ func NewClient(
 			return internalClient, nil // Unconditionally return the internal client
 		}
 	} else {
-		// Examine the context-bound user.Info to determine what ServiceAccounts
-		// they are associated with and whether any of those have sufficient
-		// permissions to perform the desired operation.
-		c.getAuthorizedClientFn = getAuthorizedClient(opts.GlobalServiceAccountNamespaces)
+		// Review the access of the subjects standing in for the context-bound
+		// identity before performing the desired operation.
+		c.getAuthorizedClientFn = getAuthorizedClient()
 	}
 	return c, nil
 }
@@ -256,6 +251,14 @@ func newDefaultCluster(
 				Cache: &libClient.CacheOptions{
 					DisableFor: []libClient.Object{
 						&corev1.Secret{},
+						// ClusterRoleBindings are read only by the escalation check
+						// on claim-annotated ServiceAccount writes, which is too rare
+						// to justify caching every binding in the cluster. Reading
+						// them uncached also means a missing list permission
+						// surfaces as an immediate Forbidden error; a cached read
+						// would instead block the request on an informer that can
+						// never sync.
+						&rbacv1.ClusterRoleBinding{},
 					},
 				},
 			}
@@ -787,16 +790,33 @@ func GetRestConfig(ctx context.Context, path string) (*rest.Config, error) {
 }
 
 // ConfigureQPSBurst configures the provided REST config to use the specified
-// QPS and burst values, unless PriorityAndFairness flow control is enabled in
-// the cluster, in which case, it disables QPS and burst.
+// QPS and burst values, unless PriorityAndFairness flow control limits the
+// config's requests, in which case, it disables QPS and burst.
+//
+// PriorityAndFairness limits a request unless it is disabled or the request is
+// classified into the exempt priority level (the system:masters group, or any
+// FlowSchema an admin points at it). QPS and burst stay configured in both
+// cases, and when the check fails or takes longer than flowControlCheckTimeout.
 //
 // For more information on PriorityAndFairness flow control, see:
 // https://kubernetes.io/docs/concepts/cluster-administration/flow-control/
 func ConfigureQPSBurst(ctx context.Context, cfg *rest.Config, qps float32, burst int) {
 	logger := logging.LoggerFromContext(ctx)
 
-	if ok, err := flowcontrol.IsEnabled(ctx, cfg); err != nil && ok {
-		logger.Debug("PriorityAndFairness flow control is enabled; disabling QPS and burst")
+	checkCtx, cancel := context.WithTimeout(ctx, flowControlCheckTimeout)
+	defer cancel()
+
+	limited, err := flowControlLimits(checkCtx, cfg)
+	switch {
+	case errors.Is(err, errExemptPriorityLevelForbidden):
+		logger.Info(
+			"cannot read the exempt PriorityAndFairness priority level; configuring QPS and burst",
+			"error", err.Error(),
+		)
+	case err != nil:
+		logger.Error(err, "error checking for PriorityAndFairness flow control; configuring QPS and burst")
+	case limited:
+		logger.Debug("PriorityAndFairness flow control limits this client; disabling QPS and burst")
 		cfg.QPS = -1
 		cfg.Burst = -1
 		return
@@ -805,6 +825,80 @@ func ConfigureQPSBurst(ctx context.Context, cfg *rest.Config, qps float32, burst
 	logger.Debug("configuring QPS and burst for REST config", "qps", qps, "burst", burst)
 	cfg.QPS = qps
 	cfg.Burst = burst
+}
+
+// flowControlCheckTimeout bounds the PriorityAndFairness check in
+// ConfigureQPSBurst, so an unresponsive API server can't block startup.
+const flowControlCheckTimeout = 10 * time.Second
+
+// errExemptPriorityLevelForbidden is returned by flowControlLimits when the
+// config's identity may not read the exempt priority level.
+var errExemptPriorityLevelForbidden = errors.New("forbidden to get the exempt PriorityLevelConfiguration")
+
+// exemptPriorityLevelPath is the API path of the mandatory exempt priority
+// level, the only one of type Exempt.
+const exemptPriorityLevelPath = "/apis/flowcontrol.apiserver.k8s.io/v1/prioritylevelconfigurations/" +
+	flowcontrolv1.PriorityLevelConfigurationNameExempt
+
+// flowControlLimits reports whether PriorityAndFairness limits requests made
+// with the provided REST config. It gets the exempt priority level: the API
+// server names the priority level it matched that request to in a response
+// header, and the response body carries the exempt priority level's UID.
+// FlowSchemas usually match on the identity, so that request lands where the
+// identity's other requests do; one that exempts only some verbs or resources
+// isn't detected. Health checks such as /livez can't be used: a suggested
+// FlowSchema exempts them for everyone.
+//
+// No header means PriorityAndFairness is disabled. A matched priority level
+// other than the exempt one means it limits the identity. The header is set
+// before authorization, so a 403 shows PriorityAndFairness is enabled but
+// can't tell whether the identity is exempt.
+func flowControlLimits(ctx context.Context, cfg *rest.Config) (bool, error) {
+	client, err := rest.HTTPClientFor(cfg)
+	if err != nil {
+		return false, fmt.Errorf("error building HTTP client: %w", err)
+	}
+	u, _, err := rest.DefaultServerUrlFor(cfg)
+	if err != nil {
+		return false, fmt.Errorf("error building server URL: %w", err)
+	}
+	u = u.JoinPath(exemptPriorityLevelPath)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return false, fmt.Errorf("error building request: %w", err)
+	}
+	req.Header.Set("Accept", runtime.ContentTypeJSON)
+	if cfg.UserAgent != "" {
+		req.Header.Set("User-Agent", cfg.UserAgent)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, fmt.Errorf("error getting the exempt PriorityLevelConfiguration: %w", err)
+	}
+	defer resp.Body.Close()
+
+	matched := resp.Header.Get(flowcontrolv1.ResponseHeaderMatchedPriorityLevelConfigurationUID)
+	if matched == "" {
+		return false, nil
+	}
+	switch resp.StatusCode {
+	case http.StatusOK:
+	case http.StatusForbidden:
+		return false, errExemptPriorityLevelForbidden
+	default:
+		return false, fmt.Errorf(
+			"unexpected status getting the exempt PriorityLevelConfiguration: %s",
+			resp.Status,
+		)
+	}
+	var exempt metav1.PartialObjectMetadata
+	if err = json.NewDecoder(resp.Body).Decode(&exempt); err != nil {
+		return false, fmt.Errorf("error decoding the exempt PriorityLevelConfiguration: %w", err)
+	}
+	if exempt.UID == "" {
+		return false, errors.New("the exempt PriorityLevelConfiguration has no UID")
+	}
+	return matched != string(exempt.UID), nil
 }
 
 // gvrAndKeyFromObj extracts the group, version, and plural resource type
@@ -833,11 +927,12 @@ func gvrAndKeyFromObj(
 	return pluralizedGVR, key, nil
 }
 
-// getAuthorizedClient examines context-bound user.Info and uses information
-// found therein to attempt to identify or build an appropriate client for
-// performing the desired operation. If it is unable to do so, it amounts to the
-// operation being unauthorized and an error is returned.
-func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
+// getAuthorizedClient decides whether the identity bound to the context may
+// perform the described operation and, if so, returns the client to perform
+// it with. An admin is allowed outright. Anyone else is allowed if any of the
+// Kubernetes subjects standing in for them is, as a SubjectAccessReview
+// decides. An unauthorized operation yields an error.
+func getAuthorizedClient() func(
 	context.Context,
 	libClient.WithWatch,
 	string,
@@ -853,14 +948,14 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 		subresource string,
 		key libClient.ObjectKey,
 	) (libClient.WithWatch, error) {
-		userInfo, ok := user.InfoFromContext(ctx)
+		id, ok := user.IdentityFromContext(ctx)
 		if !ok {
 			return nil, errors.New("not allowed")
 		}
 
-		// Admins get to use the Kargo API server's own Kubernetes client. i.e. They
-		// can do everything the server can do.
-		if userInfo.IsAdmin {
+		// Admins get to use the Kargo API server's own Kubernetes client. i.e.
+		// They can do everything the server can do.
+		if id.IsAdmin() {
 			return internalClient, nil
 		}
 
@@ -873,126 +968,34 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 			Namespace:   key.Namespace,
 			Name:        key.Name,
 		}
-
-		// sub is a standard claim. If the user has this claim, we can infer that
-		// they authenticated using OIDC.
-		if _, ok := userInfo.Claims["sub"]; ok {
-			namespacesToCheck := make(
-				[]string,
-				0,
-				// Look in the global ServiceAccount namespaces + at most one more
-				len(globalServiceAccountNamespaces)+1,
-			)
-			if key.Namespace != "" {
-				// This is written the way it is to keep key.Namespace as the first
-				// element in the slice, because it is where there is the highest
-				// likelihood of finding a ServiceAccount with the required permissions.
-				namespacesToCheck = append(namespacesToCheck, key.Namespace)
-				namespacesToCheck = append(namespacesToCheck, globalServiceAccountNamespaces...)
-			} else {
-				// For cluster-scoped resources, the set of namespaces to check is only
-				// the global ServiceAccount namespaces except in the special case of a
-				// Project. For a Project, we also need to look in the Project's
-				// underlying namespace.
-				//
-				// This is written the way it is so that in the case of a Project
-				// resource, key.Name is the first element in the slice, because this is
-				// where there is the highest likelihood of finding a ServiceAccount
-				// with the required permissions.
-				if ra.Group == kargoapi.GroupVersion.Group &&
-					ra.Version == kargoapi.GroupVersion.Version &&
-					ra.Resource == "projects" {
-					namespacesToCheck = append(namespacesToCheck, key.Name)
-				}
-				namespacesToCheck = append(namespacesToCheck, globalServiceAccountNamespaces...)
+		for _, subject := range id.Subjects(ra) {
+			err := reviewSubjectAccess(ctx, internalClient, ra, subject)
+			if err == nil {
+				return internalClient, nil
 			}
-			for _, namespaceToCheck := range namespacesToCheck {
-				serviceAccountsToCheck := userInfo.ServiceAccountsByNamespace[namespaceToCheck]
-				for serviceAccountToCheck := range serviceAccountsToCheck {
-					err := reviewSubjectAccess(
-						ctx,
-						internalClient,
-						ra,
-						serviceAccountSubject(serviceAccountToCheck),
-					)
-					if err == nil {
-						return internalClient, nil
-					}
-					if !apierrors.IsForbidden(err) {
-						return nil, fmt.Errorf("review subject access: %w", err)
-					}
-				}
+			if !apierrors.IsForbidden(err) {
+				return nil, fmt.Errorf("review subject access: %w", err)
 			}
-			return nil, newForbiddenError(ra)
 		}
-
-		if userInfo.KubernetesUserInfo == nil {
-			return nil, errors.New("not allowed")
-		}
-
-		// If we get to here, we're dealing with a user whose token was recognized
-		// by the Kubernetes API server, which told us who they are.
-		if err := reviewSubjectAccess(
-			ctx,
-			internalClient,
-			ra,
-			kubernetesUserSubject(*userInfo.KubernetesUserInfo),
-		); err != nil {
-			return nil, fmt.Errorf("review subject access: %w", err)
-		}
-		return internalClient, nil
-	}
-}
-
-// reviewSubject is the identity whose access is reviewed by
-// reviewSubjectAccess.
-type reviewSubject struct {
-	username string
-	uid      string
-	groups   []string
-	extra    map[string]authv1.ExtraValue
-}
-
-// kubernetesUserSubject is the user the Kubernetes API server resolved a bearer
-// token to. Groups, UID and extras are all carried across, because omitting them
-// would ask a different question: whether the user is permitted on the strength
-// of their username alone.
-func kubernetesUserSubject(u authnv1.UserInfo) reviewSubject {
-	subject := reviewSubject{
-		username: u.Username,
-		uid:      u.UID,
-		groups:   u.Groups,
-	}
-	if len(u.Extra) > 0 {
-		subject.extra = make(map[string]authv1.ExtraValue, len(u.Extra))
-		for k, v := range u.Extra {
-			subject.extra[k] = authv1.ExtraValue(v)
-		}
-	}
-	return subject
-}
-
-func serviceAccountSubject(name types.NamespacedName) reviewSubject {
-	return reviewSubject{
-		username: fmt.Sprintf("system:serviceaccount:%s:%s", name.Namespace, name.Name),
+		return nil, newForbiddenError(ra)
 	}
 }
 
 // reviewSubjectAccess submits a SubjectAccessReview to determine whether the
-// provided subject is allowed to do the desired operation.
+// subject is allowed to perform the described operation.
 func reviewSubjectAccess(
 	ctx context.Context,
 	cl libClient.Client,
 	ra authv1.ResourceAttributes,
-	subject reviewSubject,
+	subject user.Subject,
 ) error {
 	review := &authv1.SubjectAccessReview{
 		Spec: authv1.SubjectAccessReviewSpec{
 			ResourceAttributes: &ra,
-			User:               subject.username,
-			UID:                subject.uid,
-			Groups:             subject.groups,
-			Extra:              subject.extra,
+			User:               subject.Username,
+			UID:                subject.UID,
+			Groups:             subject.Groups,
+			Extra:              subject.Extra,
 		},
 	}
 	if err := cl.Create(ctx, review); err != nil {

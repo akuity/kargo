@@ -21,7 +21,8 @@ const plugin: DeepLinkPluginsInstallation['PromotionStep'] = {
     if (step?.uses === 'git-wait-for-pr') {
       return (
         result === PromotionDirectiveStepStatus.SUCCESS ||
-        result === PromotionDirectiveStepStatus.RUNNING
+        result === PromotionDirectiveStepStatus.RUNNING ||
+        result === PromotionDirectiveStepStatus.RETRYING
       );
     }
     return result === PromotionDirectiveStepStatus.SUCCESS;

@@ -1,4 +1,5 @@
 {{- if and .Values.dataPlane.install .Values.global.systemResources.createRBAC }}
+{{- include "kargo.validateNoLegacySecretNamespaces" . }}
 {{- if .Values.externalWebhooksServer.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

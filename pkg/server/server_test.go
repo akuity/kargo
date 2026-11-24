@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,8 +14,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
-	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/database"
+	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/rbac"
@@ -37,7 +39,7 @@ func TestNewServer(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	testSender := k8sevent.NewEventSender(fakeevent.NewEventRecorder(0))
+	testSender := &fakeevent.Sender{}
 
 	s, ok := NewServer(
 		testServerConfig,
@@ -48,16 +50,16 @@ func TestNewServer(t *testing.T) {
 			rbac.RolesDatabaseConfigFromEnv(),
 		),
 		testSender,
+		nil,
 	).(*server)
 
 	require.True(t, ok)
 	require.NotNil(t, s)
 	require.Same(t, testClient, s.client)
+	require.Nil(t, s.db)
 	require.NotNil(t, testClient, s.rolesDB)
 	require.Same(t, testSender, s.sender)
 	require.Equal(t, testServerConfig, s.cfg)
-	require.NotNil(t, s.validateProjectExistsFn)
-	require.NotNil(t, s.externalValidateProjectFn)
 	require.NotNil(t, s.getStageFn)
 	require.NotNil(t, s.getFreightByNameOrAliasFn)
 	require.NotNil(t, s.isFreightAvailableFn)
@@ -71,6 +73,80 @@ func TestNewServer(t *testing.T) {
 	require.NotNil(t, s.patchFreightStatusFn)
 	require.NotNil(t, s.authorizeFn)
 	require.NotNil(t, s.getAnalysisRunFn)
+}
+
+func TestNewServer_rolloutCreator(t *testing.T) {
+	testClient, err := kubernetes.NewClient(
+		t.Context(),
+		&rest.Config{},
+		kubernetes.ClientOptions{
+			NewInternalClient: func(
+				context.Context,
+				*rest.Config,
+				*runtime.Scheme,
+				string,
+			) (client.WithWatch, error) {
+				return fake.NewClientBuilder().Build(), nil
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	errHeldBack := errors.New("held back")
+
+	testCases := []struct {
+		name string
+		cfg  config.ServerConfig
+		db   *database.Queries
+		// wired is whether the promote endpoints create PromotionRollouts.
+		wired bool
+	}{
+		{
+			name: "without a database",
+			cfg:  config.ServerConfig{PromotionRolloutsEnabled: true},
+		},
+		{
+			name: "a server that does not create rollouts",
+			db:   database.New(nil),
+		},
+		{
+			name:  "a server that creates rollouts",
+			cfg:   config.ServerConfig{PromotionRolloutsEnabled: true},
+			db:    database.New(nil),
+			wired: true,
+		},
+		{
+			name: "a server that checks before it creates rollouts",
+			cfg: config.ServerConfig{
+				PromotionRolloutsEnabled: true,
+				PromotionRolloutCheck: func(context.Context, *kargoapi.Stage) error {
+					return errHeldBack
+				},
+			},
+			db:    database.New(nil),
+			wired: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			s, ok := NewServer(testCase.cfg, testClient, nil, nil, testCase.db).(*server)
+			require.True(t, ok)
+			require.Equal(t, testCase.db != nil, s.listTargetsFn != nil)
+			require.Equal(t, testCase.wired, s.rolloutCreator != nil)
+			if testCase.cfg.PromotionRolloutCheck != nil {
+				// The Creator asks the configured check before it reads or
+				// writes anything, so the check's refusal is what comes back.
+				_, err = s.rolloutCreator.Create(
+					t.Context(),
+					&kargoapi.Stage{},
+					&kargoapi.Freight{},
+					nil,
+					nil,
+				)
+				require.Equal(t, errHeldBack, err)
+			}
+		})
+	}
 }
 
 func TestWrapWithBasePath(t *testing.T) {

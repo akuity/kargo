@@ -2,6 +2,7 @@ import { Checkbox, Form, Input } from 'antd';
 
 import { RunnerForm } from './runner-form';
 import { RunnerWithConfiguration } from './types';
+import { STEP_DESCRIPTION_MAX_LENGTH } from './utils';
 
 export const PromotionStepForm = (props: {
   selectedRunner: RunnerWithConfiguration;
@@ -15,6 +16,16 @@ export const PromotionStepForm = (props: {
             value={props.selectedRunner?.as || ''}
             onChange={(e) =>
               props.patchSelectedRunner({ ...props.selectedRunner, as: e.target.value })
+            }
+          />
+        </Form.Item>
+        <Form.Item label='Description' extra='Optional. Explains the purpose of this step.'>
+          <Input
+            value={props.selectedRunner?.description || ''}
+            maxLength={STEP_DESCRIPTION_MAX_LENGTH}
+            showCount
+            onChange={(e) =>
+              props.patchSelectedRunner({ ...props.selectedRunner, description: e.target.value })
             }
           />
         </Form.Item>

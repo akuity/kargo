@@ -70,6 +70,88 @@ spec:
                 minLength: 1
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                 type: string
+              inflatedTasks:
+                description: |-
+                  InflatedTasks records each step of the Stage's PromotionTemplate that
+                  referenced a (Cluster)PromotionTask and was inflated into Steps. It is
+                  set by Kargo when the Promotion is created and any value supplied by
+                  users is discarded.
+                items:
+                  description: |-
+                    InflatedPromotionTask records a step of a Stage's PromotionTemplate that
+                    referenced a (Cluster)PromotionTask and was inflated into the steps of a
+                    Promotion.
+                  properties:
+                    alias:
+                      description: |-
+                        Alias is the alias of the step that referenced the task. The aliases of
+                        the steps inflated from the task are prefixed with it.
+                      type: string
+                    description:
+                      description: Description is the description of the step that
+                        referenced the task.
+                      type: string
+                    steps:
+                      description: |-
+                        Steps are the aliases of the Promotion's steps that were inflated from
+                        the task, in order.
+                      items:
+                        type: string
+                      type: array
+                    task:
+                      description: Task is the (Cluster)PromotionTask that was inflated.
+                      properties:
+                        kind:
+                          description: |-
+                            Kind is the type of the PromotionTask. Can be either PromotionTask or
+                            ClusterPromotionTask, default is PromotionTask.
+                          enum:
+                          - PromotionTask
+                          - ClusterPromotionTask
+                          type: string
+                        name:
+                          description: Name is the name of the (Cluster)PromotionTask.
+                          maxLength: 253
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    vars:
+                      description: |-
+                        Vars are the variables the task was inflated with: the task's defaults
+                        and the variables set by the step that referenced the task.
+                      items:
+                        description: |-
+                          ExpressionVariable describes a single variable that may be referenced by
+                          expressions in the context of a ClusterPromotionTask, PromotionTask,
+                          Promotion, AnalysisRun arguments, or other objects that support expressions.
+
+                          It is used to pass information to the expression evaluation engine, and to
+                          allow for dynamic evaluation of expressions based on the variable values.
+                        properties:
+                          name:
+                            description: Name is the name of the variable.
+                            minLength: 1
+                            pattern: ^[a-zA-Z_]\w*$
+                            type: string
+                          value:
+                            description: |-
+                              Value is the value of the variable. It is allowed to utilize expressions
+                              in the value.
+                              See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      type: array
+                  required:
+                  - alias
+                  - steps
+                  - task
+                  type: object
+                type: array
               origin:
                 description: |-
                   Origin, when set, identifies the FreightOrigin whose auto-promotion
@@ -93,6 +175,20 @@ spec:
                 - kind
                 - name
                 type: object
+              promotionRollout:
+                description: |-
+                  PromotionRollout optionally holds the id of the PromotionRollout this
+                  Promotion was created by, as one part of that rollout's fan-out to
+                  Targets. The id is the UID the API serves the rollout with. A
+                  PromotionRollout is not a Kubernetes resource, so it cannot own the
+                  Promotion; this field is the link in place of an owner reference, and
+                  the one the database's record of the Promotion is linked by.
+
+                  When empty (the default), the Promotion was not created by a
+                  PromotionRollout. When set, Target must be set too, and only the Kargo
+                  control plane may set it.
+                pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+                type: string
               stage:
                 description: |-
                   Stage specifies the name of the Stage to which this Promotion
@@ -128,6 +224,13 @@ spec:
                         also will not permit this failure to impact the overall status of the
                         Promotion.
                       type: boolean
+                    description:
+                      description: Description is a detail of the step's purpose.
+                      minLength: 1
+                      type: string
+                      x-kubernetes-validations:
+                      - message: description must be 256 characters or fewer
+                        rule: self.size() <= 256
                     if:
                       description: |-
                         If is an optional expression that, if present, must evaluate to a boolean
@@ -292,6 +395,8 @@ spec:
             x-kubernetes-validations:
             - message: exactly one of freight or origin must be set
               rule: has(self.freight) != has(self.origin)
+            - message: target must be set when promotionRollout is set
+              rule: '!has(self.promotionRollout) || has(self.target)'
           status:
             description: |-
               Status describes the current state of the transition represented by this
@@ -700,6 +805,11 @@ spec:
                             AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
                             the Verification process.
                           properties:
+                            kind:
+                              description: |-
+                                Kind is a string representation of GroupVersionKind describing this run
+                                For classic analysis run it is AnalysisRunKindRun or AnalysisRunKindLegacy (empty)
+                              type: string
                             name:
                               description: Name is the name of the AnalysisRun.
                               type: string
@@ -734,6 +844,10 @@ spec:
                             this will be a reflection of the underlying AnalysisRun's phase, however,
                             there are exceptions to this, such as in the case where an AnalysisRun
                             cannot be launched successfully.
+                          type: string
+                        promotionName:
+                          description: PromotionName is an optional name of promotion
+                            which triggered verification
                           type: string
                         startTime:
                           description: StartTime is the time at which the Verification

@@ -21,15 +21,14 @@ const (
 	defaultUsername = "Kargo"
 	defaultEmail    = "no-reply@kargo.io"
 
-	repoDirConfigKey         = "kargo.repoDir"
-	repoHomeDirConfigKey     = "kargo.repoHomeDir"
-	repoOriginalURLConfigKey = "kargo.repoOriginalURL"
+	repoDirConfigKey     = "kargo.repoDir"
+	repoHomeDirConfigKey = "kargo.repoHomeDir"
 
 	// cmdWaitDelay is the grace period between context cancellation and
 	// forcible termination of a command. It also bounds how long Wait can
 	// remain blocked on the command's output pipes after cancellation:
 	// killing the command does not unblock Wait if a grandchild process
-	// (e.g. ssh or an askpass helper) inherited the pipes and holds them
+	// (e.g. an askpass helper) inherited the pipes and holds them
 	// open, so a non-zero WaitDelay is required to guarantee Wait returns.
 	cmdWaitDelay = 10 * time.Second
 
@@ -51,11 +50,7 @@ type baseRepo struct {
 	creds   *RepoCredentials
 	dir     string
 	homeDir string
-	// Store the URL two ways:
-	// 1. Exactly as it was originally provided
-	// 2. Modified in ways required for internal use by this type's methods
-	originalURL string
-	accessURL   string
+	url     string
 }
 
 // ClientOptions represents options for a repository-specific Git client.
@@ -76,22 +71,38 @@ func (b *baseRepo) setupDirs(ctx context.Context, baseDir string) error {
 	if b.homeDir, err = os.MkdirTemp(baseDir, "repo-"); err != nil {
 		return fmt.Errorf(
 			"error creating home directory for repo %q: %w",
-			b.originalURL, err,
+			b.url, err,
 		)
 	}
-	if b.homeDir, err = filepath.EvalSymlinks(b.homeDir); err != nil {
+	resolvedHomeDir, err := filepath.EvalSymlinks(b.homeDir)
+	if err != nil {
 		return fmt.Errorf("error resolving symlinks in path %s: %w", b.homeDir, err)
 	}
+	b.homeDir = resolvedHomeDir
 	b.dir = filepath.Join(b.homeDir, "repo")
-	cmd := b.buildGitCommand(
-		ctx, "config", "--global", "init.defaultBranch", "main",
-	)
-	// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
-	// repository's path, but if this method was called as part of the cloning
-	// process, that path may not exist yet.
-	cmd.Dir = b.homeDir
+	if err = b.setGlobalConfig(ctx, b.homeDir, "init.defaultBranch", "main"); err != nil {
+		return err
+	}
+	return b.disableAutoMaintenance(ctx, b.homeDir)
+}
+
+// disableAutoMaintenance stops git commands such as fetch and commit from
+// starting a detached "git maintenance run --auto", which can keep writing
+// into the repository after Close() has removed it.
+func (b *baseRepo) disableAutoMaintenance(ctx context.Context, homeDir string) error {
+	return b.setGlobalConfig(ctx, homeDir, "maintenance.auto", "false")
+}
+
+// setGlobalConfig writes a "global" git config value into the given virtual
+// home directory.
+func (b *baseRepo) setGlobalConfig(ctx context.Context, homeDir, key, value string) error {
+	cmd := b.buildGitCommand(ctx, "config", "--global", key, value)
+	// Override cmd.Dir set by buildGitCommand(). The repo path may not exist
+	// yet if called during clone.
+	cmd.Dir = homeDir
+	b.setCmdHome(cmd, homeDir)
 	if _, err := libExec.Exec(cmd); err != nil {
-		return fmt.Errorf("error configuring init.defaultBranch: %w", err)
+		return fmt.Errorf("error configuring %s: %w", key, err)
 	}
 	return nil
 }
@@ -107,7 +118,7 @@ func (b *baseRepo) setupClient(ctx context.Context, opts *ClientOptions) error {
 		return fmt.Errorf("error configuring the author: %w", err)
 	}
 
-	if err := b.setupAuth(b.homeDir); err != nil {
+	if err := b.setupAuth(); err != nil {
 		return fmt.Errorf("error configuring the credentials: %w", err)
 	}
 
@@ -249,36 +260,31 @@ func (b *baseRepo) setupUser(
 	return nil
 }
 
-// setupAuth configures the git CLI with authentication information. The
-// directory specified by homeDir is used as a virtual home directory for
-// storing ssh keys if applicable.
-func (b *baseRepo) setupAuth(homeDir string) error {
+// validateRepoURL returns an error if the provided URL does not use the HTTP
+// or HTTPS scheme. These are the only transports supported for accessing
+// remote repositories.
+func validateRepoURL(repoURL string) error {
+	u, err := url.Parse(repoURL)
+	if err != nil {
+		// The URL is deliberately omitted because it may contain credentials
+		// that cannot be redacted when it fails to parse.
+		return errors.New(
+			"unsupported repository URL: only HTTP(S) URLs are supported",
+		)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf(
+			"unsupported repository URL %q: only HTTP(S) URLs are supported",
+			u.Redacted(),
+		)
+	}
+	return nil
+}
+
+// setupAuth configures the git CLI with authentication information.
+func (b *baseRepo) setupAuth() error {
 	if b.creds == nil {
 		return nil
-	}
-	// TODO(v1.13.0): Remove this block when SSH support is removed.
-	// If an SSH key was provided, use that.
-	if b.creds.SSHPrivateKey != "" {
-		sshPath := filepath.Join(homeDir, ".ssh")
-		if err := os.MkdirAll(sshPath, 0700); err != nil {
-			return fmt.Errorf("error creating SSH directory %q: %w", sshPath, err)
-		}
-		sshConfigPath := filepath.Join(sshPath, "config")
-		rsaKeyPath := filepath.Join(sshPath, "id_rsa")
-		// nolint: lll
-		sshConfig := fmt.Sprintf("Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null\n  IdentityFile %q\n", rsaKeyPath)
-		if err := os.WriteFile(sshConfigPath, []byte(sshConfig), 0600); err != nil {
-			return fmt.Errorf("error writing SSH config to %q: %w", sshConfigPath, err)
-		}
-
-		if err := os.WriteFile(
-			rsaKeyPath,
-			[]byte(b.creds.SSHPrivateKey),
-			0600,
-		); err != nil {
-			return fmt.Errorf("error writing SSH key to %q: %w", rsaKeyPath, err)
-		}
-		return nil // We're done
 	}
 
 	// If no password is specified, we're done'.
@@ -286,15 +292,20 @@ func (b *baseRepo) setupAuth(homeDir string) error {
 		return nil
 	}
 
-	// Add username@ to the URL that will be used internally...
-	lowerURL := strings.ToLower(b.accessURL)
+	// Nothing guarantees the URL was normalized, which would have removed any
+	// credentials embedded in it, so remove them here. git then asks
+	// GIT_ASKPASS for both the username and the password, so the configured
+	// credentials take precedence. Given a username without a password, git's
+	// HTTP client would first try an empty password, which servers record as a
+	// failed login...
+	lowerURL := strings.ToLower(b.url)
 	if strings.HasPrefix(lowerURL, "http://") || strings.HasPrefix(lowerURL, "https://") {
-		u, err := url.Parse(b.accessURL)
+		u, err := url.Parse(b.url)
 		if err != nil {
-			return fmt.Errorf("error parsing URL %q: %w", b.accessURL, err)
+			return fmt.Errorf("error parsing URL %q: %w", b.url, err)
 		}
-		u.User = url.User(b.creds.Username)
-		b.accessURL = u.String()
+		u.User = nil
+		b.url = u.String()
 	}
 
 	return nil
@@ -314,18 +325,6 @@ func (b *baseRepo) saveDirs(ctx context.Context) error {
 		ctx, "config", repoHomeDirConfigKey, b.homeDir,
 	)); err != nil {
 		return fmt.Errorf("error saving repo home dir as config: %w", err)
-	}
-	return nil
-}
-
-// saveOriginalURL saves the original URL of the repository to the repository's
-// configuration. This is useful for reliably determining this information when
-// an existing repository or working tree is loaded from the file system.
-func (b *baseRepo) saveOriginalURL(ctx context.Context) error {
-	if _, err := libExec.Exec(b.buildGitCommand(
-		ctx, "config", repoOriginalURLConfigKey, b.originalURL,
-	)); err != nil {
-		return fmt.Errorf("error saving original URL as config: %w", err)
 	}
 	return nil
 }
@@ -382,8 +381,8 @@ func (b *baseRepo) loadHomeDir(ctx context.Context) error {
 // toward public-keys.d/pubring.db) are covered automatically.
 //
 // Safe to call when no GnuPG state exists (no-op) and in traditional
-// single-process deployments where no cross-container state sharing occurs
-// (also effectively a no-op).
+// single-process deployments, where the next gpg invocation restarts any
+// daemons this stopped.
 func (b *baseRepo) reconcileGPGState(ctx context.Context) {
 	if b.homeDir == "" {
 		return
@@ -392,9 +391,9 @@ func (b *baseRepo) reconcileGPGState(ctx context.Context) {
 	if _, err := os.Stat(gnupgDir); err != nil {
 		return
 	}
-	// Must run before removing sockets: gpgconf finds the agent via its
-	// sockets and tells it to shut down cleanly.
-	_, _ = libExec.Exec(b.buildCommand(ctx, "gpgconf", "--kill", "gpg-agent"))
+	// Must run before removing sockets: gpgconf finds each daemon via its
+	// socket and tells it to shut down cleanly.
+	_, _ = libExec.Exec(b.buildCommand(ctx, "gpgconf", "--kill", "all"))
 
 	logger := logging.LoggerFromContext(ctx)
 	remove := func(path string) {
@@ -417,7 +416,7 @@ func (b *baseRepo) reconcileGPGState(ctx context.Context) {
 			remove(path)
 		default:
 			// Any remaining UNIX-domain socket in GNUPGHOME belongs to a
-			// dead daemon (we killed the live agent above).
+			// dead daemon (we killed the live daemons above).
 			if info, statErr := d.Info(); statErr == nil && info.Mode()&os.ModeSocket != 0 {
 				remove(path)
 			}
@@ -426,24 +425,17 @@ func (b *baseRepo) reconcileGPGState(ctx context.Context) {
 	})
 }
 
-// loadURLs restores the repository's original and access URLs from the
-// repository's configuration. This is useful for reliably determining this
-// information when an existing repository or working tree is loaded from the
-// file system.
-func (b *baseRepo) loadURLs(ctx context.Context) error {
+// loadURL restores the repository's URL from the repository's configuration.
+// This is useful for reliably determining this information when an existing
+// repository or working tree is loaded from the file system.
+func (b *baseRepo) loadURL(ctx context.Context) error {
 	res, err := libExec.Exec(b.buildGitCommand(
-		ctx, "config", repoOriginalURLConfigKey,
+		ctx, "config", "remote.origin.url",
 	))
 	if err != nil {
-		return fmt.Errorf(`error getting original URL of remote "origin": %w`, err)
-	}
-	b.originalURL = strings.TrimSpace(string(res))
-	if res, err = libExec.Exec(b.buildGitCommand(
-		ctx, "config", "remote.origin.url",
-	)); err != nil {
 		return fmt.Errorf(`error getting URL of remote "origin": %w`, err)
 	}
-	b.accessURL = strings.TrimSpace(string(res))
+	b.url = strings.TrimSpace(string(res))
 	return nil
 }
 
@@ -480,12 +472,11 @@ func (b *baseRepo) buildGitCommand(
 		"GIT_HTTP_LOW_SPEED_LIMIT="+gitHTTPLowSpeedLimit,
 		"GIT_HTTP_LOW_SPEED_TIME="+gitHTTPLowSpeedTime,
 	)
-	// TODO(v1.13.0): Remove this line when SSH support is removed.
-	cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_SSH_COMMAND=ssh -F %s/.ssh/config", b.homeDir))
 	if b.creds != nil && b.creds.Password != "" {
 		cmd.Env = append(
 			cmd.Env,
 			"GIT_ASKPASS=/usr/local/bin/credential-helper",
+			fmt.Sprintf("GIT_USERNAME=%s", b.creds.Username),
 			fmt.Sprintf("GIT_PASSWORD=%s", b.creds.Password),
 		)
 	}
@@ -518,7 +509,7 @@ func (b *baseRepo) RemoteBranchExists(
 		"ls-remote",
 		"--heads",
 		"--exit-code", // Return 2 if not found
-		b.accessURL,
+		b.url,
 		"refs/heads/"+branch,
 	))
 	var exitErr *libExec.ExitError
@@ -530,7 +521,7 @@ func (b *baseRepo) RemoteBranchExists(
 		return false, fmt.Errorf(
 			"error checking for existence of branch %q in remote repo %q: %w",
 			branch,
-			b.originalURL,
+			b.url,
 			err,
 		)
 	}
@@ -538,7 +529,7 @@ func (b *baseRepo) RemoteBranchExists(
 }
 
 func (b *baseRepo) URL() string {
-	return b.originalURL
+	return b.url
 }
 
 // setUltimateTrust sets ultimate trust (level 6) on a GPG key so that

@@ -154,10 +154,7 @@ func (g *gitlabWebhookReceiver) handlePushEvent(
 
 	var repoURLs []string
 	if e.Repository != nil {
-		repoURLs = []string{
-			urls.NormalizeGit(e.Repository.GitHTTPURL),
-			urls.NormalizeGit(e.Repository.GitSSHURL),
-		}
+		repoURLs = []string{urls.NormalizeGit(e.Repository.GitHTTPURL)}
 	}
 	var changedFiles []string
 	if e.TotalCommitsCount > int64(len(e.Commits)) {
@@ -187,10 +184,7 @@ func (g *gitlabWebhookReceiver) handleTagPushEvent(
 ) {
 	var repoURLs []string
 	if e.Repository != nil {
-		repoURLs = []string{
-			urls.NormalizeGit(e.Repository.GitHTTPURL),
-			urls.NormalizeGit(e.Repository.GitSSHURL),
-		}
+		repoURLs = []string{urls.NormalizeGit(e.Repository.GitHTTPURL)}
 	}
 	logger := logging.LoggerFromContext(ctx)
 	logger = logger.WithValues(

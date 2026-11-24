@@ -27,9 +27,8 @@ import (
 	libfmt "github.com/akuity/kargo/pkg/fmt"
 	"github.com/akuity/kargo/pkg/image/mutate"
 	intio "github.com/akuity/kargo/pkg/io"
-	"github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/promotion"
-	builtin "github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
 const stepKindOCIPush = "oci-push"
@@ -100,16 +99,16 @@ func (p *ociPusher) Run(
 }
 
 // convert validates the ociPusher configuration against a JSON schema and
-// converts it into a builtin.OCIPushConfig struct.
-func (p *ociPusher) convert(cfg promotion.Config) (builtin.OCIPushConfig, error) {
-	return validateAndConvert[builtin.OCIPushConfig](p.schemaLoader, cfg, stepKindOCIPush)
+// converts it into a stepconfig.OCIPushConfig struct.
+func (p *ociPusher) convert(cfg promotion.Config) (stepconfig.OCIPushConfig, error) {
+	return validateAndConvert[stepconfig.OCIPushConfig](p.schemaLoader, cfg, stepKindOCIPush)
 }
 
 // run executes the ociPusher step with the provided configuration.
 func (p *ociPusher) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.OCIPushConfig,
+	cfg stepconfig.OCIPushConfig,
 ) (promotion.StepResult, error) {
 	dstRef, dstCredType, err := parseOCIReference(cfg.DestRef)
 	if err != nil {
@@ -179,7 +178,7 @@ func (p *ociPusher) run(
 func (p *ociPusher) pushRemoteArtifact(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.OCIPushConfig,
+	cfg stepconfig.OCIPushConfig,
 	srcRef name.Reference,
 	srcCredType credentials.Type,
 	dstRef name.Reference,
@@ -227,22 +226,11 @@ const (
 // to report alongside the error.
 func (p *ociPusher) pushLocalFile(
 	stepCtx *promotion.StepContext,
-	cfg builtin.OCIPushConfig,
+	cfg stepconfig.OCIPushConfig,
 	dstRef name.Reference,
 	dstOpts []remote.Option,
 ) (v1.Hash, kargoapi.PromotionStepStatus, error) {
-	root, err := os.OpenRoot(stepCtx.WorkDir)
-	if err != nil {
-		return v1.Hash{}, kargoapi.PromotionStepStatusFailed, &promotion.TerminalError{
-			Err: fmt.Errorf(
-				"failed to open workspace: %w",
-				fs.SanitizePathError(err, stepCtx.WorkDir),
-			),
-		}
-	}
-	defer root.Close()
-
-	f, err := root.Open(cfg.SrcPath)
+	f, err := stepCtx.Root.Open(cfg.SrcPath)
 	if err != nil {
 		return v1.Hash{}, kargoapi.PromotionStepStatusFailed, &promotion.TerminalError{
 			Err: fmt.Errorf("failed to open source path %q: %w", cfg.SrcPath, err),
@@ -301,7 +289,7 @@ func (p *ociPusher) pushLocalFile(
 	scopes := p.parseAnnotationScopes(cfg.Annotations)
 
 	configLayer := static.NewLayer([]byte(emptyConfigBlob), configMediaType)
-	artifactLayer, err := newFileLayer(root, cfg.SrcPath, f, layerMediaType, p.maxArtifactSize)
+	artifactLayer, err := newFileLayer(stepCtx.Root, cfg.SrcPath, f, layerMediaType, p.maxArtifactSize)
 	if err != nil {
 		if _, ok := errors.AsType[*intio.BodyTooLargeError](err); ok {
 			return v1.Hash{}, kargoapi.PromotionStepStatusErrored, &promotion.TerminalError{

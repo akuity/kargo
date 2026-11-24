@@ -170,3 +170,19 @@ func waitForMergeableComputed(
 		time.Sleep(2 * time.Second)
 	}
 }
+
+func TestDeleteBranchLive(t *testing.T) {
+	repoURL := gptest.RequireEnv(t, "TEST_GITHUB_REPO_URL")
+	token := gptest.RequireEnv(t, "TEST_GITHUB_TOKEN")
+
+	repoCfg := gptest.RepoConfig{
+		RepoURL:     repoURL,
+		Token:       token,
+		GitUsername: gptest.RequireEnv(t, "TEST_GITHUB_USERNAME"),
+	}
+
+	prov, err := NewProvider(repoURL, &gitprovider.Options{Token: token})
+	require.NoError(t, err)
+
+	gptest.RunDeleteBranchTests(t, repoCfg, prov)
+}

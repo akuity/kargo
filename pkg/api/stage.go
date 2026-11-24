@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -71,16 +70,6 @@ func ListStagesByWarehouses(
 		}
 	}
 	return stages, nil
-}
-
-// IsTargetAware returns true if the Stage governs Targets, i.e. promotes
-// Freight to destinations described by Target resources rather than to itself.
-//
-// The presence of the targets block is what decides this, not what its
-// selectors happen to match. A Stage whose selectors currently match nothing is
-// still target-aware; it simply governs no Targets at the moment.
-func IsTargetAware(stage *kargoapi.Stage) bool {
-	return stage != nil && stage.Spec.Targets != nil
 }
 
 // StageMatchesAnyWarehouse returns true if the Stage requests Freight that
@@ -224,7 +213,7 @@ func RefreshStage(
 			Name:      namespacedName.Name,
 		},
 	}
-	if err := patchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyRefresh, time.Now().Format(time.RFC3339)); err != nil {
+	if err := RefreshObject(ctx, c, stage); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return stage, nil
@@ -323,8 +312,8 @@ func ReverifyStageFreight(
 		ID: currentVI.ID,
 	}
 	// Put actor information to track on the controller side
-	if u, ok := user.InfoFromContext(ctx); ok {
-		rr.Actor = FormatEventUserActor(u)
+	if u, ok := user.IdentityFromContext(ctx); ok {
+		rr.Actor = u.Actor()
 	}
 	return patchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyReverify, rr.String())
 }
@@ -371,8 +360,8 @@ func AbortStageFreightVerification(
 		ID: currentVI.ID,
 	}
 	// Put actor information to track on the controller side
-	if u, ok := user.InfoFromContext(ctx); ok {
-		ar.Actor = FormatEventUserActor(u)
+	if u, ok := user.IdentityFromContext(ctx); ok {
+		ar.Actor = u.Actor()
 	}
 	return patchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyAbort, ar.String())
 }

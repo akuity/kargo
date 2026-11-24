@@ -380,11 +380,9 @@ will be returned.
 
 #### normalizeGit(url)
 
-Normalizes Git URLs of the following forms:
+Normalizes Git URLs of the following form:
 
 - `http[s]://[proxy-user:proxy-pass@]host.xz[:port][/path/to/repo[.git][/]]`
-- `ssh://[user@]host.xz[:port][/path/to/repo[.git][/]]`
-- `[user@]host.xz[:path/to/repo[.git][/]]`
 
 This is useful for the purposes of comparison and also in cases where a
 canonical representation of a Git URL is needed. Any URL that cannot be

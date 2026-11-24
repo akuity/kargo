@@ -59,6 +59,11 @@ type Interface interface {
 	// - error: only for actual errors (auth, network, invalid PR, etc.)
 	MergePullRequest(context.Context, int64, *MergePullRequestOpts) (*PullRequest, bool, error)
 
+	// DeleteBranch deletes the named branch from the repository. Deleting a
+	// branch that does not exist is not an error, so that callers may safely
+	// retry.
+	DeleteBranch(context.Context, string) error
+
 	// GetCommitURL returns a commit URL inferred from the provided repository URL
 	// and commit ID.
 	GetCommitURL(repoURL string, commitID string) (string, error)
@@ -124,6 +129,8 @@ type PullRequest struct {
 	Object any `json:"-"`
 	// HeadSHA is the SHA of the commit at the head of the source branch.
 	HeadSHA string `json:"headSHA"`
+	// HeadBranch is the name of the source branch.
+	HeadBranch string `json:"headBranch"`
 	// CreatedAt is the time the pull request was created.
 	CreatedAt *time.Time `json:"createdAt"`
 }
@@ -147,6 +154,8 @@ type Fake struct {
 	) ([]PullRequest, error)
 	// MergePullRequestFn defines the functionality of the MergePullRequest method.
 	MergePullRequestFn func(context.Context, int64, *MergePullRequestOpts) (*PullRequest, bool, error)
+	// DeleteBranchFn defines the functionality of the DeleteBranch method.
+	DeleteBranchFn func(context.Context, string) error
 	// GetCommitURLFn defines the functionality of the GetCommitURL method.
 	GetCommitURLFn func(repoURL string, commitID string) (string, error)
 }
@@ -182,6 +191,11 @@ func (f *Fake) MergePullRequest(
 	opts *MergePullRequestOpts,
 ) (*PullRequest, bool, error) {
 	return f.MergePullRequestFn(ctx, id, opts)
+}
+
+// DeleteBranch implements gitprovider.Interface.
+func (f *Fake) DeleteBranch(ctx context.Context, branch string) error {
+	return f.DeleteBranchFn(ctx, branch)
 }
 
 // GetCommitURL implements gitprovider.Interface.

@@ -3,9 +3,6 @@ sidebar_label: tf-output
 description: Retrieves outputs from OpenTofu state for use in subsequent steps.
 ---
 
-<span class="tag professional"></span>
-<span class="tag beta"></span>
-
 # `tf-output`
 
 :::info
