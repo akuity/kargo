@@ -43,6 +43,11 @@ type authMiddleware struct {
 	cfg            config.ServerConfig
 	internalClient libClient.Client
 
+	authenticateFn func(
+		ctx context.Context,
+		path string,
+		rawToken string,
+	) (context.Context, error)
 	parseUnverifiedJWTFn func(
 		rawToken string,
 		claims jwt.Claims,
@@ -66,11 +71,16 @@ type goOIDCIDTokenVerifyFn func(ctx context.Context, rawIDToken string) (*oidc.I
 
 type claims map[string]any
 
+// authMiddlewareOpt is a functional option for configuring the auth middleware
+// returned by newAuthMiddleware.
+type authMiddlewareOpt func(*authMiddleware)
+
 // newAuthMiddleware returns an initialized Gin middleware handler for authentication
 func newAuthMiddleware(
 	ctx context.Context,
 	cfg config.ServerConfig,
 	client libClient.Client,
+	opts ...authMiddlewareOpt,
 ) gin.HandlerFunc {
 	a := &authMiddleware{
 		cfg:            cfg,
@@ -79,12 +89,17 @@ func newAuthMiddleware(
 	if cfg.OIDCConfig != nil {
 		a.oidcTokenVerifyFn = newMultiClientVerifier(ctx, cfg)
 	}
+	a.authenticateFn = a.authenticate
 	a.parseUnverifiedJWTFn = jwt.NewParser(jwt.WithoutClaimsValidation()).ParseUnverified
 	a.verifyKargoIssuedTokenFn = a.verifyKargoIssuedToken
 	a.verifyIDPIssuedTokenFn = a.verifyIDPIssuedToken
 	a.verifyKubernetesTokenFn = a.verifyKubernetesToken
 	a.oidcExtractClaimsFn = oidcExtractClaims
 	a.listServiceAccountsFn = a.listServiceAccounts
+
+	for _, opt := range opts {
+		opt(a)
+	}
 
 	return a.Handler
 }
@@ -101,7 +116,7 @@ func (a *authMiddleware) Handler(c *gin.Context) {
 	rawToken := strings.TrimPrefix(c.GetHeader(authHeaderKey), "Bearer ")
 
 	// Authenticate and get user info
-	newCtx, err := a.authenticate(ctx, path, rawToken)
+	newCtx, err := a.authenticateFn(ctx, path, rawToken)
 	if err != nil {
 		logger.Debug("authentication failed", "error", err.Error())
 		_ = c.Error(err)

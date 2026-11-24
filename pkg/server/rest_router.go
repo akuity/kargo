@@ -53,15 +53,22 @@ import (
 // @in header
 // @name Authorization
 // @description Bearer token authentication. Obtain token via OIDC/PKCE flow with your identity provider.
-func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
+func (s *server) setupRESTRouter(
+	ctx context.Context,
+	authOpts ...authMiddlewareOpt,
+) *gin.Engine {
 	router := gin.Default()
 
 	// Error handling middleware
 	router.Use(s.handleError)
 
-	// Authentication middleware (only if auth is configured)
-	if s.cfg.AdminConfig != nil || s.cfg.OIDCConfig != nil {
-		router.Use(newAuthMiddleware(ctx, s.cfg, s.client.InternalClient()))
+	// Authentication middleware. In local mode, the server acts with the
+	// Kubernetes credentials of the user running it, and the UI it serves sends
+	// no token.
+	if !s.cfg.LocalMode {
+		router.Use(
+			newAuthMiddleware(ctx, s.cfg, s.client.InternalClient(), authOpts...),
+		)
 	}
 
 	v1beta1 := router.Group("/v1beta1")
