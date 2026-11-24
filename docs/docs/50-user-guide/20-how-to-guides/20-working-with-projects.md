@@ -72,7 +72,8 @@ A `ProjectConfig` resource can contain multiple promotion policies. Each policy
 is defined by a `stageSelector` and an `autoPromotionEnabled` flag. The
 `stageSelector` specifies which `Stage`s the policy applies to, and the
 `autoPromotionEnabled` flag indicates whether automatic promotion is enabled for
-those `Stage`s.
+those `Stage`s. In Kargo Enterprise, a policy can also include an `autoRollback`
+field to configure [automatic rollback](#auto-rollback).
 
 :::info[Not what you were looking for?]
 
@@ -227,6 +228,53 @@ spec:
 In the example above, the promotion policy applies to all `Stage`s with the
 `example.org/allow-auto-promotion: "true"` label and names matching the
 `glob:prod-*` pattern.
+
+#### Policy Evaluation Order
+
+Promotion policies are evaluated in the order they're listed, and only the
+first policy whose `stageSelector` matches a `Stage` is applied. Any later
+policies that also match are ignored. This applies to all policy settings,
+including `autoPromotionEnabled` and `autoRollback`.
+
+When a `Stage` could match more than one policy, list the most specific
+selectors first. For example, to control auto-promotion and auto-rollback
+with separate labels:
+
+```yaml
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: example
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: example
+  namespace: example
+spec:
+  promotionPolicies:
+  - stageSelector:
+      matchLabels:
+        example.org/auto-promote: "true"
+        example.org/auto-rollback: "true"
+    autoPromotionEnabled: true
+    autoRollback: {}
+  - stageSelector:
+      matchLabels:
+        example.org/auto-promote: "true"
+    autoPromotionEnabled: true
+  - stageSelector:
+      matchLabels:
+        example.org/auto-rollback: "true"
+    autoRollback: {}
+```
+
+:::note
+
+`autoRollback` is a Kargo Enterprise feature and is ignored in Kargo OSS.
+
+:::
 
 #### Auto-Rollback
 
