@@ -30,6 +30,7 @@ import type {
   Freight,
   GetFreightLinksResponse,
   GetStageLinksResponse,
+  GetTargetStatusSummaryParams,
   ListImages200,
   ListProjectsParams,
   ListProjectsResponse,
@@ -38,6 +39,7 @@ import type {
   ListPromotionsParams,
   ListStagesParams,
   ListTargetPromotionsParams,
+  ListTargetStatusesParams,
   ListTargetsParams,
   PatchConfigMapRequest,
   PatchFreightAliasParams,
@@ -60,6 +62,8 @@ import type {
   Target,
   TargetList,
   TargetPromotionList,
+  TargetStatusList,
+  TargetStatusSummary,
   UpdateConfigMapRequest,
   V1ConfigMap,
   V1ConfigMapList,
@@ -4841,6 +4845,364 @@ export const useRefreshStage = <TError = ErrorType<unknown>, TContext = unknown>
 > => {
   return useMutation(getRefreshStageMutationOptions(options), queryClient);
 };
+export type listTargetStatusesResponse200 = {
+  data: TargetStatusList;
+  status: 200;
+};
+
+export type listTargetStatusesResponseSuccess = listTargetStatusesResponse200 & {
+  headers: Headers;
+};
+export type listTargetStatusesResponse = listTargetStatusesResponseSuccess;
+
+export const getListTargetStatusesUrl = (project: string, params?: ListTargetStatusesParams) => {
+  const stringifiedParams = serializeParams(params);
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects/${project}/target-statuses?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/target-statuses`;
+};
+
+/**
+ * List where a project's Targets stand with the Stages that
+ * govern them, one page at a time: one entry per Target and
+ * governing Stage, ordered by Target name and then Stage name.
+ * Nothing records a Target's status. Each entry is derived, on
+ * request, from the Promotions and PromotionRollouts on record,
+ * and which Stages govern a Target from the Stages' selectors
+ * as they are now. A Target no Stage governs has no entry.
+ *
+ * Each entry has one state, the first of these that holds:
+ * Promoting -- the last Promotion to the Target is running.
+ * Pending -- the last Promotion has yet to start, or a
+ * PromotionRollout that has not finished names the Target and
+ * has not reached it yet.
+ * NotAttempted -- a PromotionRollout that names the Target
+ * ended, without succeeding, before creating a Promotion to it,
+ * and there has been no Promotion to it since. A later rollout
+ * that does not name the Target changes nothing.
+ * NeverPromoted -- there has never been a Promotion to the
+ * Target.
+ * Failed -- the last Promotion failed, errored or was aborted.
+ * Behind -- the last Promotion succeeded, and the Freight it
+ * left on the Target is not the Stage's current Freight.
+ * UpToDate -- the last Promotion succeeded and the Target is
+ * not known to be behind.
+ *
+ * A state says how promotion went, not how the Target is
+ * doing: Target health is not recorded, so nothing here
+ * reports it. Entries are read from the database's mirror of
+ * Promotions, so they trail the cluster by its sync.
+ * @summary List Target statuses
+ */
+export const listTargetStatuses = async (
+  project: string,
+  params?: ListTargetStatusesParams,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<listTargetStatusesResponse> => {
+  return customFetch<listTargetStatusesResponse>(getListTargetStatusesUrl(project, params), {
+    ...options,
+    method: 'GET'
+  });
+};
+
+export const getListTargetStatusesQueryKey = (
+  project: string,
+  params?: ListTargetStatusesParams
+) => {
+  return [`/v1beta1/projects/${project}/target-statuses`, ...(params ? [params] : [])] as const;
+};
+
+export const getListTargetStatusesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTargetStatuses>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListTargetStatusesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTargetStatuses>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListTargetStatusesQueryKey(project, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listTargetStatuses>>> = () =>
+    listTargetStatuses(project, params, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listTargetStatuses>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListTargetStatusesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listTargetStatuses>>
+>;
+export type ListTargetStatusesQueryError = ErrorType<unknown>;
+
+export function useListTargetStatuses<
+  TData = Awaited<ReturnType<typeof listTargetStatuses>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params: undefined | ListTargetStatusesParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTargetStatuses>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTargetStatuses>>,
+          TError,
+          Awaited<ReturnType<typeof listTargetStatuses>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTargetStatuses<
+  TData = Awaited<ReturnType<typeof listTargetStatuses>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListTargetStatusesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTargetStatuses>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTargetStatuses>>,
+          TError,
+          Awaited<ReturnType<typeof listTargetStatuses>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTargetStatuses<
+  TData = Awaited<ReturnType<typeof listTargetStatuses>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListTargetStatusesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTargetStatuses>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Target statuses
+ */
+
+export function useListTargetStatuses<
+  TData = Awaited<ReturnType<typeof listTargetStatuses>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: ListTargetStatusesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTargetStatuses>>, TError, TData>>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListTargetStatusesQueryOptions(project, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type getTargetStatusSummaryResponse200 = {
+  data: TargetStatusSummary;
+  status: 200;
+};
+
+export type getTargetStatusSummaryResponseSuccess = getTargetStatusSummaryResponse200 & {
+  headers: Headers;
+};
+export type getTargetStatusSummaryResponse = getTargetStatusSummaryResponseSuccess;
+
+export const getGetTargetStatusSummaryUrl = (
+  project: string,
+  params?: GetTargetStatusSummaryParams
+) => {
+  const stringifiedParams = serializeParams(params);
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects/${project}/target-statuses/summary?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/target-statuses/summary`;
+};
+
+/**
+ * Count a project's Targets by where they stand with the
+ * Stages that govern them: for each Stage, how many of the
+ * Targets it governs are in each state; and for the project,
+ * how many Targets are in each state, a Target governed by
+ * several Stages counted once, under the worst state any of
+ * them reports. The states and the entries counted are those
+ * the Target status list serves, and are counted in the
+ * database rather than read. Targets behind their Stage's
+ * current Freight are counted as well, whatever their state.
+ * Target health is not recorded, so nothing here reports it.
+ * @summary Summarize Target statuses
+ */
+export const getTargetStatusSummary = async (
+  project: string,
+  params?: GetTargetStatusSummaryParams,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<getTargetStatusSummaryResponse> => {
+  return customFetch<getTargetStatusSummaryResponse>(
+    getGetTargetStatusSummaryUrl(project, params),
+    {
+      ...options,
+      method: 'GET'
+    }
+  );
+};
+
+export const getGetTargetStatusSummaryQueryKey = (
+  project: string,
+  params?: GetTargetStatusSummaryParams
+) => {
+  return [
+    `/v1beta1/projects/${project}/target-statuses/summary`,
+    ...(params ? [params] : [])
+  ] as const;
+};
+
+export const getGetTargetStatusSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTargetStatusSummary>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: GetTargetStatusSummaryParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getTargetStatusSummary>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTargetStatusSummaryQueryKey(project, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTargetStatusSummary>>> = () =>
+    getTargetStatusSummary(project, params, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getTargetStatusSummary>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetTargetStatusSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTargetStatusSummary>>
+>;
+export type GetTargetStatusSummaryQueryError = ErrorType<unknown>;
+
+export function useGetTargetStatusSummary<
+  TData = Awaited<ReturnType<typeof getTargetStatusSummary>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params: undefined | GetTargetStatusSummaryParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getTargetStatusSummary>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTargetStatusSummary>>,
+          TError,
+          Awaited<ReturnType<typeof getTargetStatusSummary>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTargetStatusSummary<
+  TData = Awaited<ReturnType<typeof getTargetStatusSummary>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: GetTargetStatusSummaryParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getTargetStatusSummary>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTargetStatusSummary>>,
+          TError,
+          Awaited<ReturnType<typeof getTargetStatusSummary>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTargetStatusSummary<
+  TData = Awaited<ReturnType<typeof getTargetStatusSummary>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: GetTargetStatusSummaryParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getTargetStatusSummary>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Summarize Target statuses
+ */
+
+export function useGetTargetStatusSummary<
+  TData = Awaited<ReturnType<typeof getTargetStatusSummary>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  params?: GetTargetStatusSummaryParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getTargetStatusSummary>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetTargetStatusSummaryQueryOptions(project, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export type listTargetsResponse200 = {
   data: TargetList;
   status: 200;

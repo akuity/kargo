@@ -258,10 +258,14 @@ func (s *server) setupRESTRouter(
 			// request themselves, since no Kubernetes client does it for them.
 			targets.New(s.targetStore(), s.authorize, s.client).Register(project)
 
-			// Target Promotions
-			// What has been promoted to a Target, read from the database;
-			// these handlers authorize themselves too.
-			targetstatuses.New(s.targetStatusStore(), s.authorize).Register(project)
+			// Target statuses
+			// Where each Target stands with the Stages that govern it, read
+			// from the database; these handlers authorize themselves too.
+			targetstatuses.New(
+				s.targetStatusStore(),
+				s.authorize,
+				s.client,
+			).Register(project)
 
 			// PromotionRollouts
 			// PromotionRollouts live in the database too; see above.

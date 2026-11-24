@@ -102,6 +102,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**GetStageLinks**](docs/CoreAPI.md#getstagelinks) | **Get** /v1beta1/projects/{project}/stages/{stage}/links | Retrieve deep links for a Stage resource
 *CoreAPI* | [**GetSystemConfigMap**](docs/CoreAPI.md#getsystemconfigmap) | **Get** /v1beta1/system/configmaps/{configmap} | Retrieve a system-level ConfigMap
 *CoreAPI* | [**GetTarget**](docs/CoreAPI.md#gettarget) | **Get** /v1beta1/projects/{project}/targets/{target-name} | Retrieve a Target
+*CoreAPI* | [**GetTargetStatusSummary**](docs/CoreAPI.md#gettargetstatussummary) | **Get** /v1beta1/projects/{project}/target-statuses/summary | Summarize Target statuses
 *CoreAPI* | [**GetWarehouse**](docs/CoreAPI.md#getwarehouse) | **Get** /v1beta1/projects/{project}/warehouses/{warehouse} | Retrieve a Warehouse
 *CoreAPI* | [**ListClusterPromotionTasks**](docs/CoreAPI.md#listclusterpromotiontasks) | **Get** /v1beta1/shared/cluster-promotion-tasks | List ClusterPromotionTasks
 *CoreAPI* | [**ListImages**](docs/CoreAPI.md#listimages) | **Get** /v1beta1/projects/{project}/images | List container images
@@ -115,6 +116,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**ListStages**](docs/CoreAPI.md#liststages) | **Get** /v1beta1/projects/{project}/stages | List Stages
 *CoreAPI* | [**ListSystemConfigMaps**](docs/CoreAPI.md#listsystemconfigmaps) | **Get** /v1beta1/system/configmaps | List system-level ConfigMaps
 *CoreAPI* | [**ListTargetPromotions**](docs/CoreAPI.md#listtargetpromotions) | **Get** /v1beta1/projects/{project}/targets/{target-name}/promotions | List a Target&#39;s Promotions
+*CoreAPI* | [**ListTargetStatuses**](docs/CoreAPI.md#listtargetstatuses) | **Get** /v1beta1/projects/{project}/target-statuses | List Target statuses
 *CoreAPI* | [**ListTargets**](docs/CoreAPI.md#listtargets) | **Get** /v1beta1/projects/{project}/targets | List Targets
 *CoreAPI* | [**ListWarehouses**](docs/CoreAPI.md#listwarehouses) | **Get** /v1beta1/projects/{project}/warehouses | List Warehouses
 *CoreAPI* | [**PatchFreightAlias**](docs/CoreAPI.md#patchfreightalias) | **Patch** /v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias | Patch a Freight resource&#39;s alias
@@ -396,13 +398,19 @@ Class | Method | HTTP request | Description
  - [StepExecutionMetadata](docs/StepExecutionMetadata.md)
  - [TagMap](docs/TagMap.md)
  - [Target](docs/Target.md)
+ - [TargetFreight](docs/TargetFreight.md)
  - [TargetList](docs/TargetList.md)
  - [TargetPromotion](docs/TargetPromotion.md)
  - [TargetPromotionList](docs/TargetPromotionList.md)
  - [TargetSpec](docs/TargetSpec.md)
  - [TargetStageStatus](docs/TargetStageStatus.md)
+ - [TargetState](docs/TargetState.md)
  - [TargetStats](docs/TargetStats.md)
  - [TargetStatus](docs/TargetStatus.md)
+ - [TargetStatusEntry](docs/TargetStatusEntry.md)
+ - [TargetStatusList](docs/TargetStatusList.md)
+ - [TargetStatusStageSummary](docs/TargetStatusStageSummary.md)
+ - [TargetStatusSummary](docs/TargetStatusSummary.md)
  - [TargetUpdateStrategy](docs/TargetUpdateStrategy.md)
  - [TargetVerificaitonSpec](docs/TargetVerificaitonSpec.md)
  - [UpdateConfigMapRequest](docs/UpdateConfigMapRequest.md)

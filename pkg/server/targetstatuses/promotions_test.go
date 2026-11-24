@@ -184,7 +184,7 @@ func TestListPromotions(t *testing.T) {
 	t.Run("pages follow one another without gap or overlap", func(t *testing.T) {
 		t.Parallel()
 		store := newStore()
-		router := newRouter(store, forbid("nothing"))
+		router := newRouter(store, forbid("nothing"), newKube(t))
 		query := url.Values{queryLimit: {"2"}}
 		var read []string
 		for pages := 1; ; pages++ {
