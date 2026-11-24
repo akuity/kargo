@@ -78,8 +78,19 @@ global:
   affinity: {}
   ## @param global.priorityClassName [nullable] Default priority class for all Kargo pods.
   # priorityClassName:
-  ## @param global.securityContext Default security context for all Kargo pods.
-  securityContext: {}
+  ## Default security context for all Kargo containers
+  securityContext:
+    ## @param global.securityContext.runAsNonRoot Require containers to run as a non-root user.
+    runAsNonRoot: true
+    ## @param global.securityContext.allowPrivilegeEscalation Prevent containers from gaining more privileges than their parent process.
+    allowPrivilegeEscalation: false
+    capabilities:
+      ## @param global.securityContext.capabilities.drop Linux capabilities to drop from containers.
+      drop:
+      - ALL
+    seccompProfile:
+      ## @param global.securityContext.seccompProfile.type Seccomp profile applied to containers.
+      type: RuntimeDefault
 
   ## Distributed tracing settings shared by all Kargo components.
   tracing:
@@ -536,8 +547,17 @@ api:
       annotations: {}
       ## @param api.oidc.dex.podAnnotations Annotations to add to the Dex server pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
       podAnnotations: {}
-      ## @param api.oidc.dex.securityContext Security context for Dex server pods. Defaults to `global.securityContext`.
-      securityContext: {}
+      ## @param api.oidc.dex.securityContext [object] Security context for the Dex server container. When empty, `global.securityContext` applies. The default is the hardened global default plus a numeric `runAsUser` and `runAsGroup` for the image's `dex` user, without which `runAsNonRoot` cannot be verified.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        seccompProfile:
+          type: RuntimeDefault
 
       probes:
         ## @param api.oidc.dex.probes.enabled Whether startup, liveness, and readiness probes should be included in the Dex server deployment. It is sometimes advantageous to disable these during local development.
@@ -1718,8 +1738,17 @@ database:
     ## @param database.postgres.affinity Specifies pod affinity for the bundled PostgreSQL pod. Defaults to `global.affinity`.
     affinity: {}
     # priorityClassName:
-    ## @param database.postgres.securityContext Security context for the bundled PostgreSQL container. Defaults to `global.securityContext`.
-    securityContext: {}
+    ## @param database.postgres.securityContext [object] Security context for the bundled PostgreSQL container. When empty, `global.securityContext` applies. The default is the hardened global default, running as the image's `postgres` user and group (UID and GID 999).
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 999
+      runAsGroup: 999
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      seccompProfile:
+        type: RuntimeDefault
   external:
     ## @param database.external.secretName Name of an existing Secret in Kargo's namespace that holds the connection string of an external PostgreSQL database under the key named by `database.external.secretKey`. Cannot be combined with `database.postgres.enabled`.
     secretName: ""

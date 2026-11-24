@@ -55,6 +55,19 @@ tests:
       - notExists:
           path: spec.template.spec.volumes
 
+  - it: runs PostgreSQL as its non-root user with a writable data volume by default
+    template: templates/postgres/statefulset.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 999
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 999
+
   - it: uses the configured storage class
     template: templates/postgres/statefulset.yaml
     set:

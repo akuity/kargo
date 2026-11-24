@@ -56,6 +56,19 @@ tests:
           path: metadata.name
           value: kargo-dex-server
 
+  - it: runs Dex as its numeric non-root user by default
+    template: templates/dex-server/deployment.yaml
+    set:
+      api.oidc.enabled: true
+      api.oidc.dex.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 1001
+
   - it: does not mount a service account token in the pod by default
     template: templates/dex-server/deployment.yaml
     set:
