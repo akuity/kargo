@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/client/apiserver"
+	"github.com/akuity/kargo/pkg/client/storage/dataplane"
 	"github.com/akuity/kargo/pkg/garbage"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
@@ -26,8 +26,6 @@ import (
 )
 
 type garbageCollectorOptions struct {
-	APIServer apiserver.ClientConfig
-
 	KubeConfig string
 	QPS        float32
 	Burst      int
@@ -72,8 +70,6 @@ func newGarbageCollectorCommand() *cobra.Command {
 }
 
 func (o *garbageCollectorOptions) complete() {
-	o.APIServer = apiserver.ClientConfigFromEnv()
-
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
 	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
 	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
@@ -101,21 +97,9 @@ func (o *garbageCollectorOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up controller manager: %w", err)
 	}
 
-	// Freight is served by the API server. The garbage collector lists and
-	// deletes Freight through it, acting as the ServiceAccount of the control
-	// plane that its credential for the control plane resolves to, with tokens
-	// it obtains for that ServiceAccount.
-	if o.APIServer.Address == "" {
-		return errors.New(
-			"API_SERVER_ADDRESS is not set; the garbage collector requires " +
-				"access to the API server to collect Freight",
-		)
-	}
-	apiClient, err := apiserver.New(ctx, o.APIServer, mgr.GetConfig())
-	if err != nil {
-		return fmt.Errorf("error configuring access to the API server: %w", err)
-	}
-
+	// TODO: add DB access here
+	storageClient := dataplane.NewStorageClient(mgr.GetClient(), nil, nil)
+	
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -130,7 +114,7 @@ func (o *garbageCollectorOptions) run(ctx context.Context) error {
 	}
 
 	cfg := garbage.CollectorConfigFromEnv()
-	return garbage.NewCollector(mgr.GetClient(), cfg, apiClient).Run(ctx)
+	return garbage.NewCollector(mgr.GetClient(), cfg, storageClient).Run(ctx)
 }
 
 func (o *garbageCollectorOptions) setupManager(ctx context.Context) (manager.Manager, error) {

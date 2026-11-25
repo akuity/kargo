@@ -20,8 +20,8 @@ func NewStorageClient(
 	cl client.Client,
 	eventSender event.Sender,
 	db *database.Queries,
-) StorageClient {
-	return StorageClient{
+) *StorageClient {
+	return &StorageClient{
 		cl,
 		eventSender,
 		db,

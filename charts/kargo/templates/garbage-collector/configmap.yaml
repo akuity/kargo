@@ -10,12 +10,6 @@ metadata:
     {{- include "kargo.garbageCollector.labels" . | nindent 4 }}
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.garbageCollector.annotations) | nindent 2 }}
 data:
-  {{- with (include "kargo.garbageCollector.apiServerAddress" .) }}
-  API_SERVER_ADDRESS: {{ quote . }}
-  {{- end }}
-  {{- if (include "kargo.garbageCollector.mountsAPIServerCA" .) }}
-  API_SERVER_CA_CERT_PATH: /etc/kargo/api-ca.crt
-  {{- end }}
   LOG_LEVEL: {{ quote .Values.garbageCollector.logLevel }}
   LOG_FORMAT: {{ quote .Values.garbageCollector.logFormat }}
   {{- with (include "kargo.tracing.configMapData" .) }}

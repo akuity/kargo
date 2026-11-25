@@ -20,9 +20,6 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 )
 
-// FreightGetter reads Freight through the control plane's API server.
-// *apiserver.Client satisfies it; the Verifier reads Freight through it rather
-// than the Kubernetes client.
 type FreightGetter interface {
 	GetFreight(ctx context.Context, project, nameOrAlias string) (*kargoapi.Freight, error)
 }

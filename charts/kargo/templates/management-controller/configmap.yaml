@@ -13,12 +13,6 @@ metadata:
 data:
   EXTERNAL_WEBHOOK_SERVER_BASE_URL: {{ include "kargo.externalWebhooksServer.baseURL" . }}
   KARGO_NAMESPACE: {{ include "kargo.dataNamespace" . }}
-  {{- with (include "kargo.managementController.apiServerAddress" .) }}
-  API_SERVER_ADDRESS: {{ quote . }}
-  {{- end }}
-  {{- if (include "kargo.managementController.mountsAPIServerCA" .) }}
-  API_SERVER_CA_CERT_PATH: /etc/kargo/api-ca.crt
-  {{- end }}
   SYSTEM_RESOURCES_NAMESPACE: {{ quote .Values.global.systemResources.namespace }}
   {{- if .Values.controller.serviceAccount.clusterWideSecretReadingEnabled }}
   MANAGE_CONTROLLER_ROLE_BINDINGS: "false"

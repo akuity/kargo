@@ -22,6 +22,7 @@ import (
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
+	"github.com/akuity/kargo/pkg/client/storage/dataplane"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	"github.com/akuity/kargo/pkg/kubernetes"
 	"github.com/akuity/kargo/pkg/logging"
@@ -110,30 +111,31 @@ func SetupWebhookWithManager(
 	cfg libWebhook.Config,
 	mgr ctrl.Manager,
 	sender kargoEvent.Sender,
-	apiClient *apiserver.Client,
 ) error {
 	w := newWebhook(
 		cfg,
 		mgr.GetClient(),
-		apiClient,
 		admission.NewDecoder(mgr.GetScheme()),
 		sender,
 	)
 	w.apiReader = mgr.GetAPIReader()
 	w.getStageNoCacheFn = w.apiReader.Get
+	
+	// TODO: add DB access here
+	storageClient := dataplane.NewStorageClient(mgr.GetClient(), sender, nil)
+	w.freightClient = storageClient
+
 	return libWebhook.SetupValidatingAndDefaultingWebhook(mgr, &kargoapi.Promotion{}, w)
 }
 
 func newWebhook(
 	cfg libWebhook.Config,
 	kubeClient client.Client,
-	apiClient *apiserver.Client,
 	decoder admission.Decoder,
 	sender kargoEvent.Sender,
 ) *webhook {
 	w := &webhook{
 		client:        kubeClient,
-		freightClient: apiClient,
 		decoder:       decoder,
 		sender:        sender,
 	}

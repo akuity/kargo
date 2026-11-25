@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	stdruntime "runtime"
 
@@ -16,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/event"
 	natsevent "github.com/akuity/kargo/pkg/event/nats"
 	"github.com/akuity/kargo/pkg/indexer"
@@ -41,8 +39,6 @@ import (
 )
 
 type kubernetesWebhooksServerOptions struct {
-	APIServer apiserver.ClientConfig
-
 	KubeConfig string
 	QPS        float32
 	Burst      int
@@ -87,8 +83,6 @@ func newKubernetesWebhooksServerCommand() *cobra.Command {
 }
 
 func (o *kubernetesWebhooksServerOptions) complete() {
-	o.APIServer = apiserver.ClientConfigFromEnv()
-
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
 	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
 	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
@@ -175,21 +169,6 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("index Stages by Freight: %w", err)
 	}
 
-	// Freight is served by the API server. The Promotion webhook lists the
-	// Freight available to a Stage through it, acting as the ServiceAccount of
-	// the control plane that its credential for the control plane resolves to,
-	// with tokens it obtains for that ServiceAccount.
-	if o.APIServer.Address == "" {
-		return errors.New(
-			"API_SERVER_ADDRESS is not set; the Promotion webhook requires " +
-				"access to the API server to list Freight",
-		)
-	}
-	apiClient, err := apiserver.New(ctx, o.APIServer, mgr.GetConfig())
-	if err != nil {
-		return fmt.Errorf("error configuring access to the API server: %w", err)
-	}
-
 	if err = clusterconfig.SetupWebhookWithManager(mgr); err != nil {
 		return fmt.Errorf("setup ClusterConfig webhook: %w", err)
 	}
@@ -213,7 +192,6 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 		webhookCfg,
 		mgr,
 		event.NewDefaultingSender(eventSender, "promotion-webhook"),
-		apiClient,
 	); err != nil {
 		return fmt.Errorf("setup Promotion webhook: %w", err)
 	}

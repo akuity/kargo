@@ -1047,7 +1047,7 @@ func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoap
 }
 
 // listAvailableFreight lists the Freight available for promotion to the Stage,
-// read through the control plane's API server rather than the Kubernetes client.
+// read through the control plane's API server (via freightClient).
 func (r *RegularStageReconciler) listAvailableFreight(
 	ctx context.Context,
 	stage *kargoapi.Stage,

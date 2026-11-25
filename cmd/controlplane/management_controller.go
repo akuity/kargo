@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/controller/management/clusterconfigs"
 	"github.com/akuity/kargo/pkg/controller/management/dbsync"
 	"github.com/akuity/kargo/pkg/controller/management/legacysecrets"
@@ -38,7 +37,6 @@ import (
 type managementControllerOptions struct {
 	Database   database.Config
 	KubeConfig string
-	APIServer  apiserver.ClientConfig
 	QPS        float32
 	Burst      int
 
@@ -75,7 +73,6 @@ func newManagementControllerCommand() *cobra.Command {
 func (o *managementControllerOptions) complete() {
 	o.Database = database.ConfigFromEnv()
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
-	o.APIServer = apiserver.ClientConfigFromEnv()
 	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
 	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
 

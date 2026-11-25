@@ -11,12 +11,6 @@ metadata:
   {{- include "kargo.annotations" (dict "root" . "annotations" .Values.webhooksServer.annotations) | nindent 2 }}
 data:
   KARGO_NAMESPACE: {{ include "kargo.dataNamespace" . }}
-  {{- with (include "kargo.webhooksServer.apiServerAddress" .) }}
-  API_SERVER_ADDRESS: {{ quote . }}
-  {{- end }}
-  {{- if (include "kargo.webhooksServer.mountsAPIServerCA" .) }}
-  API_SERVER_CA_CERT_PATH: /etc/kargo/api-ca.crt
-  {{- end }}
   LOG_LEVEL: {{ quote .Values.webhooksServer.logLevel }}
   LOG_FORMAT: {{ quote .Values.webhooksServer.logFormat }}
   {{- with (include "kargo.tracing.configMapData" .) }}

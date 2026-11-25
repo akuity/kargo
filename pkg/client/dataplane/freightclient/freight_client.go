@@ -51,11 +51,6 @@ type FreightLister interface {
 	) ([]kargoapi.Freight, error)
 }
 
-// FreightClient lists Freight through the control plane's API server, so that
-// availability can be computed from a component that reaches Freight only
-// through the API server rather than the Kubernetes client. *apiserver.Client
-// satisfies it.
-
 type FreightClient interface {
 	GetFreight(ctx context.Context, project, name string) (*kargoapi.Freight, error)
 	GetFreightByAlias(ctx context.Context, project, alias string) (*kargoapi.Freight, error)

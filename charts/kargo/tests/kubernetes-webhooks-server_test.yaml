@@ -92,42 +92,6 @@ tests:
           path: data.METRICS_BIND_ADDRESS
           value: ":9090"
 
-  - it: reaches the API server through its Service, trusting the chart's certificate
-    asserts:
-      - equal:
-          path: data.API_SERVER_ADDRESS
-          value: https://kargo-api.NAMESPACE.svc
-      - equal:
-          path: data.API_SERVER_CA_CERT_PATH
-          value: /etc/kargo/api-ca.crt
-
-  - it: reaches the API server over plain HTTP when it serves none
-    set:
-      api.tls.enabled: false
-    asserts:
-      - equal:
-          path: data.API_SERVER_ADDRESS
-          value: http://kargo-api.NAMESPACE.svc
-      - notExists:
-          path: data.API_SERVER_CA_CERT_PATH
-
-  - it: uses the operator's API server address when set
-    set:
-      webhooksServer.apiServer.address: https://kargo.example.com
-    asserts:
-      - equal:
-          path: data.API_SERVER_ADDRESS
-          value: https://kargo.example.com
-      - notExists:
-          path: data.API_SERVER_CA_CERT_PATH
-
-  - it: omits the API server address when the API is disabled and none is set
-    set:
-      api.enabled: false
-    asserts:
-      - notExists:
-          path: data.API_SERVER_ADDRESS
-
 ---
 suite: kubernetes-webhooks-server/deployment.yaml
 values:

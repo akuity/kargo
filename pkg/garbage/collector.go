@@ -16,6 +16,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
+	"github.com/akuity/kargo/pkg/client/storage/dataplane"
 )
 
 // CollectorConfig is configuration for the garbage collector.
@@ -140,11 +141,11 @@ type collector struct {
 func NewCollector(
 	kubeClient client.Client,
 	cfg CollectorConfig,
-	apiClient *apiserver.Client,
+	storageClient *dataplane.StorageClient,
 ) Collector {
 	c := &collector{
 		cfg:           cfg,
-		freightClient: apiClient,
+		freightClient: storageClient,
 	}
 	c.cleanProjectsFn = c.cleanProjects
 	c.cleanProjectFn = c.cleanProject
