@@ -3,8 +3,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 
 const PAGE_SIZE = 20;
-const MIN_CARD_WIDTH = 150;
-const CARD_GAP = 4;
+export const MIN_CARD_WIDTH = 150;
+export const CARD_GAP = 4;
+// Width of the scroll arrows on either side of the strip.
+export const ARROW_BUTTON_WIDTH = 28;
 
 type PreferredFilter = FreightTimelineControllerContextType['preferredFilter'];
 
