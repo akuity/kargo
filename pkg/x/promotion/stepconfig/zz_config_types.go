@@ -277,6 +277,9 @@ type GitOpenPRConfig struct {
 	// The description of the pull request. Kargo generates a description based on the commit
 	// messages if it is not explicitly specified.
 	Description string `json:"description,omitempty"`
+	// Indicates whether to leave out the link to the Stage in the Kargo UI that Kargo appends
+	// to the description by default. Default is false.
+	DisableFooter bool `json:"disableFooter,omitempty"`
 	// Indicates whether to skip TLS verification when cloning the repository. Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// Labels to add to the pull request.
