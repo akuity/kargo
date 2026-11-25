@@ -17,29 +17,6 @@
         color: var(--kargo-color-text-tertiary, #8c8c8c);
     }
 
-    // The arrows stay small to look at but are a comfortable target: the box
-    // is 20px square, and the negative block margin keeps that from pushing
-    // the rows it sits in any further apart.
-    .pagerButton {
-        width: 20px;
-        min-width: 20px;
-        height: 20px;
-        margin-block: -4px;
-        padding: 0;
-        font-size: 9px;
-        color: var(--kargo-color-text-tertiary, #8c8c8c);
-    }
-
-    // The arrows stay exactly as they are under the pointer and through a
-    // click -- no background, no change of color. AntD's text-button states
-    // are more specific than this selector, hence !important.
-    .pagerButton:hover,
-    .pagerButton:focus,
-    .pagerButton:active {
-        background: transparent !important;
-        color: var(--kargo-color-text-tertiary, #8c8c8c);
-    }
-
     .success {
         @apply bg-green-500;
         @apply text-white;
@@ -377,6 +354,33 @@ a.statusValueLink {
 // little -- still recessed, but not a hole punched through the card.
 :root[data-theme='dark'] .freight {
     background: color-mix(in srgb, var(--kargo-color-bg-layout) 70%, var(--kargo-color-bg-container));
+}
+
+// Scoped to the well rather than the node, since the well also stands on its
+// own in the pipeline list's Version column.
+.freight {
+    // The arrows stay small to look at but are a comfortable target: the box
+    // is 20px square, and the negative block margin keeps that from pushing
+    // the rows it sits in any further apart.
+    .pagerButton {
+        width: 20px;
+        min-width: 20px;
+        height: 20px;
+        margin-block: -4px;
+        padding: 0;
+        font-size: 9px;
+        color: var(--kargo-color-text-tertiary, #8c8c8c);
+    }
+
+    // The arrows stay exactly as they are under the pointer and through a
+    // click -- no background, no change of color. AntD's text-button states
+    // are more specific than this selector, hence !important.
+    .pagerButton:hover,
+    .pagerButton:focus,
+    .pagerButton:active {
+        background: transparent !important;
+        color: var(--kargo-color-text-tertiary, #8c8c8c);
+    }
 }
 
 .sectionLabel {
