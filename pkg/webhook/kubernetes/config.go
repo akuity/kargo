@@ -12,7 +12,7 @@ type Config struct {
 	// RawControlplaneUserRegex is a regular expression to match the username in
 	// admission request to distinguish if the request is coming from controlplane.
 	RawControlplaneUserRegex string         `envconfig:"CONTROLPLANE_USER_REGEX"`
-	ControlplaneUserRegex    *regexp.Regexp `ignored:"true"`
+	ControlplaneUserRegex    *regexp.Regexp `                                    ignored:"true"`
 	// ManagementControllerUsername is the exact username (typically a service
 	// account name) of the management controller. This is used where only the
 	// management controller (not the API server or other controlplane

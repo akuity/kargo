@@ -847,6 +847,11 @@ paths:
         name: nameOnly
         schema:
           type: boolean
+      - description: "Match only the Freight alias, not its name"
+        in: query
+        name: aliasOnly
+        schema:
+          type: boolean
       responses:
         "200":
           content:

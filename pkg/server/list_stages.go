@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -49,7 +48,7 @@ func (s *server) watchStages(c *gin.Context, project string, warehouses []string
 	ctx := c.Request.Context()
 	logger := logging.LoggerFromContext(ctx)
 
-	w, err := s.client.Watch(
+	watcher, err := s.watchK8sResources[*kargoapi.Stage](
 		ctx,
 		&kargoapi.StageList{},
 		buildWatchListOptions(project, resourceVersion)...,
@@ -62,56 +61,13 @@ func (s *server) watchStages(c *gin.Context, project string, warehouses []string
 		_ = c.Error(fmt.Errorf("watch stages: %w", err))
 		return
 	}
-	defer w.Stop()
-
-	keepaliveTicker := time.NewTicker(30 * time.Second)
-	defer keepaliveTicker.Stop()
-
-	SetSSEHeaders(c)
-
-	for {
-		select {
-		case <-ctx.Done():
-			logger.Debug("watch context done", "error", ctx.Err())
-			return
-
-		case <-keepaliveTicker.C:
-			if !WriteSSEKeepalive(c) {
-				return
-			}
-
-		case e, ok := <-w.ResultChan():
-			if !ok {
-				logger.Debug("watch channel closed")
-				return
-			}
-			if watchErr := ErrorFromWatchEvent(e); watchErr != nil {
-				SendSSEWatchError(c, watchErr)
-				return
-			}
-
-			stage, ok := ConvertWatchEventObject(c, e, (*kargoapi.Stage)(nil))
-			if !ok {
-				continue
-			}
-
-			eventType := e.Type
-			if len(warehouses) > 0 {
-				var send bool
-				eventType, send = FilteredWatchEventType(
-					e.Type,
-					api.StageMatchesAnyWarehouse(stage, warehouses),
-				)
-				if !send {
-					continue
-				}
-			}
-
-			if !SendSSEWatchEvent(c, eventType, stage) {
-				return
-			}
+	s.watchResources(c, watcher, func(stage *kargoapi.Stage) bool {
+		if len(warehouses) > 0 {
+			return api.StageMatchesAnyWarehouse(stage, warehouses)
 		}
-	}
+		return true
+	})
+
 }
 
 // listStagesByWarehouses lists Stages in the given project, optionally

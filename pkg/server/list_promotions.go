@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -78,7 +77,7 @@ func (s *server) watchPromotions(c *gin.Context, project, stage, resourceVersion
 
 	// Note: We can't filter by stage using field selector in the watch API.
 	// The indexer is for List operations only. We filter events client-side.
-	w, err := s.client.Watch(
+	watcher, err := s.watchK8sResources[*kargoapi.Promotion](
 		ctx,
 		&kargoapi.PromotionList{},
 		buildWatchListOptions(project, resourceVersion)...,
@@ -91,51 +90,10 @@ func (s *server) watchPromotions(c *gin.Context, project, stage, resourceVersion
 		_ = c.Error(fmt.Errorf("watch promotions: %w", err))
 		return
 	}
-	defer w.Stop()
-
-	keepaliveTicker := time.NewTicker(30 * time.Second)
-	defer keepaliveTicker.Stop()
-
-	SetSSEHeaders(c)
-
-	for {
-		select {
-		case <-ctx.Done():
-			logger.Debug("watch context done", "error", ctx.Err())
-			return
-
-		case <-keepaliveTicker.C:
-			if !WriteSSEKeepalive(c) {
-				return
-			}
-
-		case e, ok := <-w.ResultChan():
-			if !ok {
-				logger.Debug("watch channel closed")
-				return
-			}
-			if watchErr := ErrorFromWatchEvent(e); watchErr != nil {
-				SendSSEWatchError(c, watchErr)
-				return
-			}
-
-			promotion, ok := ConvertWatchEventObject(c, e, (*kargoapi.Promotion)(nil))
-			if !ok {
-				continue
-			}
-
-			eventType := e.Type
-			if stage != "" {
-				var send bool
-				eventType, send = FilteredWatchEventType(e.Type, promotion.Spec.Stage == stage)
-				if !send {
-					continue
-				}
-			}
-
-			if !SendSSEWatchEvent(c, eventType, promotion) {
-				return
-			}
+	s.watchResources(c, watcher, func(promo *kargoapi.Promotion) bool {
+		if stage != "" {
+			return promo.Spec.Stage == stage
 		}
-	}
+		return true
+	})
 }

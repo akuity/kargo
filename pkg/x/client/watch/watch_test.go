@@ -636,7 +636,13 @@ func TestStreamAnalysisRunLogs(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 			defer cancel()
 
-			logCh, errCh := client.StreamAnalysisRunLogs(ctx, "test-project", "test-run", tt.metricName, tt.containerName)
+			logCh, errCh := client.StreamAnalysisRunLogs(
+				ctx,
+				"test-project",
+				"test-run",
+				tt.metricName,
+				tt.containerName,
+			)
 
 			logs := make([]string, 0)
 			for log := range logCh {

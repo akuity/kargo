@@ -6,6 +6,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/server/auth/can"
 )
 
@@ -51,4 +52,23 @@ func (s *server) listForWatchSeed(
 	}
 
 	return s.client.APIReader().List(ctx, list, opts...)
+}
+
+// listFreightForWatchSeed returns freight and watch seed string for freight.
+// We're not using listForWatchSeed directly because of relationship between
+// kargoapi.Freight and kargoapi.FreightList, which is not easy to make generic.
+//
+// We removed FreightList from the function signature to make it compatible with DB.
+// This function can be implemented for other resources in the future.
+func (s *server) listFreightForWatchSeed(
+	ctx context.Context,
+	project string,
+) ([]kargoapi.Freight, string, error) {
+	objectList := &kargoapi.FreightList{}
+	if err := s.listForWatchSeed(ctx, "freights", objectList, client.InNamespace(project)); err != nil {
+		return nil, "", err
+	}
+	items := objectList.Items
+	resourceVersion := normalizeListResourceVersion(objectList.GetResourceVersion())
+	return items, resourceVersion, nil
 }

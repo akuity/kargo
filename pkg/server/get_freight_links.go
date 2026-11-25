@@ -30,7 +30,6 @@ type getFreightLinksResponse struct {
 // @Success 200 {object} getFreightLinksResponse
 // @Router /v1beta1/projects/{project}/freight/{freight-name-or-alias}/links [get]
 func (s *server) getFreightLinks(c *gin.Context) {
-	// FIXME: move that to API
 	ctx := c.Request.Context()
 	project := c.Param("project")
 	nameOrAlias := c.Param("freight-name-or-alias")

@@ -65,7 +65,7 @@ func Test_sendSSEWatchError(t *testing.T) {
 
 	err := connect.NewError(connect.CodeOutOfRange, errors.New("resource version expired"))
 
-	SendSSEWatchError(c, err)
+	sendSSEWatchError(c, err)
 
 	require.Contains(t, recorder.Body.String(), "event: error")
 	require.Contains(t, recorder.Body.String(), `"code":"out_of_range"`)
@@ -80,15 +80,17 @@ func Test_convertAndSendWatchEvent_errorEvent(t *testing.T) {
 	c, _ := gin.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
 
-	keepGoing := ConvertAndSendWatchEvent(c, watch.Event{
-		Type: watch.Error,
-		Object: &metav1.Status{
-			Status:  metav1.StatusFailure,
-			Message: "too old resource version",
-			Reason:  metav1.StatusReasonExpired,
-			Code:    http.StatusGone,
-		},
-	}, (*metav1.PartialObjectMetadata)(nil))
+	keepGoing := convertAndSendWatchEventFiltered(c,
+		storageEventsWatcherK8s[any]{},
+		watch.Event{
+			Type: watch.Error,
+			Object: &metav1.Status{
+				Status:  metav1.StatusFailure,
+				Message: "too old resource version",
+				Reason:  metav1.StatusReasonExpired,
+				Code:    http.StatusGone,
+			},
+		}, nil)
 
 	require.False(t, keepGoing)
 	require.Contains(t, recorder.Body.String(), "event: error")
@@ -145,7 +147,7 @@ func Test_filteredWatchEventType(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			eventType, send := FilteredWatchEventType(testCase.eventType, testCase.matches)
+			eventType, send := filteredWatchEventType(testCase.eventType, testCase.matches)
 
 			require.Equal(t, testCase.wantSend, send)
 			require.Equal(t, testCase.wantType, eventType)

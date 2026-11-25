@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -58,44 +57,19 @@ func (s *server) watchProjectConfig(c *gin.Context, project string) {
 		return
 	}
 
-	// ProjectConfig is namespaced, namespace = project
-	w, err := s.client.Watch(
+	watcher, err := s.watchK8sResources[*kargoapi.ProjectConfig](
 		ctx,
 		&kargoapi.ProjectConfigList{},
 		client.InNamespace(project),
 		client.MatchingFields{"metadata.name": project},
 	)
 	if err != nil {
+		if SendSSEWatchStartError(c, err) {
+			return
+		}
 		logger.Error(err, "failed to start watch")
 		_ = c.Error(fmt.Errorf("watch project config: %w", err))
 		return
 	}
-	defer w.Stop()
-
-	keepaliveTicker := time.NewTicker(30 * time.Second)
-	defer keepaliveTicker.Stop()
-
-	SetSSEHeaders(c)
-
-	for {
-		select {
-		case <-ctx.Done():
-			logger.Debug("watch context done", "error", ctx.Err())
-			return
-
-		case <-keepaliveTicker.C:
-			if !WriteSSEKeepalive(c) {
-				return
-			}
-
-		case e, ok := <-w.ResultChan():
-			if !ok {
-				logger.Debug("watch channel closed")
-				return
-			}
-			if !ConvertAndSendWatchEvent(c, e, (*kargoapi.ProjectConfig)(nil)) {
-				return
-			}
-		}
-	}
+	s.watchResources(c, watcher, nil)
 }

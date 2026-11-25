@@ -11,4 +11,8 @@ export type GetFreightParams = {
    * Match only the Freight name, not its alias
    */
   nameOnly?: boolean;
+  /**
+   * Match only the Freight alias, not its name
+   */
+  aliasOnly?: boolean;
 };

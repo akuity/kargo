@@ -1,11 +1,13 @@
 package server
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libhttp "github.com/akuity/kargo/pkg/http"
 )
 
 // @id GetFreight
@@ -18,6 +20,7 @@ import (
 // @Param project path string true "Project name"
 // @Param freight-name-or-alias path string true "Freight name or alias"
 // @Param nameOnly query bool false "Match only the Freight name, not its alias"
+// @Param aliasOnly query bool false "Match only the Freight alias, not its name"
 // @Success 200 {object} kargoapi.Freight "Freight custom resource (github.com/akuity/kargo/api/v1alpha1.Freight)"
 // @Router /v1beta1/projects/{project}/freight/{freight-name-or-alias} [get]
 func (s *server) getFreight(c *gin.Context) {
@@ -27,9 +30,21 @@ func (s *server) getFreight(c *gin.Context) {
 	var freight *kargoapi.Freight
 	var err error
 	ctx := c.Request.Context()
-	if c.Query("nameOnly") == trueStr {
+	nameOnly := c.Query("nameOnly") == trueStr
+	aliasOnly := c.Query("aliasOnly") == trueStr
+
+	switch {
+	case nameOnly && aliasOnly:
+		_ = c.Error(libhttp.Error(
+			errors.New("nameOnly and aliasOnly cannot be set at the same time"),
+			http.StatusBadRequest,
+		))
+		return
+	case nameOnly:
 		freight, err = s.freightClient.GetFreight(ctx, project, nameOrAlias)
-	} else {
+	case aliasOnly:
+		freight, err = s.freightClient.GetFreightByAlias(ctx, project, nameOrAlias)
+	default:
 		freight, err = s.freightClient.GetFreightByNameOrAlias(ctx, project, nameOrAlias)
 	}
 	if err != nil {

@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
@@ -163,14 +162,10 @@ func (s *server) promoteToStage(c *gin.Context) {
 			return
 		}
 		if s.sender != nil && promotion.Spec.Freight != "" {
-			freight := &kargoapi.Freight{}
-			if err = s.client.Get(
-				ctx,
-				client.ObjectKey{Namespace: promotion.Namespace, Name: promotion.Spec.Freight},
-				freight,
-			); err != nil {
+			freight, getFreightErr := s.freightClient.GetFreight(ctx, promotion.Namespace, promotion.Spec.Freight)
+			if getFreightErr != nil {
 				logging.LoggerFromContext(ctx).Error(
-					err,
+					getFreightErr,
 					"error getting resolved Freight for Promotion created event",
 				)
 			} else {
@@ -263,8 +258,7 @@ func (s *server) getFreightForPromotion(
 			return nil, err
 		}
 	} else {
-		// FIXME: We don't expect alias to overlap with name, but strict GetFreightByAlias could be useful
-		if freight, err = s.freightClient.GetFreightByNameOrAlias(ctx, project, alias); err != nil {
+		if freight, err = s.freightClient.GetFreightByAlias(ctx, project, alias); err != nil {
 			return nil, err
 		}
 	}
@@ -285,7 +279,6 @@ func (s *server) createPromotion(
 	if actor != "" {
 		api.SetCreateActorAnnotation(newPromo, actor)
 	}
-	// FIXME: resolve name conflict
 	if err := s.createPromotionFn(ctx, newPromo); err != nil {
 		return nil, err
 	}

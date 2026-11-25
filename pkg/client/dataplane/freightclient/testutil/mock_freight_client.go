@@ -14,6 +14,7 @@ var _ freightclient.FreightClient = &MockFreightClient{}
 
 type MockFreightClient struct {
 	GetFreightFun              func(ctx context.Context, project, name string) (*kargoapi.Freight, error)
+	GetFreightByAliasFun       func(ctx context.Context, project, alias string) (*kargoapi.Freight, error)
 	GetFreightByNameOrAliasFun func(ctx context.Context, project, nameOrAlias string) (*kargoapi.Freight, error)
 	CreateFreightFun           func(
 		ctx context.Context,
@@ -58,6 +59,12 @@ func (mock *MockFreightClient) ApproveFreight(
 
 func (mock *MockFreightClient) GetFreight(ctx context.Context, project, name string) (*kargoapi.Freight, error) {
 	return mock.GetFreightFun(ctx, project, name)
+}
+
+func (mock *MockFreightClient) GetFreightByAlias(
+	ctx context.Context, project, alias string,
+) (*kargoapi.Freight, error) {
+	return mock.GetFreightByAliasFun(ctx, project, alias)
 }
 
 func (mock *MockFreightClient) GetFreightByNameOrAlias(

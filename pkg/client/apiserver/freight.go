@@ -38,7 +38,15 @@ func (c *Client) GetFreight(
 	project string,
 	name string,
 ) (*kargoapi.Freight, error) {
-	return c.getFreightReq(ctx, project, name, true)
+	return c.getFreightReq(ctx, project, name, true, false)
+}
+
+func (c *Client) GetFreightByAlias(
+	ctx context.Context,
+	project string,
+	alias string,
+) (*kargoapi.Freight, error) {
+	return c.getFreightReq(ctx, project, alias, false, true)
 }
 
 func (c *Client) GetFreightByNameOrAlias(
@@ -46,7 +54,7 @@ func (c *Client) GetFreightByNameOrAlias(
 	project string,
 	name string,
 ) (*kargoapi.Freight, error) {
-	return c.getFreightReq(ctx, project, name, false)
+	return c.getFreightReq(ctx, project, name, false, false)
 }
 
 func (c *Client) getFreightReq(
@@ -54,9 +62,11 @@ func (c *Client) getFreightReq(
 	project string,
 	name string,
 	nameOnly bool,
+	aliasOnly bool,
 ) (*kargoapi.Freight, error) {
 	model, resp, err := c.api.CoreAPI.GetFreight(ctx, project, name).
 		NameOnly(nameOnly).
+		AliasOnly(aliasOnly).
 		Execute()
 	if resp != nil {
 		_ = resp.Body.Close()

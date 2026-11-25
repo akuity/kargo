@@ -1067,6 +1067,12 @@
             "description": "Match only the Freight name, not its alias",
             "name": "nameOnly",
             "in": "query"
+          },
+          {
+            "type": "boolean",
+            "description": "Match only the Freight alias, not its name",
+            "name": "aliasOnly",
+            "in": "query"
           }
         ],
         "responses": {

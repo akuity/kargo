@@ -2384,11 +2384,18 @@ type ApiGetFreightRequest struct {
 	project string
 	freightNameOrAlias string
 	nameOnly *bool
+	aliasOnly *bool
 }
 
 // Match only the Freight name, not its alias
 func (r ApiGetFreightRequest) NameOnly(nameOnly bool) ApiGetFreightRequest {
 	r.nameOnly = &nameOnly
+	return r
+}
+
+// Match only the Freight alias, not its name
+func (r ApiGetFreightRequest) AliasOnly(aliasOnly bool) ApiGetFreightRequest {
+	r.aliasOnly = &aliasOnly
 	return r
 }
 
@@ -2441,6 +2448,9 @@ func (a *CoreAPIService) GetFreightExecute(r ApiGetFreightRequest) (*Freight, *h
 
 	if r.nameOnly != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "nameOnly", r.nameOnly, "", "")
+	}
+	if r.aliasOnly != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "aliasOnly", r.aliasOnly, "", "")
 	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}

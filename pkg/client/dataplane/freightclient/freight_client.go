@@ -58,7 +58,8 @@ type FreightLister interface {
 
 type FreightClient interface {
 	GetFreight(ctx context.Context, project, name string) (*kargoapi.Freight, error)
-	GetFreightByNameOrAlias(ctx context.Context, project, alias string) (*kargoapi.Freight, error)
+	GetFreightByAlias(ctx context.Context, project, alias string) (*kargoapi.Freight, error)
+	GetFreightByNameOrAlias(ctx context.Context, project, nameOrAlias string) (*kargoapi.Freight, error)
 
 	CreateFreight(
 		ctx context.Context,
