@@ -36,6 +36,8 @@ type GraphProps = {
   warehouses: WarehouseExpanded[];
   stages: Stage[];
   project: string;
+  // height of the freight timeline floating over the top of the graph
+  topInset?: number;
 };
 
 const nodeTypes = {
@@ -45,14 +47,18 @@ const nodeTypes = {
   [reactFlowNodeConstants.CUSTOM_REPO_SUBSCRIPTION_NODE]: CustomRepoSubscriptionNode
 };
 
-// Keep fitted nodes clear of the filters and buttons floating over the top of
-// the graph. Horizontal padding matches React Flow's default.
-const fitViewPadding = { top: '80px', bottom: '60px', x: 0.1 } as const;
+// Keep fitted nodes clear of the freight timeline, filters and buttons
+// floating over the top of the graph. Horizontal padding matches React Flow's
+// default.
+const getFitViewPadding = (topInset: number) =>
+  ({ top: `${80 + topInset}px`, bottom: '40px', x: 0.1 }) as const;
 
 export const Graph = (props: GraphProps) => {
   const { isDark } = useTheme();
   const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
   const filterContext = useFreightTimelineControllerContext();
+  const topInset = props.topInset || 0;
+  const fitViewPadding = useMemo(() => getFitViewPadding(topInset), [topInset]);
 
   const stackedNodesParents = filterContext?.preferredFilter?.stackedNodesParents || [];
 

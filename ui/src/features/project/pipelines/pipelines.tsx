@@ -3,7 +3,7 @@ import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Dropdown, Flex, Result, Tooltip } from 'antd';
 import classNames from 'classnames';
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useState } from 'react';
 import { generatePath, Link, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -147,6 +147,23 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
   const [stageSearch, setStageSearch] = useState<string>('');
 
+  // The freight timeline floats over the graph; track its height so what sits
+  // under it (toolbar, fitted graph, list) can be offset below it.
+  const [timelineElement, setTimelineElement] = useState<HTMLDivElement | null>(null);
+  const [timelineHeight, setTimelineHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    if (!timelineElement) {
+      return;
+    }
+
+    const measure = () => setTimelineHeight(timelineElement.offsetHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(timelineElement);
+    return () => observer.disconnect();
+  }, [timelineElement]);
+
   const freightInStages = useFreightInStage(stages);
   const freightById = useFreightById(getFreightQuery.data?.data?.groups?.['']?.items || []);
   const stageAutoPromotionMap = useStageAutoPromotionMap(stages);
@@ -225,19 +242,34 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
           <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
             <DndPromotionContext projectName={projectName || ''}>
               <div className='overflow-hidden h-full flex flex-col'>
-                <FreightTimeline
-                  freights={freights}
-                  project={projectName || ''}
-                  warehouses={warehouses}
-                />
+                {/* The freight timeline floats over the graph: this
+                    zero-height slot keeps it out of the layout, so the graph
+                    runs underneath it. The slot is deliberately not
+                    positioned, so promote mode's overlay and header still
+                    cover the page. */}
+                <div className='h-0'>
+                  <div ref={setTimelineElement}>
+                    <FreightTimeline
+                      freights={freights}
+                      project={projectName || ''}
+                      warehouses={warehouses}
+                    />
+                  </div>
+                </div>
 
-                <div className='w-full flex-1 relative overflow-auto'>
+                <div
+                  className='w-full flex-1 relative overflow-auto'
+                  // the graph canvas runs under the freight timeline; other
+                  // content starts below it and scrolls under it
+                  style={pipelineContent === 'graph' ? undefined : { paddingTop: timelineHeight }}
+                >
                   <Flex
                     gap={12}
                     className={classNames(
-                      'top-2 right-2 left-2',
+                      'right-2 left-2',
                       pipelineView === 'graph' ? 'absolute' : 'pt-2 px-2'
                     )}
+                    style={pipelineView === 'graph' ? { top: timelineHeight + 8 } : undefined}
                     align='flex-start'
                   >
                     <GraphFilters
@@ -320,7 +352,10 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                     />
                   </Flex>
                   {preferredFilter?.images && (
-                    <div className='w-[450px] absolute right-2 top-20 z-10'>
+                    <div
+                      className='w-[450px] absolute right-2 z-10'
+                      style={{ top: timelineHeight + 80 }}
+                    >
                       <Images
                         hide={() =>
                           setPreferredFilter({
@@ -349,6 +384,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                       project={project.metadata?.name || ''}
                       warehouses={warehouses}
                       stages={stages}
+                      topInset={timelineHeight}
                     />
                   )}
                   {pipelineContent === 'list' && (
