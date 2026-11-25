@@ -67,8 +67,9 @@ export const FreightTimelineFilters = (props: FreightTimelineFiltersProps) => {
   return (
     <div className={classNames('min-w-[300px]', props.className)}>
       <div className='text-xs flex items-center gap-3'>
-        <label>Source: </label>
+        <label htmlFor='freight-filter-source'>Source: </label>
         <Select
+          id='freight-filter-source'
           mode='multiple'
           className='min-w-[200px] ml-auto'
           styles={{ popup: { root: { width: '500px' } } }}
@@ -84,8 +85,9 @@ export const FreightTimelineFilters = (props: FreightTimelineFiltersProps) => {
         />
       </div>
       <div className='text-xs flex items-center gap-3 mt-2'>
-        <label>Timerange: </label>
+        <label htmlFor='freight-filter-timerange'>Timerange: </label>
         <Select
+          id='freight-filter-timerange'
           className='min-w-[200px] ml-auto'
           size='small'
           value={props.preferredFilter?.timerange}
@@ -101,8 +103,9 @@ export const FreightTimelineFilters = (props: FreightTimelineFiltersProps) => {
       </div>
 
       <div className='text-xs flex items-center gap-3 mt-2'>
-        <label>Warehouse: </label>
+        <label htmlFor='freight-filter-warehouse'>Warehouse: </label>
         <Select
+          id='freight-filter-warehouse'
           allowClear
           className='min-w-[200px] ml-auto'
           size='small'
