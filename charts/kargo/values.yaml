@@ -105,7 +105,7 @@ global:
     sampler: parentbased_always_on
     ## @param global.tracing.samplerArg An argument for the sampler (sets `OTEL_TRACES_SAMPLER_ARG`). For the `traceidratio` samplers, this is the fraction of traces to record, for example `0.1`.
     samplerArg: ""
-    ## @param global.tracing.categories The span categories to record (sets `TRACING_CATEGORIES`): category names and the keywords `default` (the categories on by default), `all` and `none`. The categories are `database` (database queries, on by default) and `discovery` (artifact discovery, container registry requests and Freight creation, off by default). When empty, the default categories are recorded. A list without `default` replaces the default categories; include `default` to add to them. An unknown name stops each component at startup.
+    ## @param global.tracing.categories The span categories to record (sets `TRACING_CATEGORIES`): category names and the keywords `default` (the categories on by default), `all` and `none`. The categories are `database` (database queries, on by default), `discovery` (artifact discovery, container registry requests and Freight creation, off by default), `stage` (Stage sub-reconcilers and auto-promotions, off by default) and `refresh` (refresh requests, off by default). When empty, the default categories are recorded. A list without `default` replaces the default categories; include `default` to add to them. An unknown name stops each component at startup.
     categories: []
 
 ## @section Workloads
