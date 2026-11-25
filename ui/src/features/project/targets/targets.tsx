@@ -85,7 +85,11 @@ export const Targets = () => {
   const allStages = useMemo(() => stagesQuery.data?.data?.items || [], [stagesQuery.data]);
   const stages = useMemo(() => targetAwareStages(allStages), [allStages]);
   const targets = useMemo(() => targetsQuery.data?.data?.items || [], [targetsQuery.data]);
-  const statuses = useTargetStatuses(project, stages, targetsQuery.data ? targets : undefined);
+  const statuses = useTargetStatuses(
+    project,
+    stagesQuery.isLoading ? undefined : stages,
+    targetsQuery.isLoading ? undefined : targets
+  );
 
   const freightLabel = useFreightLabel(project);
   const resolveFreight = useFreightReference(project);

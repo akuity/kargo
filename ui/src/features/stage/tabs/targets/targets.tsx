@@ -61,7 +61,7 @@ export const StageTargets = ({ projectName, stage, round }: Props) => {
   const statuses = useTargetStatuses(
     projectName,
     stages,
-    targetsQuery.data ? targets : undefined,
+    targetsQuery.isLoading ? undefined : targets,
     stageName
   );
 
