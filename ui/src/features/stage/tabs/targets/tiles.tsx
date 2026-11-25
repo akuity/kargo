@@ -12,7 +12,7 @@ import { Round, isRolloutRound, roundPath } from '@ui/features/stage/utils/promo
 
 import { MarkBar, MarkDot } from './mark-visuals';
 import { Marking, tally } from './marks';
-import { healthTally } from './summary';
+import { healthTally, neverPromotedNote } from './summary';
 
 const tileClassName = `flex-1 min-w-[180px] px-4 py-3 ${surfaceClassName}`;
 
@@ -155,7 +155,7 @@ export const TargetTiles = ({
       <Tile heading='Never promoted'>
         <Figure value={counts.NeverPromoted} />
         <Typography.Text type='secondary' className='text-xs'>
-          {counts.NeverPromoted ? 'no Freight yet' : 'all have Freight'}
+          {neverPromotedNote(counts.NeverPromoted, rows)}
         </Typography.Text>
       </Tile>
     </Flex>

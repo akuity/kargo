@@ -7,7 +7,7 @@ import {
   TargetStatusEntry
 } from '@ui/gen/api/v2/models';
 
-import { entryCollection, freightNames } from './target-freight';
+import { OriginFreight, entryCollection, freightByOrigin, freightNames } from './target-freight';
 import { byName } from './target-stages';
 import {
   StateCounts,
@@ -145,6 +145,28 @@ export const aheadFreight = (row: TargetRow): string[] => [
       .flatMap(({ stage }) => freightNames(stage.status?.freightHistory?.[0]))
   )
 ];
+
+// governingOrigins lays a Target's Freight under one Stage out an origin to a
+// line, beside what the Stage is on from each. A Target with no Freight is
+// only shown what the Stage is on once a promotion to it has been tried; until
+// then it has simply not been promoted to.
+//
+// An origin reads as behind only when the server finds the Target behind the
+// Stage. A Target whose first promotion failed has no Freight, and the server
+// does not know it to be behind anything; its row and the Behind tile go by
+// that, so its card must not say otherwise origin by origin.
+export const governingOrigins = (governing?: GoverningStage): OriginFreight[] => {
+  if (!governing) {
+    return [];
+  }
+  const { currentFreight, state, behind } = governing;
+  if (!currentFreight && state !== 'Failed' && state !== 'NotAttempted') {
+    return [];
+  }
+  return freightByOrigin(currentFreight, governing.stage.status?.freightHistory?.[0]).map(
+    (origin) => ({ ...origin, behind: behind && origin.behind })
+  );
+};
 
 // stateCounts tallies rows by the state they show. Every state is present, so
 // callers may index any of them without a fallback.

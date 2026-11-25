@@ -7,11 +7,16 @@ import {
   getTargetStatusSummary,
   listTargetStatuses
 } from '@ui/gen/api/v2/core/core';
-import { Stage, TargetStatusEntry, TargetStatusSummary } from '@ui/gen/api/v2/models';
+import { Stage, Target, TargetStatusEntry, TargetStatusSummary } from '@ui/gen/api/v2/models';
 
 import { TARGETS_POLL_INTERVAL_MS } from './constants';
 import { orEmpty, polled } from './database-reads';
-import { shouldPollStatuses, statusSignature } from './model/target-status';
+import {
+  shouldPollList,
+  shouldPollSummary,
+  statusSignature,
+  targetsSignature
+} from './model/target-status';
 
 // The most entries the server returns in one page.
 const pageSize = 500;
@@ -34,28 +39,36 @@ const readAllStatuses = async (project: string, stage?: string): Promise<TargetS
   return entries;
 };
 
-// useRefetchOnChange reads statuses again whenever the Stages move on: a
-// round starts or ends, or a Stage takes on new Freight. Polling stops when
-// nothing is in flight, so this is what picks up what happens next.
-const useRefetchOnChange = (stages: Stage[], enabled: boolean, refetch: () => unknown) => {
-  const signature = statusSignature(stages);
-  const seen = useRef(signature);
+// useRefetchOnChange reads statuses again whenever signature changes: a
+// round starts or ends, a Stage takes on new Freight or new selectors, or a
+// Target comes, goes or is relabelled. Polling stops when nothing is in
+// flight, so this is what picks up what happens next. Until ready, signature
+// is not yet worth comparing -- what it is read from is still loading -- and
+// the first one seen once ready is where comparison starts, not a change.
+const useRefetchOnChange = (signature: string, ready: boolean, refetch: () => unknown) => {
+  const seen = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (seen.current === signature) {
+    if (!ready) {
       return;
     }
-    seen.current = signature;
-    if (enabled) {
+    if (seen.current !== undefined && seen.current !== signature) {
       refetch();
     }
-  }, [signature, enabled, refetch]);
+    seen.current = signature;
+  }, [signature, ready, refetch]);
 };
 
 // useTargetStatuses reads where each Target stands with each Stage that
 // governs it, for a whole Project or, given a Stage name, for that Stage. It
 // is read again while a promotion is in flight to any of them, or a Stage
-// says it is promoting, and once more whenever the Stages move on.
-export const useTargetStatuses = (project: string, stages: Stage[], stage?: string) => {
+// says it is promoting, and once more whenever the Stages or the Targets move
+// on. targets is the list the page shows, or undefined while it loads.
+export const useTargetStatuses = (
+  project: string,
+  stages: Stage[],
+  targets: Target[] | undefined,
+  stage?: string
+) => {
   const enabled = !!project;
   const params = stage ? { stage } : undefined;
 
@@ -65,7 +78,13 @@ export const useTargetStatuses = (project: string, stages: Stage[], stage?: stri
     enabled,
     meta: polled,
     refetchInterval: (query) =>
-      shouldPollStatuses(query.state.data || [], stages) ? TARGETS_POLL_INTERVAL_MS : false
+      shouldPollList(
+        { failed: query.state.status === 'error', updatedAt: query.state.dataUpdatedAt },
+        query.state.data || [],
+        stages
+      )
+        ? TARGETS_POLL_INTERVAL_MS
+        : false
   });
 
   const summaryQuery = useQuery({
@@ -77,9 +96,17 @@ export const useTargetStatuses = (project: string, stages: Stage[], stage?: stri
       ),
     enabled,
     meta: polled,
-    // The summary moves with the list, so it is polled by the same rule.
-    refetchInterval: () =>
-      shouldPollStatuses(listQuery.data || [], stages) ? TARGETS_POLL_INTERVAL_MS : false
+    // The summary moves with the list, so it is polled by the list's rule,
+    // and once more after the list's latest read.
+    refetchInterval: (query) =>
+      shouldPollSummary(
+        { failed: query.state.status === 'error', updatedAt: query.state.dataUpdatedAt },
+        { failed: listQuery.isError, updatedAt: listQuery.dataUpdatedAt },
+        listQuery.data || [],
+        stages
+      )
+        ? TARGETS_POLL_INTERVAL_MS
+        : false
   });
 
   const refetch = listQuery.refetch;
@@ -88,11 +115,18 @@ export const useTargetStatuses = (project: string, stages: Stage[], stage?: stri
     () => () => Promise.all([refetch(), refetchSummary()]),
     [refetch, refetchSummary]
   );
-  useRefetchOnChange(stages, enabled, refetchBoth);
+  useRefetchOnChange(statusSignature(stages), enabled, refetchBoth);
+  const targetsKey = useMemo(() => (targets ? targetsSignature(targets) : ''), [targets]);
+  useRefetchOnChange(targetsKey, enabled && !!targets, refetchBoth);
 
   return {
     entries: listQuery.data,
     summary: summaryQuery.data,
-    isLoading: enabled && (listQuery.isLoading || summaryQuery.isLoading)
+    isLoading: enabled && (listQuery.isLoading || summaryQuery.isLoading),
+    // Set only while no read of the list has succeeded, so there are no
+    // statuses to show. That is not an empty fleet, and must not be drawn as
+    // one. A read that fails after one has succeeded leaves its entries in
+    // place; the failure is reported once, and the list is read again.
+    error: listQuery.data ? null : listQuery.error
   };
 };

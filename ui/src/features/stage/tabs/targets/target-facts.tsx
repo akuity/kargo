@@ -9,9 +9,8 @@ import { paths } from '@ui/config/paths';
 import { useModal } from '@ui/features/common/modal/use-modal';
 import { TargetYamlModal } from '@ui/features/project/targets/detail/target-yaml-modal';
 import { flattenParams } from '@ui/features/project/targets/model/target-details-utils';
-import { freightByOrigin } from '@ui/features/project/targets/model/target-freight';
 import { visibleLabels } from '@ui/features/project/targets/model/target-labels';
-import { TargetRow } from '@ui/features/project/targets/model/target-rows';
+import { TargetRow, governingOrigins } from '@ui/features/project/targets/model/target-rows';
 import {
   TargetState,
   targetStatePresentations
@@ -114,14 +113,7 @@ export const TargetFacts = ({
         }
       : undefined;
 
-  const currentFreight = governed?.currentFreight;
-  // A Target with no Freight is only shown what the Stage is on once a
-  // promotion to it has been tried. Until then it has simply not been promoted
-  // to, and is not behind on anything.
-  const origins =
-    currentFreight || state === 'Failed' || state === 'NotAttempted'
-      ? freightByOrigin(currentFreight, governed?.stage.status?.freightHistory?.[0])
-      : [];
+  const origins = governingOrigins(governed);
   const anyBehind = origins.some(({ behind }) => behind);
   const params = flattenParams(target.spec?.params);
   const targetSet = owningTargetSet(target);

@@ -5,6 +5,7 @@ import {
   behindCount,
   byWorstState,
   freightTally,
+  governingOrigins,
   inFlight,
   scopeToStage,
   stateCounts,
@@ -162,6 +163,41 @@ describe('scopeToStage()', () => {
     expect(aheadFreight(row)).toEqual(['f-new']);
     expect(aheadFreight(scopeToStage(row, row.stages[0]))).toEqual([]);
     expect(aheadFreight(scopeToStage(row, row.stages[1]))).toEqual(['f-new']);
+  });
+});
+
+describe('governingOrigins()', () => {
+  const s = fleetStage('s', [{}], 'f-new');
+  const governingOf = (e: ReturnType<typeof entry>) =>
+    targetRows([target(e.target || '')], [e], [s])[0].stages[0];
+
+  test('shows nothing for a Target never promoted to', () => {
+    expect(governingOrigins(undefined)).toEqual([]);
+    expect(governingOrigins(governingOf(entry('t', 's', 'NeverPromoted')))).toEqual([]);
+  });
+
+  test('marks an origin behind when the server finds the Target behind', () => {
+    const origins = governingOrigins(
+      governingOf(entry('t', 's', 'Failed', { behind: true, freightName: 'f-old' }))
+    );
+    expect(origins.map(({ origin, behind }) => [origin, behind])).toEqual([['w', true]]);
+  });
+
+  test('shows what the Stage is on, not behind, for a Target whose first promotion failed', () => {
+    // No Freight has reached the Target, so the server does not know it to be
+    // behind, and neither its row nor the Behind tile count it so.
+    const origins = governingOrigins(governingOf(entry('t', 's', 'Failed')));
+    expect(origins).toHaveLength(1);
+    expect(origins[0].current).toBeUndefined();
+    expect(origins[0].stage?.name).toBe('f-new');
+    expect(origins[0].behind).toBe(false);
+  });
+
+  test('marks nothing behind for a Target on what the Stage is on', () => {
+    const origins = governingOrigins(
+      governingOf(entry('t', 's', 'UpToDate', { freightName: 'f-new' }))
+    );
+    expect(origins.map(({ behind }) => behind)).toEqual([false]);
   });
 });
 
