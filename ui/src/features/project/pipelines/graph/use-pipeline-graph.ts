@@ -9,7 +9,7 @@ import { Stage } from '@ui/gen/api/v2/models';
 import { groupStages } from '../stage-groups';
 
 import { edgeIndexer } from './edge-indexer';
-import { groupStageNodes } from './group-stage-nodes';
+import { groupStageNodes, uncollapsibleStageGroups } from './group-stage-nodes';
 import { layoutGraph } from './layout-graph';
 import { stackedIndexer, stageGroupIndexer, warehouseIndexer } from './node-indexer';
 import { repoSubscriptionSizer, stackSizer, stageSizer, warehouseSizer } from './node-sizer';
@@ -47,9 +47,15 @@ export const useReactFlowPipelineGraph = (
 ) => {
   const { warehouseColorMap } = useContext(ColorContext);
 
-  const [result, setResult] = useState<{ nodes: Node[]; edges: Edge[] }>({
+  const [result, setResult] = useState<{
+    nodes: Node[];
+    edges: Edge[];
+    // stage groups drawn expanded because their members are wired differently
+    uncollapsibleStageGroups: string[];
+  }>({
     nodes: [],
-    edges: []
+    edges: [],
+    uncollapsibleStageGroups: []
   });
   const lastRunRef = useRef(0);
   const functionCalled = useRef(false);
@@ -79,7 +85,9 @@ export const useReactFlowPipelineGraph = (
         hideSubscriptions
       );
 
-      graph = groupStageNodes(graph, groupStages(stages, expandedStageGroups), maxStageHeight);
+      const stageGroups = groupStages(stages, expandedStageGroups);
+      const uncollapsible = [...uncollapsibleStageGroups(graph, stageGroups)];
+      graph = groupStageNodes(graph, stageGroups, maxStageHeight);
 
       graph = stackNodes(stack?.afterNodes || [], graph, stageByName, maxStageHeight);
 
@@ -210,7 +218,11 @@ export const useReactFlowPipelineGraph = (
         });
       }
 
-      setResult({ nodes: reactFlowNodes, edges: reactFlowEdges });
+      setResult({
+        nodes: reactFlowNodes,
+        edges: reactFlowEdges,
+        uncollapsibleStageGroups: uncollapsible
+      });
     };
 
     // Run the first layout immediately so the graph paints without delay.

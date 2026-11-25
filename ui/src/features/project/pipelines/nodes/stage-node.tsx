@@ -230,7 +230,12 @@ export const StageNode = (props: { stage: Stage }) => {
               size='small'
               type='text'
               className={classNames(styles.action, 'flex-none')}
-              title={`Collapse group ${stageGroup}`}
+              disabled={graphContext.uncollapsibleStageGroups.includes(stageGroup)}
+              title={
+                graphContext.uncollapsibleStageGroups.includes(stageGroup)
+                  ? `Group ${stageGroup} cannot be collapsed: its Stages have different upstream or downstream Stages`
+                  : `Collapse group ${stageGroup}`
+              }
               icon={<FontAwesomeIcon icon={faCompress} />}
               onClick={() => graphContext.onCollapseGroup(stageGroup)}
             />

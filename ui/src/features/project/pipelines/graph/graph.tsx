@@ -421,6 +421,7 @@ export const Graph = (props: GraphProps) => {
         onUnstack,
         onExpandGroup,
         onCollapseGroup,
+        uncollapsibleStageGroups: graph.uncollapsibleStageGroups,
         ready,
         hoveredWarehouseName,
         setHoveredWarehouseName,
