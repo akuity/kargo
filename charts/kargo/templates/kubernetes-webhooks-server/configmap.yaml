@@ -13,6 +13,9 @@ data:
   KARGO_NAMESPACE: {{ include "kargo.dataNamespace" . }}
   LOG_LEVEL: {{ quote .Values.webhooksServer.logLevel }}
   LOG_FORMAT: {{ quote .Values.webhooksServer.logFormat }}
+  {{- with (include "kargo.tracing.configMapData" .) }}
+  {{- . | nindent 2 }}
+  {{- end }}
   {{- if $kc }}
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}
