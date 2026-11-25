@@ -3084,7 +3084,7 @@
               ],
               "type": "string"
             },
-            "collectionFormat": "csv",
+            "collectionFormat": "multi",
             "description": "Only entries in one of these states; repeat to give several",
             "name": "state",
             "in": "query"

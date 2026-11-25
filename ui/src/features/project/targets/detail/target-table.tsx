@@ -74,7 +74,7 @@ export const TargetTable = ({
       // Wide enough that an ordinary name stays on one line; only a very long
       // one wraps. The floor sits on the content, not on the column's
       // minWidth: that lands on a <col>, which an auto-laid-out table ignores,
-      // so wide Stages or Health cells would still squeeze the name.
+      // so wide Stages or Status cells would still squeeze the name.
       render: (_, row) => (
         <Typography.Text className='block min-w-[220px] text-xs font-semibold break-words'>
           <FontAwesomeIcon icon={faBullseye} className='mr-2 text-gray-400' />
@@ -203,9 +203,9 @@ export const TargetTable = ({
       }
     },
     {
-      title: 'Health',
+      title: 'Status',
       key: 'state',
-      width: 110,
+      width: 130,
       render: (_, row) => (
         <Flex gap={6} align='center'>
           <StateDot state={row.state} />

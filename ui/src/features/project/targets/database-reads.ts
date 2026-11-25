@@ -1,3 +1,5 @@
+import { QueryClient, QueryKey } from '@tanstack/react-query';
+
 import { ApiError } from '@ui/lib/api/custom-fetch';
 
 const notImplemented = 501;
@@ -18,5 +20,19 @@ export const orEmpty = async <T>(read: () => Promise<T>, empty: T): Promise<T> =
       return empty;
     }
     throw error;
+  }
+};
+
+// readFresh reads a query again with a read that starts now, for when
+// something the query depends on has just changed. A read already under way
+// with data before it is dropped for a new one. One under way with nothing
+// read yet is not: TanStack hands it back instead of starting another, though
+// it may have started before the change. So it is let finish, and read after.
+export const readFresh = async (client: QueryClient, queryKey: QueryKey): Promise<void> => {
+  const state = client.getQueryState(queryKey);
+  const joined = state?.fetchStatus === 'fetching' && state.data === undefined;
+  await client.refetchQueries({ queryKey, exact: true });
+  if (joined) {
+    await client.refetchQueries({ queryKey, exact: true });
   }
 };

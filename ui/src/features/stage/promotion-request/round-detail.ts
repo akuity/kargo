@@ -1,37 +1,37 @@
 import { PromotionStepStatus } from '@ui/features/common/promotion-directive-step-status/promotion-step-status';
 import {
   PhaseFilter,
-  PromotionPhase,
-  isPromotionPhase
+  RoundTargetPhase,
+  isPromotionPhase,
+  notAttempted,
+  unreachedPhase
 } from '@ui/features/common/promotion-status/promotion-phase';
+import { RoundSummary, summaryKey } from '@ui/features/common/promotion-status/round-progress';
 import {
   PromotionStatusPhase,
   isPromotionPhaseTerminal
 } from '@ui/features/common/promotion-status/utils';
-import {
-  Promotion,
-  PromotionRequest,
-  PromotionRequestSummary,
-  Target
-} from '@ui/gen/api/v2/models';
+import { Promotion, PromotionRequest, Target } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
 
 import { targetRows } from '../utils/promotion-request';
 
 // ChildPromotion is one Target of a round: the Promotion promoting Freight to
 // it, how that went, and the labels the Target carries -- which are what a
-// reader slices a round's failures by.
+// reader slices a round's failures by. A Target the round ended without
+// promoting to has no Promotion, and its phase says it was not attempted.
 export type ChildPromotion = {
   target: string;
   promotion?: Promotion;
-  phase: PromotionPhase;
+  phase: RoundTargetPhase;
   labels: Record<string, string>;
 };
 
 // severity ranks a child for ordering: what went wrong first, what is still
-// moving next, what is settled last. The same ranking the Targets tab uses, so a
-// reader meets the fleet in the same order wherever they look at it.
-const severity = (phase: PromotionPhase): number => {
+// moving next, what the round never got to after that, and what is settled
+// last. The same ranking the Targets tab uses, so a reader meets the fleet in
+// the same order wherever they look at it.
+const severity = (phase: RoundTargetPhase): number => {
   switch (phase) {
     case 'Failed':
     case 'Errored':
@@ -39,8 +39,10 @@ const severity = (phase: PromotionPhase): number => {
     case 'Running':
     case 'Pending':
       return 1;
-    default:
+    case notAttempted:
       return 2;
+    default:
+      return 3;
   }
 };
 
@@ -56,6 +58,10 @@ const severity = (phase: PromotionPhase): number => {
  * reads as unfinished. A finished phase does not go back, so that Promotion is
  * only a watch that has not caught up yet, and trusting it would leave a
  * finished round showing a Target as still running.
+ *
+ * A Target the round has made no Promotion for is whatever unreachedPhase
+ * makes of it: Pending while the round is still fanning out, and not attempted
+ * once the round has ended without getting to it.
  */
 export const childPromotions = (
   request?: PromotionRequest,
@@ -69,6 +75,8 @@ export const childPromotions = (
     targets.map((target) => [target.metadata?.name || '', target.metadata?.labels || {}])
   );
 
+  const unreached = unreachedPhase(request?.status?.phase);
+
   return targetRows(request)
     .map<ChildPromotion>((row) => {
       const promotion = row.promotion ? byName.get(row.promotion) : undefined;
@@ -78,10 +86,13 @@ export const childPromotions = (
         !isPromotionPhaseTerminal(promoted as PromotionStatusPhase)
           ? row.phase
           : (promoted ?? row.phase);
+      // A Promotion the round has made but nothing has picked up yet has no
+      // phase, and is Pending whatever has become of the round.
+      const reached = !!row.promotion || !!row.phase;
       return {
         target: row.name,
         promotion,
-        phase: isPromotionPhase(phase) ? phase : 'Pending',
+        phase: isPromotionPhase(phase) ? phase : reached ? 'Pending' : unreached,
         labels: labelsOf.get(row.name) || {}
       };
     })
@@ -93,10 +104,10 @@ export const childPromotions = (
 
 // childrenSummary tallies the children by phase, so the round's bar, its grid
 // and its table are all drawn from the same counts and cannot disagree.
-export const childrenSummary = (children: ChildPromotion[]): PromotionRequestSummary => {
-  const summary: PromotionRequestSummary = {};
+export const childrenSummary = (children: ChildPromotion[]): RoundSummary => {
+  const summary: RoundSummary = {};
   for (const child of children) {
-    const key = child.phase.toLowerCase() as keyof PromotionRequestSummary;
+    const key = summaryKey(child.phase);
     summary[key] = (summary[key] || 0) + 1;
   }
   return summary;
@@ -247,18 +258,21 @@ export const matchesChild = (child: ChildPromotion, needle: string): boolean => 
 // childChipPhases is the order a round's own Promotions are offered in. It
 // leads with what broke, unlike the list of rounds, which leads with what is
 // moving: a reader opens one round to find out what went wrong in it.
-const childChipPhases: readonly PromotionPhase[] = [
+const childChipPhases: readonly RoundTargetPhase[] = [
   'Failed',
   'Errored',
   'Running',
   'Pending',
   'Succeeded',
-  'Aborted'
+  'Aborted',
+  notAttempted
 ];
 
-// Every phase but Aborted keeps its chip at zero, so the round's shape can be
-// read off the chips alone. Aborted appears only once something was cancelled.
-const childAlwaysOffered: readonly PromotionPhase[] = [
+// Every Promotion phase but Aborted keeps its chip at zero, so the round's
+// shape can be read off the chips alone. Aborted appears only once something
+// was cancelled, and not attempted only once the round has ended short of a
+// Target.
+const childAlwaysOffered: readonly RoundTargetPhase[] = [
   'Failed',
   'Errored',
   'Running',
@@ -268,8 +282,8 @@ const childAlwaysOffered: readonly PromotionPhase[] = [
 
 // childPhaseFilters builds the chips above a round's Promotions: All, then one
 // per phase, each with how many of the round's children are in it.
-export const childPhaseFilters = (children: ChildPromotion[]): PhaseFilter[] => {
-  const counts = children.reduce<Partial<Record<PromotionPhase, number>>>((acc, child) => {
+export const childPhaseFilters = (children: ChildPromotion[]): PhaseFilter<RoundTargetPhase>[] => {
+  const counts = children.reduce<Partial<Record<RoundTargetPhase, number>>>((acc, child) => {
     acc[child.phase] = (acc[child.phase] || 0) + 1;
     return acc;
   }, {});

@@ -11,8 +11,6 @@ import { labelKeys } from '@ui/features/project/targets/model/target-labels';
 import { TargetRow } from '@ui/features/project/targets/model/target-rows';
 import { surfaceClassName } from '@ui/features/project/targets/shared/surface';
 import { TargetGrid } from '@ui/features/project/targets/summary/target-grid';
-import { roundBlock } from '@ui/features/stage/utils/promotion-request';
-import { Round } from '@ui/features/stage/utils/promotion-rollout';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 import { MarkLegend } from './mark-visuals';
@@ -83,22 +81,19 @@ const GroupRow = ({
  * TargetMatrix draws the whole fleet as squares, sliced into rows along
  * whichever label the reader picks -- tier, cloud, region, whatever the
  * Targets happen to carry -- and coloured for whichever reading they are after:
- * how the Stage's last round went, what Freight each Target runs, or how
+ * where each Target stands with the Stage, what Freight each runs, or how
  * healthy each is. Picking a square answers for the Target behind it.
  */
 export const TargetMatrix = ({
   project,
   stageName,
   rows,
-  round,
   stageFreight,
   freightLabel
 }: {
   project: string;
   stageName: string;
   rows: TargetRow[];
-  // The Stage's latest round, which a picked Target reads its failure from.
-  round?: Round;
   // The Freight the Stage itself is on: what every Target it governs is on its
   // way to, and the first colour of the Freight legend.
   stageFreight: string[];
@@ -127,12 +122,9 @@ export const TargetMatrix = ({
     storedGroupBy === NO_GROUPING || keys.includes(storedGroupBy) ? storedGroupBy : NO_GROUPING;
   const groupKey = groupBy || undefined;
 
-  // A blocked round reached no Target, so the squares say that rather than
-  // reporting each Target as one the round never named.
-  const blocked = !!roundBlock(round);
   const marks = useMemo(
-    () => marking(mode, rows, stageFreight, colors, freightLabel, blocked),
-    [mode, rows, stageFreight, colors, freightLabel, blocked]
+    () => marking(mode, rows, stageFreight, colors, freightLabel),
+    [mode, rows, stageFreight, colors, freightLabel]
   );
   const groups = useMemo(() => groupTargetRows(rows, groupKey), [rows, groupKey]);
   const tallies = useMemo(() => tally(rows, marks), [rows, marks]);
@@ -202,8 +194,6 @@ export const TargetMatrix = ({
           project={project}
           stageName={stageName}
           row={picked}
-          round={round}
-          blocked={blocked}
           freightLabel={freightLabel}
           onClose={() => setPickedName(undefined)}
         />

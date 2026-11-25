@@ -9,6 +9,7 @@ import {
   isPromotionRequestFailed,
   isPromotionRequestPhaseTerminal,
   isPromotionRequestRetryable,
+  isRoundAwaitingStage,
   promotionRequestCompareFn,
   roundBlock,
   targetRows
@@ -232,6 +233,16 @@ describe('roundBlock()', () => {
     expect(block?.description).toBe('Target us-east-1 not found');
   });
 
+  test('a round waiting for its Stage to let it start is not blocked', () => {
+    // Its Ready condition is False for as long as it waits, with a message,
+    // which is all it would take to be read as a round that cannot progress.
+    const waiting = blocked(
+      'AwaitingStage',
+      'Waiting for Stage "prod" to let this PromotionRollout start'
+    );
+    expect(roundBlock(waiting)).toBeUndefined();
+  });
+
   test('is not a block once the round has fanned out, even with failed children', () => {
     const failedRound = blocked('PromotionsFailed', '1 of 3 Promotions did not succeed');
     failedRound.status = {
@@ -257,6 +268,42 @@ describe('roundBlock()', () => {
         })
       )
     ).toBeUndefined();
+  });
+});
+
+describe('isRoundAwaitingStage()', () => {
+  const ready = (status: string, reason: string) => [
+    { type: 'Ready', status, reason, message: 'm', lastTransitionTime: '2026-11-20T00:00:00Z' }
+  ];
+
+  test('reads the reason its Ready condition is False for', () => {
+    expect(
+      isRoundAwaitingStage(request({ status: { conditions: ready('False', 'AwaitingStage') } }))
+    ).toBe(true);
+  });
+
+  test('any other reason is not a wait for the Stage', () => {
+    expect(
+      isRoundAwaitingStage(request({ status: { conditions: ready('False', 'TargetsMissing') } }))
+    ).toBe(false);
+    expect(
+      isRoundAwaitingStage(request({ status: { conditions: ready('True', 'AwaitingStage') } }))
+    ).toBe(false);
+    expect(isRoundAwaitingStage(request({}))).toBe(false);
+    expect(isRoundAwaitingStage(undefined)).toBe(false);
+  });
+
+  test('a round that has attempted a Target is no longer waiting', () => {
+    expect(
+      isRoundAwaitingStage(
+        request({
+          status: {
+            conditions: ready('False', 'AwaitingStage'),
+            targets: [{ name: 'eu', promotion: 'p' }]
+          }
+        })
+      )
+    ).toBe(false);
   });
 });
 

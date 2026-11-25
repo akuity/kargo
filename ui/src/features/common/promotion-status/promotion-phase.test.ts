@@ -3,9 +3,14 @@ import { describe, expect, test } from 'vitest';
 
 import {
   getPromotionPhasePresentation,
+  getRoundTargetPhasePresentation,
   isPromotionPhase,
+  notAttempted,
   promotionPhasePresentations,
-  promotionPhases
+  promotionPhases,
+  roundTargetPhaseLabel,
+  roundTargetPhases,
+  unreachedPhase
 } from './promotion-phase';
 
 describe('isPromotionPhase()', () => {
@@ -67,5 +72,57 @@ describe('getPromotionPhasePresentation()', () => {
 describe('promotionPhases', () => {
   test('covers every phase exactly once', () => {
     expect([...promotionPhases].sort()).toEqual(Object.keys(promotionPhasePresentations).sort());
+  });
+});
+
+describe('unreachedPhase()', () => {
+  test.each([
+    // A round still under way has yet to reach the Target.
+    [undefined, 'Pending'],
+    ['', 'Pending'],
+    ['Pending', 'Pending'],
+    ['Running', 'Pending'],
+    // A round that ended without succeeding never will: it exceeded the
+    // failures it tolerates, or was aborted, and stopped fanning out.
+    ['Failed', 'NotAttempted'],
+    ['Errored', 'NotAttempted'],
+    ['Aborted', 'NotAttempted'],
+    // A round that succeeded promoted to every Target it names.
+    ['Succeeded', 'Succeeded'],
+    // A phase this UI does not know is not taken for an ending.
+    ['Rethinking', 'Pending']
+  ])('a Target with no Promotion in a round that is %s is %s', (roundPhase, expected) => {
+    expect(unreachedPhase(roundPhase)).toBe(expected);
+  });
+});
+
+describe('what a round reports for a Target', () => {
+  test('is a Promotion phase, or that the Target was not attempted', () => {
+    expect(roundTargetPhases).toEqual([...promotionPhases, notAttempted]);
+    // Not a phase a Promotion can be in, so nothing that reads a Promotion
+    // ever shows it.
+    expect(isPromotionPhase(notAttempted)).toBe(false);
+  });
+
+  test('not attempted is neither an outcome nor something still to come', () => {
+    const presentation = getRoundTargetPhasePresentation(notAttempted);
+    expect(presentation.tagColor).toBe('default');
+    expect(presentation.spin).toBe(false);
+    expect(presentation.colorToken).toBe('colorTextQuaternary');
+    // In particular it does not fall back to Pending, as an unknown phase does.
+    expect(presentation).not.toBe(promotionPhasePresentations.Pending);
+    expect(presentation.colorToken).not.toBe(promotionPhasePresentations.Pending.colorToken);
+  });
+
+  test.each([...promotionPhases, undefined, 'Unknown'])(
+    '%s is presented as a Promotion is',
+    (p) => {
+      expect(getRoundTargetPhasePresentation(p)).toBe(getPromotionPhasePresentation(p));
+    }
+  );
+
+  test('is named by its phase, and in words when it was not attempted', () => {
+    expect(roundTargetPhaseLabel('Failed')).toBe('Failed');
+    expect(roundTargetPhaseLabel(notAttempted)).toBe('Not attempted');
   });
 });

@@ -1,8 +1,8 @@
 import { Flex, Tag, Tooltip, Typography } from 'antd';
 import { ReactNode } from 'react';
 
-import { OriginFreight } from '../model/round-utils';
 import { artifactSummary, referenceArtifacts } from '../model/target-details-utils';
+import { OriginFreight } from '../model/target-freight';
 
 import { FreightLink } from './freight-link';
 
