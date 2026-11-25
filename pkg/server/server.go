@@ -61,7 +61,7 @@ type server struct {
 	// in which case nothing is published.
 	events *nats.Publisher
 
-	dataplaneStorageClient dataplane.StorageClient
+	dataplaneStorageClient *dataplane.StorageClient
 	freightClient          freightclient.FreightClient
 
 	// The following behaviors are overridable for testing purposes:
@@ -153,7 +153,7 @@ func NewServer(
 	}
 
 	s.dataplaneStorageClient = dataplane.NewStorageClient(kubeClient, sender, db)
-	s.freightClient = &s.dataplaneStorageClient
+	s.freightClient = s.dataplaneStorageClient
 
 	s.getStageFn = api.GetStage
 	s.createPromotionFn = kubeClient.Create

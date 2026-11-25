@@ -26,7 +26,7 @@ import (
 type UpdatedArgoCDAppHandler[T any] struct {
 	kargoClient    client.Client
 	shardPredicate controller.ResponsibleFor[kargoapi.Promotion]
-	freightClient freightclient.FreightClient
+	freightClient  freightclient.FreightClient
 }
 
 // Create implements TypedEventHandler.

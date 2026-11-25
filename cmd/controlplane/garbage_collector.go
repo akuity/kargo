@@ -99,7 +99,7 @@ func (o *garbageCollectorOptions) run(ctx context.Context) error {
 
 	// TODO: add DB access here
 	storageClient := dataplane.NewStorageClient(mgr.GetClient(), nil, nil)
-	
+
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 

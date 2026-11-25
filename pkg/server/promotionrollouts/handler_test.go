@@ -564,7 +564,7 @@ func newRouter(
 		creator = NewCreator(store, targets, check)
 	}
 	freightClient := dataplane.NewStorageClient(kube, nil, nil)
-	New(store, creator, authorize, kube, &freightClient).Register(router.Group("/v1beta1/projects/:project"))
+	New(store, creator, authorize, kube, freightClient).Register(router.Group("/v1beta1/projects/:project"))
 	return router
 }
 

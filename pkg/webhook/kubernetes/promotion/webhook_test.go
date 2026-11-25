@@ -38,7 +38,6 @@ func TestNewWebhook(t *testing.T) {
 	w := newWebhook(
 		libWebhook.Config{},
 		kubeClient,
-		nil,
 		admission.NewDecoder(kubeClient.Scheme()),
 		&fakeevent.Sender{},
 	)
@@ -3159,7 +3158,6 @@ func Test_webhook_Handle_PreservesUnrelatedDurationFormatting(t *testing.T) {
 	w := newWebhook(
 		libWebhook.Config{},
 		kubeClient,
-		nil,
 		admission.NewDecoder(scheme),
 		&fakeevent.Sender{},
 	)
