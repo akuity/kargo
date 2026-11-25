@@ -258,14 +258,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                 </div>
 
                 <div
-                  className={classNames(
-                    'w-full flex-1 relative',
-                    // The graph canvas runs past the bottom edge, to be cut
-                    // off. Clip rather than hide: a hidden overflow still
-                    // scrolls to show a focused element, such as a node in
-                    // the part cut off, which would shift the whole graph.
-                    pipelineContent === 'graph' ? 'overflow-clip' : 'overflow-auto'
-                  )}
+                  className='w-full flex-1 relative overflow-auto'
                   // the graph canvas runs under the freight timeline; other
                   // content starts below it and scrolls under it
                   style={pipelineContent === 'graph' ? undefined : { paddingTop: timelineHeight }}
