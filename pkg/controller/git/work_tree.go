@@ -811,7 +811,9 @@ type PushOptions struct {
 // https://regex101.com/r/f7kTjs/1
 //
 // nolint: lll
-var nonFastForwardRegex = regexp.MustCompile(`(?m)^\s*!\s+\[(?:remote )?rejected].+\((?:non-fast-forward|fetch first|cannot lock ref.*|incorrect old value provided)\)\s*$`)
+var nonFastForwardRegex = regexp.MustCompile(
+	`(?m)^\s*!\s+\[(?:remote )?rejected].+\((?:non-fast-forward|fetch first|cannot lock ref.*|incorrect old value provided)\)\s*$`,
+)
 
 func (w *workTree) Push(ctx context.Context, opts *PushOptions) error {
 	if opts == nil {
