@@ -118,6 +118,22 @@ tests:
             name: DATABASE_HOST
           any: true
 
+  - it: mounts a service account token in the pod by default
+    template: templates/management-controller/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: true
+
+  - it: does not mount a service account token in the pod when managementController.automountServiceAccountToken is false
+    template: templates/management-controller/deployment.yaml
+    set:
+      managementController.automountServiceAccountToken: false
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+
 ---
 suite: management-controller/configmap.yaml
 values:
@@ -241,3 +257,24 @@ tests:
       - equal:
           path: spec.selector.matchLabels["app.kubernetes.io/component"]
           value: management-controller
+
+---
+suite: management-controller/service-account.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/management-controller/service-account.yaml
+tests:
+  - it: enables token automounting on the ServiceAccount by default
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: true
+
+  - it: disables token automounting on the ServiceAccount when managementController.automountServiceAccountToken is false
+    set:
+      managementController.automountServiceAccountToken: false
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: false

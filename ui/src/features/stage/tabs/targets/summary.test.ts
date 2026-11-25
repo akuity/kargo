@@ -4,7 +4,13 @@ import { TargetStatusEntry } from '../../../../gen/api/v2/models';
 import { targetRows } from '../../../project/targets/model/target-rows';
 import { entry, fleetStage, health, target } from '../../../project/targets/model/test-fixtures';
 
-import { assessedHealth, governing, healthTally, owningTargetSet } from './summary';
+import {
+  assessedHealth,
+  governing,
+  healthTally,
+  neverPromotedNote,
+  owningTargetSet
+} from './summary';
 
 const stage = fleetStage('prod', [{ matchLabels: { env: 'prod' } }], 'freight-new');
 
@@ -91,5 +97,44 @@ describe('owningTargetSet()', () => {
 
   test('is nothing for a Target written by hand', () => {
     expect(owningTargetSet(target('t'))).toBeUndefined();
+  });
+});
+
+describe('neverPromotedNote()', () => {
+  test('says every Target has Freight only when every row has some', () => {
+    const all = rows(
+      [{ name: 'a' }, { name: 'b' }],
+      [
+        entry('a', 'prod', 'UpToDate', { freightName: 'freight-new' }),
+        entry('b', 'prod', 'Behind', { freightName: 'freight-old' })
+      ]
+    );
+    expect(neverPromotedNote(0, all)).toBe('all have Freight');
+  });
+
+  test('says no Freight yet when the never promoted are the only Targets without', () => {
+    const some = rows(
+      [{ name: 'a' }, { name: 'b' }],
+      [
+        entry('a', 'prod', 'UpToDate', { freightName: 'freight-new' }),
+        entry('b', 'prod', 'NeverPromoted')
+      ]
+    );
+    expect(neverPromotedNote(1, some)).toBe('no Freight yet');
+  });
+
+  test('counts Targets without Freight that are not never promoted', () => {
+    // A failed first promotion and a Target a rollout has yet to reach leave
+    // no Freight behind, though neither counts as never promoted.
+    const none = rows(
+      [{ name: 'a' }, { name: 'b' }, { name: 'c' }],
+      [
+        entry('a', 'prod', 'UpToDate', { freightName: 'freight-new' }),
+        entry('b', 'prod', 'Failed'),
+        entry('c', 'prod', 'Pending')
+      ]
+    );
+    expect(neverPromotedNote(0, none)).toBe('2 have no Freight');
+    expect(neverPromotedNote(0, none.slice(0, 2))).toBe('1 has no Freight');
   });
 });

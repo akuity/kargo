@@ -48,7 +48,7 @@ import (
 // @Security BearerAuth
 // @Param project path string true "Project name"
 // @Param stage query string false "Only entries for this Stage"
-// @Param state query []string false "Only entries in one of these states; repeat to give several" Enums(Promoting, Pending, Failed, NotAttempted, NeverPromoted, Behind, UpToDate)
+// @Param state query []string false "Only entries in one of these states; repeat to give several" collectionFormat(multi) Enums(Promoting, Pending, Failed, NotAttempted, NeverPromoted, Behind, UpToDate)
 // @Param continue query string false "The previous page's continue, to read the page after it; resend stage and state"
 // @Param limit query int false "The page size, at most 500; 100 if omitted"
 // @Produce json

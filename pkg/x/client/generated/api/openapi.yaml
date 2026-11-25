@@ -2317,7 +2317,7 @@ paths:
         schema:
           type: string
       - description: Only entries in one of these states; repeat to give several
-        explode: false
+        explode: true
         in: query
         name: state
         schema:

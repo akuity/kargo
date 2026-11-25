@@ -36,6 +36,7 @@ import { targetAwareStages } from './model/target-stages';
 import { fleetFigures } from './model/target-status';
 import { FiltersPanel } from './shared/filters-panel';
 import { GroupByFilter } from './shared/group-by-filter';
+import { StatusesError } from './shared/statuses-error';
 import { useFreightLabel, useFreightReference } from './shared/use-freight-label';
 import { TargetGroupCard } from './summary/group-card';
 import { StatTiles } from './summary/stat-tiles';
@@ -84,7 +85,11 @@ export const Targets = () => {
   const allStages = useMemo(() => stagesQuery.data?.data?.items || [], [stagesQuery.data]);
   const stages = useMemo(() => targetAwareStages(allStages), [allStages]);
   const targets = useMemo(() => targetsQuery.data?.data?.items || [], [targetsQuery.data]);
-  const statuses = useTargetStatuses(project, stages);
+  const statuses = useTargetStatuses(
+    project,
+    stagesQuery.isLoading ? undefined : stages,
+    targetsQuery.isLoading ? undefined : targets
+  );
 
   const freightLabel = useFreightLabel(project);
   const resolveFreight = useFreightReference(project);
@@ -216,6 +221,8 @@ export const Targets = () => {
 
       {loading ? (
         <LoadingState />
+      ) : statuses.error ? (
+        <StatusesError error={statuses.error} />
       ) : (
         <Flex gap={16} align='flex-start' className='min-h-0' wrap>
           {/* With no Targets there is nothing to filter, and the panel would be

@@ -47,6 +47,20 @@ export const healthTally = (rows: TargetRow[]): HealthTally => {
 export const assessedHealth = (rows: TargetRow[]): boolean =>
   rows.some((row) => healthStatusToEnum(governing(row)?.health?.status) !== HealthStatus.UNDEFINED);
 
+// neverPromotedNote is what the Never promoted tile says under its count.
+// Having no Freight is not the same as never having been promoted to: a
+// Target whose first promotion failed, or that a rollout has named and not yet
+// reached, has no Freight either, and is counted under its own state. So the
+// note reads Freight off the rows, and says every Target has some only when
+// every row does.
+export const neverPromotedNote = (neverPromoted: number, rows: TargetRow[]): string => {
+  const withoutFreight = rows.filter(({ freight }) => freight.length === 0).length;
+  if (withoutFreight > neverPromoted) {
+    return `${withoutFreight} ${withoutFreight === 1 ? 'has' : 'have'} no Freight`;
+  }
+  return neverPromoted ? 'no Freight yet' : 'all have Freight';
+};
+
 // owningTargetSet names the TargetSet a Target was generated from. Targets may
 // also be written by hand, and then nothing owns them.
 export const owningTargetSet = (target: Target): string | undefined =>

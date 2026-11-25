@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"reflect"
 )
 
 
@@ -5658,7 +5659,15 @@ func (a *CoreAPIService) ListTargetStatusesExecute(r ApiListTargetStatusesReques
 		parameterAddToHeaderOrQuery(localVarQueryParams, "stage", r.stage, "", "")
 	}
 	if r.state != nil {
-		parameterAddToHeaderOrQuery(localVarQueryParams, "state", r.state, "form", "csv")
+		t := *r.state
+		if reflect.TypeOf(t).Kind() == reflect.Slice {
+			s := reflect.ValueOf(t)
+			for i := 0; i < s.Len(); i++ {
+				parameterAddToHeaderOrQuery(localVarQueryParams, "state", s.Index(i).Interface(), "form", "multi")
+			}
+		} else {
+			parameterAddToHeaderOrQuery(localVarQueryParams, "state", t, "form", "multi")
+		}
 	}
 	if r.continue_ != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "continue", r.continue_, "", "")

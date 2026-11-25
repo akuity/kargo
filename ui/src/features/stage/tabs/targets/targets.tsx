@@ -6,6 +6,7 @@ import { TARGETS_POLL_INTERVAL_MS } from '@ui/features/project/targets/constants
 import { freightNames } from '@ui/features/project/targets/model/target-freight';
 import { targetRows } from '@ui/features/project/targets/model/target-rows';
 import { stageFigures } from '@ui/features/project/targets/model/target-status';
+import { StatusesError } from '@ui/features/project/targets/shared/statuses-error';
 import {
   useFreightLabel,
   useFreightReference
@@ -50,19 +51,24 @@ export const StageTargets = ({ projectName, stage, round }: Props) => {
   const stageName = stage.metadata?.name || '';
   const stages = useMemo(() => [stage], [stage]);
 
-  const statuses = useTargetStatuses(projectName, stages, stageName);
   // Targets live in the database, which offers no watch; the list is polled.
   const targetsQuery = useListTargets(
     projectName,
     { stage: stageName },
     { query: { refetchInterval: TARGETS_POLL_INTERVAL_MS } }
   );
+  const targets = useMemo(() => targetsQuery.data?.data?.items || [], [targetsQuery.data]);
+  const statuses = useTargetStatuses(
+    projectName,
+    stages,
+    targetsQuery.isLoading ? undefined : targets,
+    stageName
+  );
 
   const freightLabel = useFreightLabel(projectName);
   const resolveFreight = useFreightReference(projectName);
   const colors = useMarkColors();
 
-  const targets = useMemo(() => targetsQuery.data?.data?.items || [], [targetsQuery.data]);
   // Rows are built from this Stage's statuses alone, so every state on the
   // tab is the Target as this Stage sees it, not as the fleet at large does.
   // A Target the list holds and the statuses do not -- one whose labels have
@@ -89,6 +95,12 @@ export const StageTargets = ({ projectName, stage, round }: Props) => {
 
   if (statuses.isLoading || targetsQuery.isLoading) {
     return <LoadingState />;
+  }
+
+  // Without statuses no Target would match, which says the selectors are
+  // wrong when it is the read that failed.
+  if (statuses.error) {
+    return <StatusesError error={statuses.error} />;
   }
 
   if (rows.length === 0) {

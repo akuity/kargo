@@ -10,8 +10,7 @@ import { SmallLabel } from '@ui/features/common/small-label';
 import { parseDate } from '@ui/utils/dates';
 
 import { flattenParams } from '../model/target-details-utils';
-import { freightByOrigin } from '../model/target-freight';
-import { GoverningStage, TargetRow } from '../model/target-rows';
+import { GoverningStage, TargetRow, governingOrigins } from '../model/target-rows';
 import { targetStatePresentations } from '../model/target-state';
 import { LastPromotion } from '../shared/last-promotion';
 import { OriginRows, Row } from '../shared/origin-rows';
@@ -41,13 +40,7 @@ const StageCard = ({
   freightLabel: (name: string) => string;
 }) => {
   const stageName = governing.stage.metadata?.name || '';
-  // A Target with no Freight is only shown what the Stage is on once a
-  // promotion to it has been tried. Until then it has simply not been promoted
-  // to, and is not behind on anything.
-  const origins =
-    governing.currentFreight || governing.state === 'Failed' || governing.state === 'NotAttempted'
-      ? freightByOrigin(governing.currentFreight, governing.stage.status?.freightHistory?.[0])
-      : [];
+  const origins = governingOrigins(governing);
   const anyBehind = origins.some(({ behind }) => behind);
   const issues = governing.health?.issues || [];
 

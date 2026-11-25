@@ -29,6 +29,7 @@ system to access the git repos.
 | `targetBranch` | `string` | N | The branch to which the changes should be merged. |
 | `title` | `string` | N | The title for the pull request. Kargo generates a title based on the commit messages if it is not explicitly specified. |
 | `description` | `string` | N | The description for the pull request. |
+| `disableFooter` | `boolean` | N | Indicates whether to leave out the link to the Stage in the Kargo UI that Kargo appends to the description by default. This is useful when the pull request is reviewed by people who can't reach the Kargo UI. Defaults to `false`. |
 | `labels` | `[]string` | N | Labels to add to the pull request. Not all Git providers support labels; see the note below. |
 
 :::note

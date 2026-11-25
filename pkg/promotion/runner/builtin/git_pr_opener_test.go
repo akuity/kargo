@@ -155,6 +155,16 @@ func Test_gitPROpener_convert(t *testing.T) {
 				"description: String length must be greater than or equal to 1",
 			},
 		},
+		{
+			name: "valid with footer disabled",
+			config: promotion.Config{
+				"provider":      "github",
+				"repoURL":       "https://github.com/example/repo.git",
+				"sourceBranch":  "fake-branch",
+				"targetBranch":  "another-fake-branch",
+				"disableFooter": true,
+			},
+		},
 	}
 
 	r := newGitPROpener(promotion.StepRunnerCapabilities{})
@@ -206,6 +216,7 @@ func Test_gitPROpener_run(t *testing.T) {
 	const fakeGitProviderName = "fake"
 	const testPRNumber int64 = 42
 	const testPRURL = "http://example.com/pull/42"
+	var createPROpts *gitprovider.CreatePullRequestOpts
 	gitprovider.Register(
 		fakeGitProviderName,
 		gitprovider.Registration{
@@ -223,9 +234,10 @@ func Test_gitPROpener_run(t *testing.T) {
 						return nil, nil
 					},
 					CreatePullRequestFn: func(
-						context.Context,
-						*gitprovider.CreatePullRequestOpts,
+						_ context.Context,
+						opts *gitprovider.CreatePullRequestOpts,
 					) (*gitprovider.PullRequest, error) {
+						createPROpts = opts
 						return &gitprovider.PullRequest{
 							Number: testPRNumber,
 							URL:    testPRURL,
@@ -309,9 +321,10 @@ func Test_gitPROpener_run(t *testing.T) {
 		res, err := runner.run(
 			t.Context(),
 			&promotion.StepContext{
-				Project: "fake-project",
-				Stage:   "fake-stage",
-				WorkDir: workDir,
+				UIBaseURL: "https://kargo.example.com",
+				Project:   "fake-project",
+				Stage:     "fake-stage",
+				WorkDir:   workDir,
 			},
 			stepconfig.GitOpenPRConfig{
 				RepoURL:      testRepoURL,
@@ -330,6 +343,49 @@ func Test_gitPROpener_run(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, testPRNumber, prOutput["id"])
 		require.Equal(t, testPRURL, prOutput["url"])
+
+		// Validate that a link to the Stage was appended to the description
+		require.NotNil(t, createPROpts)
+		require.Equal(
+			t,
+			"kargo description\n\n[View in Kargo UI]"+
+				"(https://kargo.example.com/project/fake-project/stage/fake-stage)",
+			createPROpts.Description,
+		)
+	})
+
+	t.Run("omits link to the Stage when footer is disabled", func(t *testing.T) {
+		createPROpts = nil
+
+		r := newGitPROpener(promotion.StepRunnerCapabilities{
+			CredsDB: &credentials.FakeDB{},
+		})
+		runner, ok := r.(*gitPROpener)
+		require.True(t, ok)
+
+		res, err := runner.run(
+			t.Context(),
+			&promotion.StepContext{
+				UIBaseURL: "https://kargo.example.com",
+				Project:   "fake-project",
+				Stage:     "fake-stage",
+				WorkDir:   workDir,
+			},
+			stepconfig.GitOpenPRConfig{
+				RepoURL:       testRepoURL,
+				SourceBranch:  testSourceBranch,
+				TargetBranch:  testTargetBranch,
+				Provider:      ptr.To(stepconfig.Provider(fakeGitProviderName)),
+				Title:         "kargo",
+				Description:   "kargo description",
+				DisableFooter: true,
+			},
+		)
+		require.NoError(t, err)
+		require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+
+		require.NotNil(t, createPROpts)
+		require.Equal(t, "kargo description", createPROpts.Description)
 	})
 }
 

@@ -43,6 +43,16 @@ describe('roundSegments()', () => {
     expect(segments.every((s) => s.percent > 33 && s.percent < 34)).toBe(true);
   });
 
+  test('Targets a round ended without promoting to close the bar', () => {
+    const { total, segments } = roundSegments({ succeeded: 1, failed: 1, notAttempted: 8 });
+    expect(total).toBe(10);
+    expect(segments).toEqual([
+      { phase: 'Succeeded', count: 1, percent: 10 },
+      { phase: 'Failed', count: 1, percent: 10 },
+      { phase: 'NotAttempted', count: 8, percent: 80 }
+    ]);
+  });
+
   test('negative counts are treated as zero', () => {
     expect(roundSegments({ succeeded: 2, failed: -3 })).toEqual({
       total: 2,
@@ -59,6 +69,12 @@ describe('describeRound()', () => {
   test('lists each phase in order with the total', () => {
     expect(describeRound(roundSegments({ succeeded: 3, errored: 1 }))).toBe(
       '3 succeeded, 1 errored of 4 Targets'
+    );
+  });
+
+  test('says in words what was not attempted', () => {
+    expect(describeRound(roundSegments({ succeeded: 1, failed: 1, notAttempted: 8 }))).toBe(
+      '1 succeeded, 1 failed, 8 not attempted of 10 Targets'
     );
   });
 
@@ -79,7 +95,12 @@ describe('roundBadgePhase()', () => {
     [{ succeeded: 3, running: 1, failed: 1 }, 'Failed'],
     [{ succeeded: 3, failed: 1, errored: 1 }, 'Errored'],
     [{ succeeded: 3, aborted: 1 }, 'Aborted'],
-    [{ aborted: 2, pending: 1 }, 'Pending']
+    [{ aborted: 2, pending: 1 }, 'Pending'],
+    // A failure outranks the Targets it kept the round from reaching.
+    [{ succeeded: 1, failed: 1, notAttempted: 8 }, 'Failed'],
+    [{ succeeded: 3, aborted: 1, notAttempted: 6 }, 'Aborted'],
+    // A round cut short of a Target did not succeed, whatever else it did.
+    [{ succeeded: 3, notAttempted: 7 }, 'NotAttempted']
   ])('%j -> %s', (summary, phase) => {
     expect(roundBadgePhase(roundSegments(summary))).toBe(phase);
   });
@@ -90,5 +111,8 @@ describe('roundBadgeText()', () => {
     expect(roundBadgeText(roundSegments({ succeeded: 37, errored: 3 }))).toBe('37/40');
     expect(roundBadgeText(roundSegments({ pending: 5 }))).toBe('0/5');
     expect(roundBadgeText(roundSegments({}))).toBe('0/0');
+    expect(roundBadgeText(roundSegments({ succeeded: 1, failed: 1, notAttempted: 8 }))).toBe(
+      '1/10'
+    );
   });
 });

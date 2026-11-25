@@ -79,22 +79,49 @@ export const blockingMessage = (promotionRequest?: PromotionRequest) => {
 // of Kargo Enterprise.
 const enterpriseOnlyReason = 'EnterpriseOnlyFeature';
 
+// The Ready condition reason a round carries while it waits for its Stage to
+// let it start. A Stage holds its next round for as long as the Freight it is
+// on is still being verified, so a round may wait as long as a verification
+// runs -- which is the round working as intended, not one in trouble.
+const awaitingStageReason = 'AwaitingStage';
+
 export type RoundBlock = { title: string; description: string };
+
+// hasFannedOut reports whether a round got as far as its Targets: it recorded
+// one, or a tally of them.
+const hasFannedOut = (promotionRequest?: PromotionRequest): boolean =>
+  !!promotionRequest?.status?.targets?.length || !!promotionRequest?.status?.summary;
+
+const readyCondition = (promotionRequest?: PromotionRequest) =>
+  promotionRequest?.status?.conditions?.find((condition) => condition.type === 'Ready');
+
+// isRoundAwaitingStage reports whether a round is waiting for its Stage to let
+// it start. It has attempted no Target, and nothing is wrong with it: it is
+// Pending in the way a Promotion is Pending while its Stage verifies the
+// Freight it is on, and is shown the same way -- as a round that is Pending,
+// with no warning about it.
+export const isRoundAwaitingStage = (promotionRequest?: PromotionRequest): boolean => {
+  if (hasFannedOut(promotionRequest)) {
+    return false;
+  }
+  const ready = readyCondition(promotionRequest);
+  return ready?.status === 'False' && ready.reason === awaitingStageReason;
+};
 
 // roundBlock explains, in words meant for a person, why a PromotionRequest
 // never fanned out. A round that did fan out and then had children fail is
 // not blocked -- its Targets show the outcome -- so a request that recorded
 // any Target or summary yields nothing even if its Ready condition is False.
+// Nor is a round that is only waiting for its Stage to let it start: its
+// Ready condition is False for the length of the wait, and it is not stuck.
 // The Ready message is written for operators; the one case a user is likely
 // to meet -- fan-out being an Enterprise feature -- gets plain language, and
 // any other reason is passed through under a general heading.
 export const roundBlock = (promotionRequest?: PromotionRequest): RoundBlock | undefined => {
-  if (promotionRequest?.status?.targets?.length || promotionRequest?.status?.summary) {
+  if (hasFannedOut(promotionRequest) || isRoundAwaitingStage(promotionRequest)) {
     return undefined;
   }
-  const ready = promotionRequest?.status?.conditions?.find(
-    (condition) => condition.type === 'Ready'
-  );
+  const ready = readyCondition(promotionRequest);
   if (ready?.status !== 'False' || !ready.message) {
     return undefined;
   }

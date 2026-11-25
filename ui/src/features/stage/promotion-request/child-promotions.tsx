@@ -10,8 +10,10 @@ import { paths } from '@ui/config/paths';
 import { PromotionStepStatus } from '@ui/features/common/promotion-directive-step-status/promotion-step-status';
 import { PhaseFilterChips } from '@ui/features/common/promotion-status/phase-filter-chips';
 import {
-  PromotionPhase,
-  getPromotionPhasePresentation
+  RoundTargetPhase,
+  getRoundTargetPhasePresentation,
+  notAttempted,
+  roundTargetPhaseLabel
 } from '@ui/features/common/promotion-status/promotion-phase';
 import { Promotion } from '@ui/gen/api/v2/models';
 import { parseDate } from '@ui/utils/dates';
@@ -106,7 +108,7 @@ export const ChildPromotions = ({
   loading: boolean;
 }) => {
   const navigate = useNavigate();
-  const [phase, setPhase] = useState<PromotionPhase | undefined>();
+  const [phase, setPhase] = useState<RoundTargetPhase | undefined>();
   const [search, setSearch] = useState('');
 
   const pathOf = (row: ChildPromotion) =>
@@ -127,10 +129,10 @@ export const ChildPromotions = ({
       title: 'Phase',
       width: 120,
       render: (_, row) => {
-        const { icon, tagColor, spin } = getPromotionPhasePresentation(row.phase);
+        const { icon, tagColor, spin } = getRoundTargetPhasePresentation(row.phase);
         return (
           <Tag className='m-0' color={tagColor} icon={<FontAwesomeIcon icon={icon} spin={spin} />}>
-            {row.phase}
+            {roundTargetPhaseLabel(row.phase)}
           </Tag>
         );
       }
@@ -148,7 +150,13 @@ export const ChildPromotions = ({
                 </Link>
               </Tooltip>
             ) : (
-              <Tooltip title='No Promotion has been created for this Target yet'>
+              <Tooltip
+                title={
+                  row.phase === notAttempted
+                    ? 'This round ended before promoting to this Target'
+                    : 'No Promotion has been created for this Target yet'
+                }
+              >
                 <Typography.Text className='text-xs font-mono'>{row.target}</Typography.Text>
               </Tooltip>
             )}
@@ -212,6 +220,7 @@ export const ChildPromotions = ({
             filters={childPhaseFilters(rows)}
             selected={phase}
             onSelect={setPhase}
+            labelOf={roundTargetPhaseLabel}
           />
         </Flex>
         <Input
@@ -233,8 +242,9 @@ export const ChildPromotions = ({
         rowKey={(row) => row.target}
         onRow={(row) => {
           const path = pathOf(row);
-          // A Target whose Promotion has not been created yet has nothing to
-          // open, so its row stays inert rather than offering a dead click.
+          // A Target with no Promotion, because the round has yet to create
+          // one or ended before it could, has nothing to open, so its row
+          // stays inert rather than offering a dead click.
           if (!path) {
             return {};
           }

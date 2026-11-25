@@ -92,7 +92,7 @@ func (d *httpDownloader) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
-	resp, err := d.performHTTPRequest(cfg)
+	resp, err := d.performHTTPRequest(ctx, cfg)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
@@ -144,8 +144,11 @@ func (d *httpDownloader) checkFileOverwrite(root *os.Root, relOutPath, outPath s
 }
 
 // performHTTPRequest executes the HTTP request and returns the response.
-func (d *httpDownloader) performHTTPRequest(cfg stepconfig.HTTPDownloadConfig) (*http.Response, error) {
-	req, err := d.buildRequest(cfg)
+func (d *httpDownloader) performHTTPRequest(
+	ctx context.Context,
+	cfg stepconfig.HTTPDownloadConfig,
+) (*http.Response, error) {
+	req, err := d.buildRequest(ctx, cfg)
 	if err != nil {
 		return nil, &promotion.TerminalError{Err: fmt.Errorf("error building HTTP request: %w", err)}
 	}
@@ -166,8 +169,11 @@ func (d *httpDownloader) performHTTPRequest(cfg stepconfig.HTTPDownloadConfig) (
 }
 
 // buildRequest constructs the HTTP request with headers and query parameters.
-func (d *httpDownloader) buildRequest(cfg stepconfig.HTTPDownloadConfig) (*http.Request, error) {
-	req, err := http.NewRequest(http.MethodGet, cfg.URL, nil)
+func (d *httpDownloader) buildRequest(
+	ctx context.Context,
+	cfg stepconfig.HTTPDownloadConfig,
+) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, cfg.URL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating HTTP request: %w", err)
 	}

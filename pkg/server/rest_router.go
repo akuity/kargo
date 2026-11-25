@@ -179,8 +179,16 @@ func (s *server) setupRESTRouter(
 		{
 			// Cluster Analysis Templates (Argo Rollouts)
 			shared.GET("/cluster-analysis-templates", requireRollouts, s.listClusterAnalysisTemplates)
-			shared.GET("/cluster-analysis-templates/:cluster-analysis-template", requireRollouts, s.getClusterAnalysisTemplate)
-			shared.DELETE("/cluster-analysis-templates/:cluster-analysis-template", requireRollouts, s.deleteClusterAnalysisTemplate)
+			shared.GET(
+				"/cluster-analysis-templates/:cluster-analysis-template",
+				requireRollouts,
+				s.getClusterAnalysisTemplate,
+			)
+			shared.DELETE(
+				"/cluster-analysis-templates/:cluster-analysis-template",
+				requireRollouts,
+				s.deleteClusterAnalysisTemplate,
+			)
 
 			// Cluster Promotion Tasks
 			shared.GET("/cluster-promotion-tasks", s.listClusterPromotionTasks)
