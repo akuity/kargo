@@ -2,7 +2,7 @@ import { useDndContext } from '@dnd-kit/core';
 import { faArrowLeft, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import classNames from 'classnames';
-import { CSSProperties, useContext, useState } from 'react';
+import { CSSProperties, useContext, useMemo, useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -13,6 +13,7 @@ import { useDictionaryContext } from '@ui/features/project/pipelines/context/dic
 import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { Freight } from '@ui/gen/api/v2/models';
 
+import { getPreviousFreight } from './freight-artifact-changes-utils';
 import { FreightCard } from './freight-card';
 import { FreightExpandTile } from './freight-expand-tile';
 import { FreightTimelineEmpty } from './freight-timeline-empty';
@@ -74,6 +75,10 @@ export const FreightTimeline = (props: {
     usePromotionEligibleFreight(props.project);
 
   const soakTime = useSoakTime(props.freights);
+
+  // From every piece of freight rather than the filtered ones, so filtering
+  // the timeline does not change what a card's artifacts are compared with.
+  const previousFreight = useMemo(() => getPreviousFreight(props.freights), [props.freights]);
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
 
@@ -150,6 +155,7 @@ export const FreightTimeline = (props: {
           );
         }}
         soakTime={freightSoakTime}
+        previousFreight={previousFreight[freight?.metadata?.name || '']}
       />
     );
   };

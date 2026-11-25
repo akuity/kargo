@@ -60,6 +60,9 @@ type FreightCardProps = {
   soakTime?: Duration;
   promotionEligible?: boolean;
   isPromotionEligibleLoading?: boolean;
+  // the piece of freight its Warehouse discovered before this one, which the
+  // artifacts are compared with to pick out what differs
+  previousFreight?: Freight;
 };
 
 export const FreightCard = (props: FreightCardProps) => {
@@ -242,7 +245,7 @@ export const FreightCard = (props: FreightCardProps) => {
         {/* at least two artifact rows tall (2 x 20px + 2px gap), so a card with
             one artifact matches the height of one with two */}
         <div className='flex flex-col gap-[2px] mt-1 min-w-0 min-h-[42px]'>
-          <FreightArtifactList freight={props.freight} />
+          <FreightArtifactList freight={props.freight} previousFreight={props.previousFreight} />
         </div>
 
         <div
