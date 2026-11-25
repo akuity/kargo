@@ -48,10 +48,11 @@ const nodeTypes = {
 };
 
 // Keep fitted nodes clear of the freight timeline, filters and buttons
-// floating over the top of the graph. Horizontal padding matches React Flow's
-// default.
+// floating over the top of the graph. The canvas runs as far past the bottom
+// edge as the timeline covers at the top (see below), so the bottom padding
+// takes that in too. Horizontal padding matches React Flow's default.
 const getFitViewPadding = (topInset: number) =>
-  ({ top: `${80 + topInset}px`, bottom: '40px', x: 0.1 }) as const;
+  ({ top: `${80 + topInset}px`, bottom: `${40 + topInset}px`, x: 0.1 }) as const;
 
 export const Graph = (props: GraphProps) => {
   const { isDark } = useTheme();
@@ -370,73 +371,84 @@ export const Graph = (props: GraphProps) => {
         matchedStageIndices
       }}
     >
-      <ReactFlow
-        className='kargo-pipeline-graph'
-        colorMode={isDark ? 'dark' : 'light'}
-        nodes={nodes}
-        // Sizes only, so that a node replaced by a watch event keeps them.
-        // Without them React Flow drops the node's handles, and its edges are
-        // drawn afresh, restarting their animation.
-        onNodesChange={(changes) => onNodesChange(changes.filter((c) => c.type === 'dimensions'))}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{
-          nodes: nodesExcludingSubscriptionNodes,
-          padding: fitViewPadding
-        }}
-        proOptions={{ hideAttribution: true }}
-        minZoom={nodes.length > 100 ? 0.4 : 0.2}
-        maxZoom={1.4}
-        onlyRenderVisibleElements
-        panOnDrag
-        onInit={(inst) => (reactFlowInstance.current = inst)}
-      >
-        {filterContext?.preferredFilter?.showMinimap && (
-          <MiniMap
-            style={{
-              width: 140,
-              height: 100,
-              background: 'var(--kargo-color-bg-container, white)',
-              border: '1px solid var(--kargo-color-border, lightblue)',
-              borderRadius: '5px'
-            }}
-            pannable
-          />
-        )}
-        <Controls
-          showInteractive={false}
-          fitViewOptions={{ padding: fitViewPadding }}
-          onFitView={() => {
-            setRedraw(!redraw);
+      {/* React Flow centers the graph on its canvas, which runs under the
+          freight timeline. Running it as far past the bottom edge, where it
+          is cut off, puts the canvas's middle in the middle of what is in
+          view, so fitting and zooming center there. React Flow overrides a
+          height set on itself, so it fills this instead. */}
+      <div style={{ height: `calc(100% + ${topInset}px)` }}>
+        <ReactFlow
+          className='kargo-pipeline-graph'
+          colorMode={isDark ? 'dark' : 'light'}
+          nodes={nodes}
+          // Sizes only, so that a node replaced by a watch event keeps them.
+          // Without them React Flow drops the node's handles, and its edges are
+          // drawn afresh, restarting their animation.
+          onNodesChange={(changes) => onNodesChange(changes.filter((c) => c.type === 'dimensions'))}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{
+            nodes: nodesExcludingSubscriptionNodes,
+            padding: fitViewPadding
           }}
+          proOptions={{ hideAttribution: true }}
+          minZoom={nodes.length > 100 ? 0.4 : 0.2}
+          maxZoom={1.4}
+          onlyRenderVisibleElements
+          panOnDrag
+          onInit={(inst) => (reactFlowInstance.current = inst)}
         >
-          <ControlButton
-            title={filterContext?.preferredFilter?.showMinimap ? 'Hide Minimap' : 'Show Minimap'}
-            onClick={() =>
-              filterContext?.setPreferredFilter({
-                ...filterContext?.preferredFilter,
-                showMinimap: !filterContext?.preferredFilter?.showMinimap
-              })
-            }
+          {filterContext?.preferredFilter?.showMinimap && (
+            <MiniMap
+              style={{
+                width: 140,
+                height: 100,
+                background: 'var(--kargo-color-bg-container, white)',
+                border: '1px solid var(--kargo-color-border, lightblue)',
+                borderRadius: '5px',
+                // above the part of the canvas past the bottom edge
+                bottom: topInset
+              }}
+              pannable
+            />
+          )}
+          <Controls
+            // above the part of the canvas past the bottom edge
+            style={{ bottom: topInset }}
+            showInteractive={false}
+            fitViewOptions={{ padding: fitViewPadding }}
+            onFitView={() => {
+              setRedraw(!redraw);
+            }}
           >
-            <FontAwesomeIcon icon={faMap} />
-          </ControlButton>
-          <ControlButton
-            title={
-              filterContext?.preferredFilter?.stepEdges ? 'Use Curved Edges' : 'Use Step Edges'
-            }
-            onClick={() =>
-              filterContext?.setPreferredFilter({
-                ...filterContext?.preferredFilter,
-                stepEdges: !filterContext?.preferredFilter?.stepEdges
-              })
-            }
-          >
-            <FontAwesomeIcon icon={faShareNodes} />
-          </ControlButton>
-        </Controls>
-      </ReactFlow>
+            <ControlButton
+              title={filterContext?.preferredFilter?.showMinimap ? 'Hide Minimap' : 'Show Minimap'}
+              onClick={() =>
+                filterContext?.setPreferredFilter({
+                  ...filterContext?.preferredFilter,
+                  showMinimap: !filterContext?.preferredFilter?.showMinimap
+                })
+              }
+            >
+              <FontAwesomeIcon icon={faMap} />
+            </ControlButton>
+            <ControlButton
+              title={
+                filterContext?.preferredFilter?.stepEdges ? 'Use Curved Edges' : 'Use Step Edges'
+              }
+              onClick={() =>
+                filterContext?.setPreferredFilter({
+                  ...filterContext?.preferredFilter,
+                  stepEdges: !filterContext?.preferredFilter?.stepEdges
+                })
+              }
+            >
+              <FontAwesomeIcon icon={faShareNodes} />
+            </ControlButton>
+          </Controls>
+        </ReactFlow>
+      </div>
     </GraphContext.Provider>
   );
 };
