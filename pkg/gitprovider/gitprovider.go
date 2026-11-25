@@ -2,7 +2,20 @@ package gitprovider
 
 import (
 	"context"
+	"errors"
 	"time"
+)
+
+var (
+	// ErrPullRequestNotFound indicates that the requested pull request does not
+	// exist.
+	ErrPullRequestNotFound = errors.New("pull request not found")
+	// ErrPullRequestClosedUnmerged indicates that the pull request is closed
+	// without having been merged.
+	ErrPullRequestClosedUnmerged = errors.New("pull request is closed but not merged")
+	// ErrUnsupportedMergeMethod indicates that the requested merge method is not
+	// supported by the provider.
+	ErrUnsupportedMergeMethod = errors.New("unsupported merge method")
 )
 
 // PullRequestState represents the state of a pull request. e.g. Closed, Open,

@@ -171,14 +171,14 @@ func Test_gitPRMerger_run(t *testing.T) {
 		assertions func(*testing.T, promotion.StepResult, error)
 	}{
 		{
-			name: "error during merge attempt",
+			name: "transient error during merge attempt",
 			provider: &gitprovider.Fake{
 				MergePullRequestFn: func(
 					context.Context,
 					int64,
 					*gitprovider.MergePullRequestOpts,
 				) (*gitprovider.PullRequest, bool, error) {
-					return nil, false, errors.New("authentication failed")
+					return nil, false, errors.New("500 internal server error")
 				},
 			},
 			config: stepconfig.GitMergePRConfig{
@@ -186,8 +186,74 @@ func Test_gitPRMerger_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.ErrorContains(t, err, "error merging pull request")
-				require.ErrorContains(t, err, "authentication failed")
-				require.True(t, promotion.IsTerminal(err))
+				require.ErrorContains(t, err, "500 internal server error")
+				require.False(t, promotion.IsTerminal(err))
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+			},
+		},
+		{
+			name: "terminal error: pull request closed unmerged",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					context.Context,
+					int64,
+					*gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					return nil, false, gitprovider.ErrPullRequestClosedUnmerged
+				},
+			},
+			config: stepconfig.GitMergePRConfig{
+				PRNumber: 42,
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "error merging pull request")
+				var termErr *promotion.TerminalError
+				require.ErrorAs(t, err, &termErr)
+				require.ErrorIs(t, termErr.Err, gitprovider.ErrPullRequestClosedUnmerged)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
+			name: "terminal error: unsupported merge method",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					context.Context,
+					int64,
+					*gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					return nil, false, gitprovider.ErrUnsupportedMergeMethod
+				},
+			},
+			config: stepconfig.GitMergePRConfig{
+				PRNumber: 42,
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "error merging pull request")
+				var termErr *promotion.TerminalError
+				require.ErrorAs(t, err, &termErr)
+				require.ErrorIs(t, termErr.Err, gitprovider.ErrUnsupportedMergeMethod)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
+			name: "terminal error: pull request not found",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					context.Context,
+					int64,
+					*gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					return nil, false, gitprovider.ErrPullRequestNotFound
+				},
+			},
+			config: stepconfig.GitMergePRConfig{
+				PRNumber: 42,
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.ErrorContains(t, err, "error merging pull request")
+				var termErr *promotion.TerminalError
+				require.ErrorAs(t, err, &termErr)
+				require.ErrorIs(t, termErr.Err, gitprovider.ErrPullRequestNotFound)
 				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
 			},
 		},

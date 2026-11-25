@@ -303,12 +303,15 @@ func (p *provider) MergePullRequest(
 		opts = &gitprovider.MergePullRequestOpts{}
 	}
 
-	giteaPR, _, err := p.client.GetPullRequest(p.owner, p.repo, id)
+	giteaPR, resp, err := p.client.GetPullRequest(p.owner, p.repo, id)
 	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
+			return nil, false, fmt.Errorf("error getting pull request %d: %w: %w", id, gitprovider.ErrPullRequestNotFound, err)
+		}
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
 	if giteaPR == nil {
-		return nil, false, fmt.Errorf("pull request %d not found", id)
+		return nil, false, fmt.Errorf("pull request %d not found: %w", id, gitprovider.ErrPullRequestNotFound)
 	}
 
 	switch {
@@ -317,7 +320,7 @@ func (p *provider) MergePullRequest(
 		return &pr, true, nil
 
 	case giteaPR.State != gitea.StateOpen:
-		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
+		return nil, false, fmt.Errorf("pull request %d: %w", id, gitprovider.ErrPullRequestClosedUnmerged)
 
 	case giteaPR.Draft || !giteaPR.Mergeable:
 		return nil, false, nil
@@ -329,7 +332,7 @@ func (p *provider) MergePullRequest(
 	}
 	if _, ok := validMergeMethods[mergeMethod]; !ok {
 		return nil, false,
-			fmt.Errorf("unsupported merge method %q", mergeMethod)
+			fmt.Errorf("%w %q", gitprovider.ErrUnsupportedMergeMethod, mergeMethod)
 	}
 
 	merged, _, err := p.client.MergePullRequest(
