@@ -10,6 +10,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+
+	"github.com/akuity/kargo/pkg/telemetry/internal/state"
 )
 
 // resetGlobals restores the global OpenTelemetry state after a test that
@@ -18,9 +20,13 @@ func resetGlobals(t *testing.T) {
 	t.Helper()
 	prevProvider := otel.GetTracerProvider()
 	prevPropagator := otel.GetTextMapPropagator()
+	prevEnabled := state.Enabled.Load()
+	prevSelected := state.Selected.Load()
 	t.Cleanup(func() {
 		otel.SetTracerProvider(prevProvider)
 		otel.SetTextMapPropagator(prevPropagator)
+		state.Enabled.Store(prevEnabled)
+		state.Selected.Store(prevSelected)
 	})
 }
 
@@ -41,6 +47,8 @@ func TestSetup(t *testing.T) {
 				// The global provider must not have been replaced.
 				_, ok := otel.GetTracerProvider().(*sdktrace.TracerProvider)
 				require.False(t, ok)
+				require.False(t, Enabled())
+				require.False(t, CategoryEnabled(CategoryDatabase))
 			},
 		},
 		{
@@ -59,14 +67,87 @@ func TestSetup(t *testing.T) {
 				require.NotNil(t, shutdown)
 				_, ok := otel.GetTracerProvider().(*sdktrace.TracerProvider)
 				require.True(t, ok)
+				require.True(t, Enabled())
+				require.True(t, CategoryEnabled(CategoryDatabase))
 				require.ElementsMatch(
 					t,
-					[]string{"traceparent", "tracestate", "baggage"},
+					[]string{"traceparent", "tracestate"},
 					otel.GetTextMapPropagator().Fields(),
 				)
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
 				require.NoError(t, shutdown(ctx))
+				require.False(t, Enabled())
+				require.False(t, CategoryEnabled(CategoryDatabase))
+			},
+		},
+		{
+			name: "no category",
+			cfg: Config{
+				Enabled:    true,
+				Protocol:   ProtocolHTTPProtobuf,
+				Categories: []string{" None "},
+			},
+			assert: func(t *testing.T, shutdown ShutdownFunc, err error) {
+				require.NoError(t, err)
+				require.True(t, Enabled())
+				require.False(t, CategoryEnabled(CategoryDatabase))
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				require.NoError(t, shutdown(ctx))
+				require.Nil(t, state.Selected.Load())
+			},
+		},
+		{
+			name: "every category",
+			cfg: Config{
+				Enabled:    true,
+				Protocol:   ProtocolHTTPProtobuf,
+				Categories: []string{"ALL"},
+			},
+			assert: func(t *testing.T, shutdown ShutdownFunc, err error) {
+				require.NoError(t, err)
+				require.True(t, CategoryEnabled(CategoryDatabase))
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				require.NoError(t, shutdown(ctx))
+				require.False(t, CategoryEnabled(CategoryDatabase))
+				require.Nil(t, state.Selected.Load())
+			},
+		},
+		{
+			name: "none with a category",
+			cfg: Config{
+				Enabled:    true,
+				Protocol:   ProtocolHTTPProtobuf,
+				Categories: []string{"none", "database"},
+			},
+			assert: func(t *testing.T, shutdown ShutdownFunc, err error) {
+				require.ErrorContains(t, err, "none can't be combined with other categories")
+				require.Nil(t, shutdown)
+				require.False(t, Enabled())
+			},
+		},
+		{
+			name: "unknown category",
+			cfg: Config{
+				Enabled:    true,
+				Protocol:   ProtocolHTTPProtobuf,
+				Categories: []string{"bogus"},
+			},
+			assert: func(t *testing.T, shutdown ShutdownFunc, err error) {
+				require.ErrorContains(t, err, `unknown tracing category "bogus" in TRACING_CATEGORIES`)
+				require.Nil(t, shutdown)
+				require.False(t, Enabled())
+			},
+		},
+		{
+			name: "unknown category with tracing off",
+			cfg:  Config{Categories: []string{"bogus"}},
+			assert: func(t *testing.T, shutdown ShutdownFunc, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, shutdown)
+				require.False(t, Enabled())
 			},
 		},
 		{
@@ -196,4 +277,22 @@ func TestNewResource(t *testing.T) {
 			testCase.assert(t, res.Set())
 		})
 	}
+}
+
+func TestSetup_twice(t *testing.T) {
+	// Not parallel: changes global telemetry state.
+	resetGlobals(t)
+	cfg := Config{Enabled: true, Protocol: ProtocolHTTPProtobuf}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	first, err := Setup(ctx, cfg, Service{Name: "test"})
+	require.NoError(t, err)
+	second, err := Setup(ctx, cfg, Service{Name: "test"})
+	require.NoError(t, err)
+
+	// The first shutdown leaves the second Setup's state alone.
+	require.NoError(t, first(ctx))
+	require.True(t, CategoryEnabled(CategoryDatabase))
+	require.NoError(t, second(ctx))
+	require.False(t, CategoryEnabled(CategoryDatabase))
 }
