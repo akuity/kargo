@@ -81,9 +81,11 @@ export const FreightTimeline = (props: {
   // the timeline does not change what a card's artifacts are compared with.
   const previousFreight = useMemo(() => getPreviousFreight(props.freights), [props.freights]);
 
+  // A Map rather than an object: freight from a deleted Warehouse named, say,
+  // "constructor" would otherwise read what objects inherit.
   const subscriptionsByWarehouse = useMemo(
     () =>
-      Object.fromEntries(
+      new Map(
         props.warehouses.map((warehouse) => [
           warehouse?.metadata?.name || '',
           warehouse?.spec?.subscriptions || []
@@ -174,7 +176,7 @@ export const FreightTimeline = (props: {
         soakTime={freightSoakTime}
         previousFreight={previousFreight[freight?.metadata?.name || '']}
         showSubscriptionNames={showSubscriptionNames}
-        subscriptions={subscriptionsByWarehouse[freight?.origin?.name || '']}
+        subscriptions={subscriptionsByWarehouse.get(freight?.origin?.name || '')}
       />
     );
   };
