@@ -40,6 +40,35 @@ export const groupByWarehouse = <T extends Freight>(freights: T[]): WarehouseGro
   return groups;
 };
 
+// collapseUnused replaces the unused freight before each piece of freight in
+// use with entries counting it, each a copy of the first freight it counts. The
+// unused freight is split where the Warehouse changes, so that each count is
+// grouped under the Warehouse its freight came from. Unused freight after the
+// last freight in use is left out.
+export const collapseUnused = <T extends Freight>(
+  freights: T[],
+  inUse: (freight: T) => boolean
+): (T & { count?: number })[] => {
+  const collapsed: (T & { count?: number })[] = [];
+  let unused: T[] = [];
+
+  for (const freight of freights) {
+    if (!inUse(freight)) {
+      unused.push(freight);
+      continue;
+    }
+
+    for (const run of groupByWarehouse(unused)) {
+      collapsed.push({ ...run.freights[0], count: run.freights.length });
+    }
+
+    unused = [];
+    collapsed.push(freight);
+  }
+
+  return collapsed;
+};
+
 // takeFreight keeps the first `count` freight of the grouped timeline, and the
 // groups they fall in, keys and all.
 export const takeFreight = <T extends Freight>(

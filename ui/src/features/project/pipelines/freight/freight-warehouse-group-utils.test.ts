@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { Freight } from '@ui/gen/api/v2/models';
 
 import {
+  collapseUnused,
   filterToWarehouse,
   getFocusableWarehouses,
   getFocusedWarehouse,
@@ -157,5 +158,59 @@ describe('takeFreight', () => {
 
   test('keeps everything when the count covers it', () => {
     expect(takeFreight(groups, 10)).toEqual(groups);
+  });
+});
+
+describe('collapseUnused', () => {
+  const inUse =
+    (...used: string[]) =>
+    (freight: Freight) =>
+      used.includes(freight.metadata?.name || '');
+
+  const summary = (freights: (Freight & { count?: number })[]) =>
+    freights.map((f) =>
+      f.count ? `${f.origin?.name}:+${f.count}` : `${f.origin?.name}:${f.metadata?.name}`
+    );
+
+  test('counts the unused freight before a piece of freight in use', () => {
+    const collapsed = collapseUnused(
+      [freightFrom('a', '1'), freightFrom('a', '2'), freightFrom('a', '3')],
+      inUse('3')
+    );
+
+    expect(summary(collapsed)).toEqual(['a:+2', 'a:3']);
+  });
+
+  test('counts unused freight under the Warehouse it came from', () => {
+    const collapsed = collapseUnused(
+      [freightFrom('a', '1'), freightFrom('a', '2'), freightFrom('b', '3'), freightFrom('b', '4')],
+      inUse('4')
+    );
+
+    expect(summary(collapsed)).toEqual(['a:+2', 'b:+1', 'b:4']);
+  });
+
+  test('copies each count from the first freight it counts', () => {
+    const collapsed = collapseUnused(
+      [freightFrom('a', '1'), freightFrom('a', '2'), freightFrom('b', '3')],
+      inUse('3')
+    );
+
+    expect(collapsed[0].metadata?.uid).toBe('uid-1');
+  });
+
+  test('keeps freight in use as it is', () => {
+    const freights = [freightFrom('a', '1'), freightFrom('b', '2')];
+
+    expect(collapseUnused(freights, inUse('1', '2'))).toEqual(freights);
+  });
+
+  test('leaves out unused freight after the last freight in use', () => {
+    const collapsed = collapseUnused(
+      [freightFrom('a', '1'), freightFrom('a', '2'), freightFrom('b', '3')],
+      inUse('1')
+    );
+
+    expect(summary(collapsed)).toEqual(['a:1']);
   });
 });
