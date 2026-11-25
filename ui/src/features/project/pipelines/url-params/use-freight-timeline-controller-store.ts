@@ -12,6 +12,7 @@ export const useFreightTimelineControllerStore = (project: string) => {
   const filters = useMemo(() => {
     const filters: FreightTimelineControllerContextType['preferredFilter'] = {
       showAlias: true,
+      showSubscriptionNames: undefined,
       sources: [],
       timerange: 'all-time',
       showColors: true,
@@ -40,6 +41,11 @@ export const useFreightTimelineControllerStore = (project: string) => {
     const showAliasParam = searchParams.get('showAlias');
     if (showAliasParam && showAliasParam !== '') {
       filters.showAlias = showAliasParam === 'true';
+    }
+
+    const showSubscriptionNamesParam = searchParams.get('showSubscriptionNames');
+    if (showSubscriptionNamesParam && showSubscriptionNamesParam !== '') {
+      filters.showSubscriptionNames = showSubscriptionNamesParam === 'true';
     }
 
     const showMinimap = searchParams.get('showMinimap');
@@ -124,6 +130,14 @@ export const useFreightTimelineControllerStore = (project: string) => {
         currentSearchParams.set('showColors', `${nextPartial.showColors}`);
 
         currentSearchParams.set('showAlias', `${nextPartial.showAlias}`);
+
+        // left out until the user chooses, so the default can follow the
+        // Warehouses
+        if (nextPartial.showSubscriptionNames === undefined) {
+          currentSearchParams.delete('showSubscriptionNames');
+        } else {
+          currentSearchParams.set('showSubscriptionNames', `${nextPartial.showSubscriptionNames}`);
+        }
 
         currentSearchParams.delete('sources');
         if (nextPartial.sources && nextPartial.sources.length > 0) {

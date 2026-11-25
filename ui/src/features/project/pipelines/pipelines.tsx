@@ -228,7 +228,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                 <FreightTimeline
                   freights={freights}
                   project={projectName || ''}
-                  warehouseCount={warehouses.length}
+                  warehouses={warehouses}
                 />
 
                 <div className='w-full flex-1 relative overflow-auto'>

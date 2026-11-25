@@ -16,6 +16,7 @@ import { CSSProperties, useEffect, useMemo, useRef } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { RepoSubscription } from '@ui/extend/types';
 import { useModal } from '@ui/features/common/modal/use-modal';
 import { getShortFreightLabel } from '@ui/features/common/utils';
 import { useActionContext } from '@ui/features/project/pipelines/context/action-context';
@@ -63,6 +64,11 @@ type FreightCardProps = {
   // the piece of freight its Warehouse discovered before this one, which the
   // artifacts are compared with to pick out what differs
   previousFreight?: Freight;
+  // whether the artifacts name the Warehouse subscription they came from
+  showSubscriptionNames?: boolean;
+  // the subscriptions of the freight's Warehouse, to name the ones its
+  // artifacts do not record
+  subscriptions?: RepoSubscription[];
 };
 
 export const FreightCard = (props: FreightCardProps) => {
@@ -127,7 +133,7 @@ export const FreightCard = (props: FreightCardProps) => {
   return (
     <div
       ref={setNodeRef}
-      style={{ width: 'var(--freight-card-width, 140px)', ...dragStyle }}
+      style={{ width: 'var(--freight-card-width, 150px)', ...dragStyle }}
       className='relative shrink-0 flex'
     >
       <div
@@ -245,7 +251,12 @@ export const FreightCard = (props: FreightCardProps) => {
         {/* at least two artifact rows tall (2 x 20px + 2px gap), so a card with
             one artifact matches the height of one with two */}
         <div className='flex flex-col gap-[2px] mt-1 min-w-0 min-h-[42px]'>
-          <FreightArtifactList freight={props.freight} previousFreight={props.previousFreight} />
+          <FreightArtifactList
+            freight={props.freight}
+            previousFreight={props.previousFreight}
+            showSubscriptionNames={props.showSubscriptionNames}
+            subscriptions={props.subscriptions}
+          />
         </div>
 
         <div
