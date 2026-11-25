@@ -204,6 +204,7 @@ formatters:
     - gci
     - gofmt
     - goimports
+    - golines
 
   settings:
     gci:
@@ -221,6 +222,10 @@ formatters:
       # Put imports beginning with prefix after 3rd-party packages
       local-prefixes:
         - github.com/org/project
+    golines:
+      max-len: 120
+      tab-len: 2
+      reformat-tags: false
 
   exclusions:
     generated: lax

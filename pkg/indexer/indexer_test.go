@@ -473,7 +473,9 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 					State: &apiextensionsv1.JSON{
 						// Mock the output of the previous steps
 						// nolint:lll
-						Raw: []byte(`{"push":{"branch":"from-branch"},"composition":{"name":"from-composition"},"task-1::fake":{"name":"from-task"}}`),
+						Raw: []byte(
+							`{"push":{"branch":"from-branch"},"composition":{"name":"from-composition"},"task-1::fake":{"name":"from-task"}}`,
+						),
 					},
 					CurrentStep: 7, // Ensure all steps above are considered
 				},
