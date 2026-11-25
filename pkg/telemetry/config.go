@@ -2,6 +2,8 @@ package telemetry
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -17,17 +19,18 @@ const (
 	ProtocolHTTPProtobuf Protocol = "http/protobuf"
 )
 
-// Config represents configuration for a component's telemetry. Apart from the
-// Kargo-specific on/off switch, it is deliberately minimal: the OpenTelemetry
-// SDK and exporters configure themselves from the standard OTEL_* environment
+// Config represents configuration for a component's telemetry. Apart from
+// OTEL_SDK_DISABLED, which the Go SDK doesn't read, it is deliberately
+// minimal: the OpenTelemetry SDK and exporters configure themselves from the standard OTEL_* environment
 // variables (OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_EXPORTER_OTLP_HEADERS,
 // OTEL_TRACES_SAMPLER, OTEL_RESOURCE_ATTRIBUTES, and so on), and this package
 // intentionally does not duplicate them.
 type Config struct {
-	// Enabled indicates whether traces are exported at all. When false, the
-	// OpenTelemetry API's no-op implementations remain in place and the
-	// instrumentation throughout Kargo costs next to nothing.
-	Enabled bool `envconfig:"TRACING_ENABLED" default:"false"`
+	// Enabled indicates whether traces are exported at all: true unless
+	// OTEL_SDK_DISABLED is true. When false, the OpenTelemetry API's no-op
+	// implementations remain in place and the instrumentation throughout Kargo
+	// costs next to nothing.
+	Enabled bool `ignored:"true"`
 	// Protocol is the OTLP transport used for all signals unless overridden for
 	// a specific signal. The Go exporters do not read this environment variable
 	// themselves, so it is handled here.
@@ -42,6 +45,9 @@ type Config struct {
 func ConfigFromEnv() Config {
 	cfg := Config{}
 	envconfig.MustProcess("", &cfg)
+	// The Go SDK doesn't read OTEL_SDK_DISABLED; per spec, only a
+	// case-insensitive "true" disables it.
+	cfg.Enabled = !strings.EqualFold(os.Getenv("OTEL_SDK_DISABLED"), "true")
 	return cfg
 }
 

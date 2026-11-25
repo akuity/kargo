@@ -225,8 +225,9 @@ tests:
       - equal:
           path: data.DATABASE_MIGRATION_LOCK_TIMEOUT
           value: 1h
-      - notExists:
-          path: data.TRACING_ENABLED
+      - equal:
+          path: data.OTEL_SDK_DISABLED
+          value: "true"
 
   - it: carries the log and tracing settings
     set:
@@ -242,8 +243,8 @@ tests:
           path: data.LOG_FORMAT
           value: JSON
       - equal:
-          path: data.TRACING_ENABLED
-          value: "true"
+          path: data.OTEL_SDK_DISABLED
+          value: "false"
       - equal:
           path: data.OTEL_EXPORTER_OTLP_ENDPOINT
           value: http://otel:4318
