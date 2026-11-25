@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/kelseyhightower/envconfig"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,6 +18,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/kubeclient"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/telemetry"
 )
 
 const (
@@ -98,10 +101,24 @@ type reconciler struct {
 	client client.Client
 }
 
+// tracer is the instrumentation scope under which this package's spans are
+// recorded.
+var tracer = otel.Tracer("github.com/akuity/kargo/pkg/controller/promotionrequests")
+
 func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
+	ctx, span := tracer.Start(
+		ctx,
+		"Reconcile PromotionRequest",
+		trace.WithAttributes(
+			telemetry.ProjectKey.String(req.Namespace),
+			telemetry.PromotionRequestKey.String(req.Name),
+		),
+	)
+	defer span.End()
+
 	promotionRequest := &kargoapi.PromotionRequest{}
 	if err := r.client.Get(ctx, req.NamespacedName, promotionRequest); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)

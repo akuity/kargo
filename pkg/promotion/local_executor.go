@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
+	"github.com/akuity/kargo/pkg/telemetry"
 )
 
 // LocalStepExecutor is a concrete implementation of StepExecutor that
@@ -46,6 +49,24 @@ func (e *LocalStepExecutor) ExecuteStep(
 	ctx context.Context,
 	req StepExecutionRequest,
 ) (result StepResult, err error) {
+	ctx, span := tracer.Start(
+		ctx,
+		"Execute step",
+		trace.WithAttributes(
+			telemetry.ProjectKey.String(req.Context.Project),
+			telemetry.StepKindKey.String(req.Step.Kind),
+			telemetry.StepAliasKey.String(req.Step.Alias),
+		),
+	)
+	defer func() {
+		span.SetAttributes(telemetry.StepStatusKey.String(string(result.Status)))
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+	}()
+
 	reg, err := e.registry.Get(req.Step.Kind)
 	if err != nil {
 		return StepResult{

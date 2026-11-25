@@ -7,10 +7,17 @@ import (
 	"net/http"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/pkg/logging"
 )
+
+// webhookSpanName is the name of the server span recorded for each inbound
+// webhook request. Every receiver's path is distinct, so naming spans after the
+// path would make them impossible to aggregate; the path is recorded as an
+// attribute instead.
+const webhookSpanName = "Receive webhook"
 
 type server struct {
 	cfg    ServerConfig
@@ -42,8 +49,23 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	// All other requests are delegated to the route handler.
 	mux.HandleFunc("/", s.route)
 
+	var handler http.Handler = mux
+	if s.cfg.TracingEnabled {
+		// Health checks are frequent and uninteresting, so they are not traced.
+		handler = otelhttp.NewHandler(
+			mux,
+			webhookSpanName,
+			otelhttp.WithSpanNameFormatter(func(string, *http.Request) string {
+				return webhookSpanName
+			}),
+			otelhttp.WithFilter(func(r *http.Request) bool {
+				return r.URL.Path != "/healthz"
+			}),
+		)
+	}
+
 	srv := &http.Server{
-		Handler:           mux,
+		Handler:           handler,
 		ReadHeaderTimeout: time.Minute,
 	}
 	errCh := make(chan error)
