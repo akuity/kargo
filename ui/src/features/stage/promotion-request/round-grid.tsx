@@ -1,6 +1,9 @@
 import { theme } from 'antd';
 
-import { getPromotionPhasePresentation } from '@ui/features/common/promotion-status/promotion-phase';
+import {
+  getRoundTargetPhasePresentation,
+  roundTargetPhaseLabel
+} from '@ui/features/common/promotion-status/promotion-phase';
 
 import { ChildPromotion } from './round-detail';
 
@@ -33,12 +36,12 @@ export const RoundGrid = ({ rows }: { rows: ChildPromotion[] }) => {
       {shown.map((row) => (
         <div
           key={row.target}
-          title={`${row.target} — ${row.phase}`}
+          title={`${row.target} — ${roundTargetPhaseLabel(row.phase)}`}
           style={{
             width: 10,
             height: 10,
             borderRadius: 2,
-            background: token[getPromotionPhasePresentation(row.phase).colorToken]
+            background: token[getRoundTargetPhasePresentation(row.phase).colorToken]
           }}
         />
       ))}

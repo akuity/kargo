@@ -8,7 +8,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { PhaseFilterChips } from '@ui/features/common/promotion-status/phase-filter-chips';
 import {
   PromotionPhase,
-  getPromotionPhasePresentation
+  RoundTargetPhase,
+  getPromotionPhasePresentation,
+  roundTargetPhaseLabel
 } from '@ui/features/common/promotion-status/promotion-phase';
 import { RoundProgressBar } from '@ui/features/common/promotion-status/round-progress-bar';
 import { getAlias } from '@ui/features/common/utils';
@@ -35,14 +37,14 @@ const roundsPagination = { hideOnSinglePage: true, pageSize: 10, showSizeChanger
 // TargetsCell draws how a round fared: the same bar every other surface draws a
 // round with, and beneath it the figure per phase. Only what needs to stand out
 // is painted -- a failure in red, movement in blue. Succeeded is the expected
-// case and reads as ordinary text, and Pending and Aborted are painted with
-// fills too faint to read as text at all.
+// case and reads as ordinary text, and Pending, Aborted and not attempted are
+// painted with fills too faint to read as text at all.
 const TargetsCell = ({ round, kind }: { round: Round; kind: RoundKind }) => {
   const { token } = theme.useToken();
   const summary = roundSummary(round);
   const tally = targetsTally(summary);
 
-  const partColor = (phase: PromotionPhase) => {
+  const partColor = (phase: RoundTargetPhase) => {
     if (phase === 'Failed' || phase === 'Errored') {
       return token.colorError;
     }
@@ -68,7 +70,7 @@ const TargetsCell = ({ round, kind }: { round: Round; kind: RoundKind }) => {
         {tally.parts.map(({ phase, count }, index) => (
           <span key={phase} style={{ color: partColor(phase) }}>
             {index > 0 && <span style={{ color: token.colorTextQuaternary }}> · </span>}
-            {count} {phase.toLowerCase()}
+            {count} {roundTargetPhaseLabel(phase).toLowerCase()}
           </span>
         ))}
         <Typography.Text type='secondary'> / {tally.total}</Typography.Text>
