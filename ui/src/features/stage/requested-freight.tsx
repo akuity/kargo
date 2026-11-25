@@ -127,12 +127,7 @@ export const RequestedFreight = ({
                       {current.alias || shortVersion(currentFreightName, 12)}
                     </Link>
                     <SmallLabel className='mb-1'>ARTIFACTS</SmallLabel>
-                    <Flex
-                      wrap
-                      gap={4}
-                      align='center'
-                      className='[&_.ant-tag]:m-0 [&_.ant-tag]:max-w-full [&_.ant-tag]:truncate [&>a]:flex [&>a]:items-center [&_a_.ant-tag]:cursor-pointer'
-                    >
+                    <Flex wrap gap={4} align='center'>
                       <FreightArtifactList freight={current.reference} />
                     </Flex>
                   </div>

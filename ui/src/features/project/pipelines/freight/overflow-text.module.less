@@ -1,0 +1,63 @@
+// Text too long for its box (e.g. a freight's alias, or an artifact's
+// subscription) fades out where it is cut off instead of ending in an
+// ellipsis. Hovering it slides the text left to show the rest of it, and the
+// fade moves from the right edge to the left as it goes. Only the text moves,
+// so the hovered box stays under the pointer.
+
+@fade: 10px;
+
+// The pause before the text starts to slide, so passing the pointer over it
+// does not set it in motion.
+@hover-delay: 200ms;
+@return-duration: 300ms;
+
+.box {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.text {
+  display: inline-block;
+  transition: transform @return-duration ease-out;
+}
+
+// The mask is one fade wider than the box and holds a fade at each end. At
+// rest it sits one fade to the left, so only its right fade shows; on hover it
+// moves back, so only its left fade does. Moving the mask, unlike swapping it,
+// animates, so the fades cross over in step with the text.
+.overflowing {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black @fade,
+    black calc(100% - @fade),
+    transparent
+  );
+  mask-size: calc(100% + @fade) 100%;
+  mask-repeat: no-repeat;
+  mask-position: -@fade 0;
+  transition: mask-position @return-duration ease-out;
+}
+
+.overflowing:hover {
+  mask-position: 0 0;
+  transition-duration: var(--overflow-duration);
+  transition-delay: @hover-delay;
+  transition-timing-function: ease-in-out;
+
+  .text {
+    transform: translateX(var(--overflow-shift));
+    transition-duration: var(--overflow-duration);
+    transition-delay: @hover-delay;
+    transition-timing-function: ease-in-out;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overflowing,
+  .text,
+  .overflowing:hover,
+  .overflowing:hover .text {
+    transition: none;
+  }
+}

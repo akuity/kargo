@@ -1,51 +1,52 @@
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Flex, Tooltip, Typography } from 'antd';
+import { theme, Tooltip, Typography } from 'antd';
 
+import { useTheme } from '@ui/features/common/theme/use-theme';
 import { Freight, FreightReference } from '@ui/gen/api/v2/models';
 
 import { FreightArtifact } from './freight-artifact';
-import {
-  DEFAULT_MAX_ARTIFACTS,
-  getFreightArtifacts,
-  getHiddenFreightArtifactCounts
-} from './freight-artifact-list-utils';
+import { DEFAULT_MAX_ARTIFACTS, getFreightArtifacts } from './freight-artifact-list-utils';
 
 type FreightArtifactListProps = {
   freight?: Freight | FreightReference;
   // max is the number of artifacts to render before collapsing the rest into a
   // "+N more" indicator.
   max?: number;
-  expand?: boolean;
 };
 
 // FreightArtifactList renders up to `max` artifact tags for a piece of Freight,
-// collapsing any overflow into a "+N more" indicator that reveals a per-kind
-// breakdown of the hidden artifacts on hover. Shared by the freight timeline
-// card and the Stage drawer's current-freight panel. It renders a flat fragment
-// so callers control the surrounding layout.
+// collapsing any overflow into a "+N more" indicator that lists the hidden
+// artifacts on hover. Shared by the freight timeline card and the Stage
+// drawer's current-freight panel. It renders a flat fragment so callers control
+// the surrounding layout.
 export const FreightArtifactList = ({
   freight,
-  max = DEFAULT_MAX_ARTIFACTS,
-  expand
+  max = DEFAULT_MAX_ARTIFACTS
 }: FreightArtifactListProps) => {
+  const { isDark } = useTheme();
+  const { token } = theme.useToken();
+
   const artifacts = getFreightArtifacts(freight);
   const overflow = artifacts.length - max;
 
   return (
     <>
       {artifacts.slice(0, max).map((artifact, i) => (
-        <FreightArtifact key={i} artifact={artifact} expand={expand} />
+        <FreightArtifact key={i} artifact={artifact} />
       ))}
       {overflow > 0 && (
         <Tooltip
+          // AntD's tooltip is near-black in the light theme, where the blue
+          // tags read badly; there it takes the white of a popover instead.
+          // The dark theme's tooltip grey suits them as it is.
+          color={isDark ? undefined : token.colorBgElevated}
           title={
-            <Flex vertical align='center'>
-              {getHiddenFreightArtifactCounts(freight, max).map(({ icon, count }) => (
-                <div key={icon.iconName} className='text-[10px]'>
-                  {count}x <FontAwesomeIcon icon={icon} />
-                </div>
+            // a freight with dozens of artifacts scrolls rather than running
+            // the tooltip off the screen
+            <div className='flex flex-col gap-[2px] max-h-[60vh] overflow-y-auto'>
+              {artifacts.slice(max).map((artifact, i) => (
+                <FreightArtifact key={i} artifact={artifact} />
               ))}
-            </Flex>
+            </div>
           }
         >
           <Typography.Text type='secondary' className='text-[10px] cursor-default'>

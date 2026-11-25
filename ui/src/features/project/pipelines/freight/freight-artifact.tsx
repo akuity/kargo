@@ -1,129 +1,43 @@
-import { Tag } from 'antd';
 import Link from 'antd/es/typography/Link';
-import { ReactNode } from 'react';
 
-import {
-  isArtifactChart,
-  isArtifactGitCommit,
-  isArtifactImage
-} from '@ui/features/assemble-freight/artifact-type-guards';
-import {
-  getGitCommitURL,
-  getImageSource
-} from '@ui/features/freight-timeline/open-container-initiative-utils';
 import { ArtifactReference, Chart, GitCommit, Image } from '@ui/gen/api/v2/models';
 
 import { ArtifactIcon } from './artifact-icon';
-import { humanComprehendableArtifact } from './artifact-parts-utils';
-import { shortVersion } from './short-version-utils';
+import { getArtifactDisplay } from './freight-artifact-utils';
+
+// One blue for every artifact type: the value is a chip in it, and the icon
+// takes it too. Light values are AntD's geekblue shades (1 for fill, 7 for
+// text); dark values come from the freightline design.
+const iconClassName = 'shrink-0 w-3.5 mr-1.5 text-[#1d39c4] dark:text-[#8ab8ff]';
+const chipClassName =
+  'inline-block max-w-full truncate rounded px-1.5 font-mono text-[12px] leading-[18px] bg-[#f0f5ff] text-[#1d39c4] dark:bg-[#1b2d4a] dark:text-[#8ab8ff]';
 
 type FreightArtifactProps = {
   artifact: GitCommit | Chart | Image | ArtifactReference;
-  expand?: boolean;
 };
 
+// FreightArtifact renders one artifact: its type icon, then its version as a
+// chip, linked to its source where there is one.
 export const FreightArtifact = (props: FreightArtifactProps) => {
-  let Expand: ReactNode;
+  const { value, title, url } = getArtifactDisplay(props.artifact);
 
-  if (props.expand) {
-    Expand = (
-      <span className='text-[10px] ml-1'>{humanComprehendableArtifact(props.artifact)}</span>
-    );
-  }
-
-  if (isArtifactGitCommit(props.artifact)) {
-    const url = getGitCommitURL(props.artifact.repoURL || '', props.artifact.id || '');
-
-    // prioritize semver; use shortVersion for tags, 7-char slice for raw commit hashes
-    const displayId = props.artifact.tag
-      ? shortVersion(props.artifact.tag)
-      : props.artifact.id?.slice(0, 7);
-
-    const TagComponent = (
-      <Tag title={props.artifact.repoURL} variant='filled' color='geekblue' key={props.artifact.id}>
-        <ArtifactIcon artifact={props.artifact} className='mr-1' />
-
-        {displayId}
-
-        {Expand}
-      </Tag>
-    );
-
-    if (url) {
-      return (
-        <Link
-          key={props.artifact.repoURL}
-          href={url}
-          target='_blank'
-          onClick={(e) => e.stopPropagation()}
-        >
-          {TagComponent}
-        </Link>
-      );
-    }
-
-    return TagComponent;
-  }
-
-  if (isArtifactChart(props.artifact)) {
-    return (
-      <Tag
-        title={`${props.artifact.repoURL}:${props.artifact.version}`}
-        variant='filled'
-        color='geekblue'
-        key={props.artifact.repoURL}
-      >
-        <ArtifactIcon artifact={props.artifact} className='mr-1' />
-
-        {shortVersion(props.artifact.version)}
-
-        {Expand}
-      </Tag>
-    );
-  }
-
-  if (isArtifactImage(props.artifact)) {
-    let imageSourceFromOci = '';
-
-    if (props.artifact.annotations) {
-      imageSourceFromOci = getImageSource(props.artifact.annotations);
-    }
-
-    const TagComponent = (
-      <Tag
-        title={`${props.artifact.repoURL}:${props.artifact.tag}`}
-        variant='filled'
-        color='geekblue'
-        key={props.artifact?.repoURL}
-        className='hover:cursor-default'
-      >
-        <ArtifactIcon artifact={props.artifact} className='mr-1' />
-
-        {shortVersion(props.artifact?.tag)}
-
-        {Expand}
-      </Tag>
-    );
-
-    if (imageSourceFromOci) {
-      return (
-        <Link
-          key={props.artifact?.repoURL}
-          href={imageSourceFromOci}
-          target='_blank'
-          onClick={(e) => e.stopPropagation()}
-        >
-          {TagComponent}
-        </Link>
-      );
-    }
-
-    return TagComponent;
-  }
+  const chip = <span className={chipClassName}>{value}</span>;
 
   return (
-    <Tag color='geekblue' variant='filled'>
-      {shortVersion(props.artifact.version)}
-    </Tag>
+    <div className='flex items-center h-5 min-w-0 max-w-full' title={title}>
+      <ArtifactIcon artifact={props.artifact} className={iconClassName} />
+      {url ? (
+        <Link
+          href={url}
+          target='_blank'
+          className='flex min-w-0'
+          onClick={(e) => e.stopPropagation()}
+        >
+          {chip}
+        </Link>
+      ) : (
+        chip
+      )}
+    </div>
   );
 };
