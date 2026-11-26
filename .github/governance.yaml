@@ -65,6 +65,18 @@ issues:
           For more information about enterprise features and support, please contact [Akuity](https://akuity.io) directly.
       - close: true
 
+    low:
+      description: "Set priority to low"
+      actions:
+      - addLabels: [priority/low]
+      - removeLabels: [needs/priority, priority/high, priority/normal, priority/urgent, priority/wontfix]
+      - comment: |
+          ## Low Priority
+
+          A maintainer has determined this issue to be low priority.
+
+          The maintainer team has its own priorities, and those cannot be displaced. We respectfully ask for your understanding. Patience will be required, as it may be some time before a maintainer is able to give this issue further attention.
+
     maintainer:
       description: "Add `maintainer only` label; blocks external contribution"
       actions:
@@ -244,6 +256,18 @@ pullRequests:
 
           For more information about enterprise features and support, please contact [Akuity](https://akuity.io) directly.
       - close: true
+
+    low:
+      description: "Set priority to low"
+      actions:
+      - addLabels: [priority/low]
+      - removeLabels: [needs/priority, priority/high, priority/normal, priority/urgent, priority/wontfix]
+      - comment: |
+          ## Low Priority
+
+          A maintainer has determined this pull request to be low priority.
+
+          The maintainer team has its own priorities, and those cannot be displaced. We respectfully ask for your understanding. Patience will be required, as it may be some time before a maintainer is able to review this pull request.
 
     quality:
       description: "Close; does not meet quality standards"
