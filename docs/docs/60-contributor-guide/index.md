@@ -35,7 +35,9 @@ consider every submission.
 
 1. **Wait for the issue to be unblocked.** When an issue is ready for external
    contribution, a maintainer will remove all blocking labels. **Do not begin
-   work while any blocking labels are present.**
+   work while any blocking labels are present.** This applies to bug reports
+   too. A maintainer needs to confirm a bug, and usually reproduce it, before a
+   fix is worth writing.
 
 1. **Open a pull request** that references the unblocked issue using
    `Closes #<number>` in the PR body.
