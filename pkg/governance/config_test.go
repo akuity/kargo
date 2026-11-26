@@ -122,3 +122,28 @@ func Test_action_UnmarshalYAML_listFromConfig(t *testing.T) {
 	require.NoError(t, yaml.Unmarshal(actions[2].config, &closed))
 	require.True(t, closed)
 }
+
+func Test_config_onOpened(t *testing.T) {
+	doc := `
+issues:
+  onOpened:
+    actions:
+    - comment: hi
+pullRequests:
+  onOpened:
+    actions:
+    - comment: hi
+`
+	var cfg config
+	require.NoError(t, yaml.Unmarshal([]byte(doc), &cfg))
+
+	require.NotNil(t, cfg.Issues)
+	require.NotNil(t, cfg.Issues.OnOpened)
+	require.Len(t, cfg.Issues.OnOpened.Actions, 1)
+	require.Equal(t, "comment", cfg.Issues.OnOpened.Actions[0].kind)
+
+	require.NotNil(t, cfg.PullRequests)
+	require.NotNil(t, cfg.PullRequests.OnOpened)
+	require.Len(t, cfg.PullRequests.OnOpened.Actions, 1)
+	require.Equal(t, "comment", cfg.PullRequests.OnOpened.Actions[0].kind)
+}

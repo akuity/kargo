@@ -33,9 +33,13 @@ type handlePROpenedOpts struct {
 //     prefixes.
 //  3. Enforces required-label prefixes, flagging any that are still missing
 //     after inheritance.
-//  4. Applies PR policy — any configured actions for PRs with no linked
+//  4. Runs any configured OnOpened actions.
+//  5. Applies PR policy — any configured actions for PRs with no linked
 //     issue or with a linked issue that carries blocking labels.
 //     Maintainers and bots are exempt from this step only.
+//
+// Steps 1–4 are skipped when opts.applyPolicyOnly is set (reopened and
+// ready_for_review events).
 //
 // Labeling happens before policy so that maintainers have full context on
 // the PR's subject matter regardless of whether policy ends up drafting or
@@ -107,7 +111,7 @@ func (h *prHandler) handleOpened(
 			for _, l := range inheritedLabels {
 				existingLabels[l] = struct{}{}
 			}
-			if err := h.enforceRequiredLabels(
+			if err = h.enforceRequiredLabels(
 				ctx,
 				number,
 				existingLabels,
@@ -118,9 +122,25 @@ func (h *prHandler) handleOpened(
 			}
 		}
 
+		// 4. Run any configured OnOpened actions.
+		if h.cfg.PullRequests != nil && h.cfg.PullRequests.OnOpened != nil {
+			if err = executeActions(
+				ctx,
+				&actionContext{
+					repoContext: h.repoContext,
+					number:      number,
+					isPR:        true,
+				},
+				h.cfg.PullRequests.OnOpened.Actions,
+			); err != nil {
+				logger.Error(err, "error running onOpened actions")
+				errs = append(errs, fmt.Errorf("run onOpened actions: %w", err))
+			}
+		}
+
 	}
 
-	// 4. Apply PR policy. The exemption check now lives inside
+	// 5. Apply PR policy. The exemption check now lives inside
 	// applyPRPolicy and gates only the blocking outcomes; OnPass runs
 	// regardless so that policy-label cleanup keeps working on PRs that
 	// only became exempt after the fact.

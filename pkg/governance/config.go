@@ -28,6 +28,9 @@ type issuesConfig struct {
 	// carry at least one label for. For any missing prefix, a "needs/<prefix>"
 	// label is added automatically.
 	RequiredLabelPrefixes []string `json:"requiredLabelPrefixes,omitempty"`
+	// OnOpened defines the actions to take when an issue is opened. They run
+	// after required-label enforcement.
+	OnOpened *onOpenedConfig `json:"onOpened,omitempty"`
 	// SlashCommands defines the slash commands available on issues, keyed by
 	// command name.
 	SlashCommands map[string]commandDef `json:"slashCommands,omitempty"`
@@ -59,6 +62,11 @@ type pullRequestsConfig struct {
 	// must carry at least one label for. For any missing prefix, a
 	// "needs/<prefix>" label is added automatically.
 	RequiredLabelPrefixes []string `json:"requiredLabelPrefixes,omitempty"`
+	// OnOpened defines the actions to take when a pull request is opened.
+	// They run after required-label enforcement and before policy
+	// evaluation, and do not run when a pull request is reopened or marked
+	// ready for review.
+	OnOpened *onOpenedConfig `json:"onOpened,omitempty"`
 	// SlashCommands defines the slash commands available on pull requests,
 	// keyed by command name.
 	SlashCommands map[string]commandDef `json:"slashCommands,omitempty"`
@@ -102,6 +110,14 @@ type onBlockedIssueConfig struct {
 // corresponding check).
 type onPassConfig struct {
 	// Actions defines the actions to take when the PR passes policy.
+	Actions []action `json:"actions,omitempty"`
+}
+
+// onOpenedConfig defines the actions to take when an issue or pull request
+// is opened.
+type onOpenedConfig struct {
+	// Actions defines the actions to take when an issue or pull request is
+	// opened.
 	Actions []action `json:"actions,omitempty"`
 }
 
