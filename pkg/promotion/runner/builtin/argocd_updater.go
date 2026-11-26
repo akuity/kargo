@@ -449,7 +449,65 @@ updateLoop:
 	return desiredSources, nil
 }
 
+// mustPerformUpdate determines whether a new sync of app is needed. Before
+// initiating a sync, it also verifies that every Helm chart source whose
+// targetRevision is owned by another controller (e.g. an ApplicationSet) has
+// already been advanced to its desired revision. Starting a sync earlier would
+// deploy the stale chart version and require a second sync once the owner
+// updates the Application.
 func (a *argocdUpdater) mustPerformUpdate(
+	ctx context.Context,
+	stepCtx *promotion.StepContext,
+	update *stepconfig.ArgoCDAppUpdate,
+	app *argocd.Application,
+) (argocd.OperationPhase, bool, error) {
+	phase, mustUpdate, err := a.checkOperationState(ctx, stepCtx, update, app)
+	if mustUpdate && a.waitingForDesiredTargetRevision(update, app) {
+		logging.LoggerFromContext(ctx).WithValues(
+			"app", app.Name,
+			"namespace", app.Namespace,
+		).Info("waiting for Application's targetRevision to reach desired revision")
+		return argocd.OperationRunning, false, nil
+	}
+	return phase, mustUpdate, err
+}
+
+// waitingForDesiredTargetRevision returns true when at least one Helm chart
+// source still points at a targetRevision other than its desiredRevision and
+// Kargo is not meant to update that field itself. For such sources,
+// desiredRevision is the chart version, so it can be compared directly with
+// targetRevision. Git sources are deliberately excluded because their
+// targetRevision is commonly a branch name or alias that cannot be compared
+// meaningfully with a commit SHA.
+func (a *argocdUpdater) waitingForDesiredTargetRevision(
+	update *stepconfig.ArgoCDAppUpdate,
+	app *argocd.Application,
+) bool {
+	sources := app.Spec.Sources
+	if len(sources) == 0 && app.Spec.Source != nil {
+		sources = argocd.ApplicationSources{*app.Spec.Source}
+	}
+	for i := range sources {
+		src := &sources[i]
+		if src.Chart == "" {
+			continue
+		}
+		srcUpdate := a.findSourceUpdate(update, *src)
+		if srcUpdate == nil || srcUpdate.UpdateTargetRevision ||
+			srcUpdate.DesiredRevision == "" {
+			continue
+		}
+		if src.TargetRevision != srcUpdate.DesiredRevision {
+			return true
+		}
+	}
+	return false
+}
+
+// checkOperationState determines, from the Application's current operation
+// state, whether a new sync must be initiated and which phase to report while
+// waiting for an existing operation to complete.
+func (a *argocdUpdater) checkOperationState(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 	update *stepconfig.ArgoCDAppUpdate,

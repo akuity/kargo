@@ -1695,6 +1695,237 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 	}
 }
 
+func Test_argoCDUpdater_mustPerformUpdate_desiredTargetRevision(t *testing.T) {
+	const (
+		promotionName = "fake-promotion"
+		chartRepoURL  = "https://charts.example.com"
+		gitRepoURL    = "https://github.com/example/repo.git"
+	)
+
+	testCases := []struct {
+		name               string
+		sources            argocd.ApplicationSources
+		sourceUpdates      []stepconfig.ArgoCDAppSourceUpdate
+		expectedPhase      argocd.OperationPhase
+		expectedMustUpdate bool
+	}{
+		{
+			name: "chart source with stale target revision waits",
+			sources: argocd.ApplicationSources{{
+				RepoURL: chartRepoURL, Chart: "my-chart", TargetRevision: "237",
+			}},
+			sourceUpdates: []stepconfig.ArgoCDAppSourceUpdate{{
+				RepoURL: chartRepoURL, Chart: "my-chart", DesiredRevision: "238",
+			}},
+			expectedPhase: argocd.OperationRunning,
+		},
+		{
+			name: "chart source with matching target revision syncs",
+			sources: argocd.ApplicationSources{{
+				RepoURL: chartRepoURL, Chart: "my-chart", TargetRevision: "238",
+			}},
+			sourceUpdates: []stepconfig.ArgoCDAppSourceUpdate{{
+				RepoURL: chartRepoURL, Chart: "my-chart", DesiredRevision: "238",
+			}},
+			expectedMustUpdate: true,
+		},
+		{
+			name: "chart source owned by Kargo bypasses the wait",
+			sources: argocd.ApplicationSources{{
+				RepoURL: chartRepoURL, Chart: "my-chart", TargetRevision: "237",
+			}},
+			sourceUpdates: []stepconfig.ArgoCDAppSourceUpdate{{
+				RepoURL:              chartRepoURL,
+				Chart:                "my-chart",
+				DesiredRevision:      "238",
+				UpdateTargetRevision: true,
+			}},
+			expectedMustUpdate: true,
+		},
+		{
+			name: "git source with branch target revision syncs",
+			sources: argocd.ApplicationSources{{
+				RepoURL: gitRepoURL, TargetRevision: "main",
+			}},
+			sourceUpdates: []stepconfig.ArgoCDAppSourceUpdate{{
+				RepoURL: gitRepoURL, DesiredRevision: "abc123",
+			}},
+			expectedMustUpdate: true,
+		},
+		{
+			name: "source without a desired revision syncs",
+			sources: argocd.ApplicationSources{{
+				RepoURL: chartRepoURL, Chart: "my-chart", TargetRevision: "237",
+			}},
+			sourceUpdates: []stepconfig.ArgoCDAppSourceUpdate{{
+				RepoURL: chartRepoURL, Chart: "my-chart",
+			}},
+			expectedMustUpdate: true,
+		},
+		{
+			name: "one stale chart source in a multi-source Application waits",
+			sources: argocd.ApplicationSources{
+				{RepoURL: gitRepoURL, TargetRevision: "main"},
+				{RepoURL: chartRepoURL, Chart: "my-chart", TargetRevision: "237"},
+			},
+			sourceUpdates: []stepconfig.ArgoCDAppSourceUpdate{
+				{RepoURL: gitRepoURL, DesiredRevision: "abc123"},
+				{RepoURL: chartRepoURL, Chart: "my-chart", DesiredRevision: "238"},
+			},
+			expectedPhase: argocd.OperationRunning,
+		},
+		{
+			name: "multi-source Application with all revisions applied syncs",
+			sources: argocd.ApplicationSources{
+				{RepoURL: gitRepoURL, TargetRevision: "main"},
+				{RepoURL: chartRepoURL, Chart: "my-chart", TargetRevision: "238"},
+			},
+			sourceUpdates: []stepconfig.ArgoCDAppSourceUpdate{
+				{RepoURL: gitRepoURL, DesiredRevision: "abc123"},
+				{RepoURL: chartRepoURL, Chart: "my-chart", DesiredRevision: "238"},
+			},
+			expectedMustUpdate: true,
+		},
+	}
+
+	runner := &argocdUpdater{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			app := &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{Name: "my-app", Namespace: "argocd"},
+				Spec:       argocd.ApplicationSpec{Sources: testCase.sources},
+			}
+			update := &stepconfig.ArgoCDAppUpdate{Sources: testCase.sourceUpdates}
+
+			phase, mustUpdate, err := runner.mustPerformUpdate(
+				t.Context(),
+				&promotion.StepContext{Promotion: promotionName},
+				update,
+				app,
+			)
+			require.NoError(t, err)
+			assert.Equal(t, testCase.expectedPhase, phase)
+			assert.Equal(t, testCase.expectedMustUpdate, mustUpdate)
+		})
+	}
+}
+
+// Test_argoCDUpdater_applicationSetOwnedChartRevision reproduces
+// https://github.com/akuity/kargo/issues/8147. When an ApplicationSet owns a
+// chart source's targetRevision, argocd-update must wait for the ApplicationSet
+// to apply the desired revision before starting a sync. Syncing earlier would
+// deploy the stale chart version and force a second sync.
+func Test_argoCDUpdater_applicationSetOwnedChartRevision(t *testing.T) {
+	const (
+		promotionName = "fake-promotion"
+		chartRepoURL  = "https://charts.example.com"
+		chartName     = "my-chart"
+		oldRevision   = "237"
+		newRevision   = "238"
+	)
+
+	testCases := []struct {
+		name                   string
+		targetRevision         string
+		syncResultRevision     string
+		expectedPhase          argocd.OperationPhase
+		expectedSyncedRevision []string
+	}{
+		{
+			name:           "ApplicationSet has not applied the new revision",
+			targetRevision: oldRevision,
+			expectedPhase:  argocd.OperationRunning,
+		},
+		{
+			name:               "first sync deployed the stale revision",
+			targetRevision:     oldRevision,
+			syncResultRevision: oldRevision,
+			expectedPhase:      argocd.OperationRunning,
+		},
+		{
+			name:                   "ApplicationSet applied the new revision",
+			targetRevision:         newRevision,
+			syncResultRevision:     oldRevision,
+			expectedPhase:          argocd.OperationRunning,
+			expectedSyncedRevision: []string{newRevision},
+		},
+		{
+			name:               "sync at the new revision completed",
+			targetRevision:     newRevision,
+			syncResultRevision: newRevision,
+			expectedPhase:      argocd.OperationSucceeded,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			app := &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-app",
+					Namespace: "argocd",
+				},
+				Spec: argocd.ApplicationSpec{
+					Sources: argocd.ApplicationSources{{
+						RepoURL:        chartRepoURL,
+						Chart:          chartName,
+						TargetRevision: testCase.targetRevision,
+					}},
+				},
+			}
+			if testCase.syncResultRevision != "" {
+				app.Status.OperationState = &argocd.OperationState{
+					Phase: argocd.OperationSucceeded,
+					Operation: argocd.Operation{
+						InitiatedBy: argocd.OperationInitiator{
+							Username: applicationOperationInitiator,
+						},
+						Info: []*argocd.Info{{
+							Name:  promotionInfoKey,
+							Value: promotionName,
+						}},
+					},
+					SyncResult: &argocd.SyncOperationResult{
+						Revisions: []string{testCase.syncResultRevision},
+					},
+				}
+			}
+
+			var syncedRevisions []string
+			runner := &argocdUpdater{}
+			runner.mustPerformUpdateFn = runner.mustPerformUpdate
+			runner.buildDesiredSourcesFn = runner.buildDesiredSources
+			runner.applyArgoCDSourceUpdateFn = runner.applyArgoCDSourceUpdate
+			runner.syncApplicationFn = func(
+				_ context.Context,
+				_ *promotion.StepContext,
+				_ *argocd.Application,
+				desiredSources argocd.ApplicationSources,
+			) error {
+				syncedRevisions = append(syncedRevisions, desiredSources[0].TargetRevision)
+				return nil
+			}
+
+			update := &stepconfig.ArgoCDAppUpdate{
+				Name: "my-app",
+				Sources: []stepconfig.ArgoCDAppSourceUpdate{{
+					RepoURL:         chartRepoURL,
+					Chart:           chartName,
+					DesiredRevision: newRevision,
+				}},
+			}
+			phase, err := runner.processApplication(
+				t.Context(),
+				&promotion.StepContext{Promotion: promotionName},
+				update,
+				app,
+			)
+			require.NoError(t, err)
+			assert.Equal(t, testCase.expectedPhase, phase)
+			assert.Equal(t, testCase.expectedSyncedRevision, syncedRevisions)
+		})
+	}
+}
+
 func Test_argoCDUpdater_syncApplication(t *testing.T) {
 	testCases := []struct {
 		name           string

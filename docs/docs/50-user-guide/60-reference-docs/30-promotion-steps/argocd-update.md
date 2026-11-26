@@ -170,6 +170,20 @@ refresh groups of `Application`s with heterogeneous configurations.
 | `apps[].sources[].helm.images[].key` | `string` | Y | The key to update within the target `ApplicationSource`'s `helm.parameters` map. See Helm documentation on the [format and limitations](https://helm.sh/docs/intro/using_helm/#the-format-and-limitations-of---set) of the notation used in this field. |
 | `apps[].sources[].helm.images[].value` | `string` | Y | Specifies the new value for the key. Typically, a value from [`chartFrom()`](../40-expressions.md#chartfrom) is used here. |
 
+:::note
+
+For a Helm chart source with `desiredRevision` specified and
+`updateTargetRevision` set to `false`, `argocd-update` waits for the
+`Application`'s `targetRevision` to equal `desiredRevision` before starting a
+sync. This matters when another controller -- commonly an ApplicationSet -- owns
+that field: syncing before the new chart version has been applied would deploy
+the stale version and require a second sync. The step remains `Running` until
+the revision matches or its timeout expires. If no external controller owns
+`targetRevision`, set `updateTargetRevision` to `true` instead so Kargo advances
+it itself.
+
+:::
+
 ## Output
 
 | Name | Type | Description |

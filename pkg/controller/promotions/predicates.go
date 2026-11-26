@@ -2,6 +2,7 @@ package promotions
 
 import (
 	"maps"
+	"slices"
 
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
@@ -210,6 +211,60 @@ func (p ArgoCDAppLabelsChanged[T]) Delete(event.TypedDeleteEvent[T]) bool {
 
 func (p ArgoCDAppLabelsChanged[T]) Generic(event.TypedGenericEvent[T]) bool {
 	return false
+}
+
+// ArgoCDAppSourceRevisionChanged is a predicate that fires when an
+// Application's source targetRevision changes. An ApplicationSet commonly owns
+// targetRevision and updates it from a file in Git. Steps such as argocd-update
+// wait for that change before deploying, so the Promotion reconciler must wake
+// up as soon as it is applied instead of waiting for the next poll.
+type ArgoCDAppSourceRevisionChanged[T any] struct {
+	logger *logging.Logger
+}
+
+func (p ArgoCDAppSourceRevisionChanged[T]) Create(event.TypedCreateEvent[T]) bool {
+	return false
+}
+
+func (p ArgoCDAppSourceRevisionChanged[T]) Update(e event.TypedUpdateEvent[T]) bool {
+	oldApp := any(e.ObjectOld).(*argocd.Application) // nolint: forcetypeassert
+	newApp := any(e.ObjectNew).(*argocd.Application) // nolint: forcetypeassert
+	if oldApp == nil || newApp == nil {
+		p.logger.Error(
+			nil, "Update event has no new or old object",
+			"event", e,
+		)
+		return false
+	}
+	return !slices.Equal(
+		sourceTargetRevisions(oldApp),
+		sourceTargetRevisions(newApp),
+	)
+}
+
+func (p ArgoCDAppSourceRevisionChanged[T]) Delete(event.TypedDeleteEvent[T]) bool {
+	return false
+}
+
+func (p ArgoCDAppSourceRevisionChanged[T]) Generic(event.TypedGenericEvent[T]) bool {
+	return false
+}
+
+// sourceTargetRevisions returns the targetRevision of every source of app, in
+// the same order as the Application's spec, so revisions can be compared
+// index-by-index.
+func sourceTargetRevisions(app *argocd.Application) []string {
+	if len(app.Spec.Sources) > 0 {
+		revisions := make([]string, len(app.Spec.Sources))
+		for i := range app.Spec.Sources {
+			revisions[i] = app.Spec.Sources[i].TargetRevision
+		}
+		return revisions
+	}
+	if app.Spec.Source != nil {
+		return []string{app.Spec.Source.TargetRevision}
+	}
+	return nil
 }
 
 // ArgoCDAppCreatedOrDeleted is a predicate that fires when an ArgoCD
