@@ -1,6 +1,7 @@
 package governance
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -146,4 +147,55 @@ pullRequests:
 	require.NotNil(t, cfg.PullRequests.OnOpened)
 	require.Len(t, cfg.PullRequests.OnOpened.Actions, 1)
 	require.Equal(t, "comment", cfg.PullRequests.OnOpened.Actions[0].kind)
+}
+
+// Test_repoGovernanceConfig guards this repository's own
+// .github/governance.yaml. The bot parses config leniently, so a mistyped
+// key or action kind would otherwise go unnoticed until it misbehaved in
+// production.
+func Test_repoGovernanceConfig(t *testing.T) {
+	data, err := os.ReadFile("../../.github/governance.yaml")
+	require.NoError(t, err)
+
+	var cfg config
+	require.NoError(
+		t,
+		yaml.UnmarshalWithOptions(data, &cfg, yaml.DisallowUnknownField()),
+	)
+
+	lists := map[string][]action{}
+	addCommands := func(prefix string, cmds map[string]commandDef) {
+		for name, cmd := range cmds {
+			lists[prefix+"/"+name] = cmd.Actions
+		}
+	}
+	if i := cfg.Issues; i != nil {
+		if i.OnOpened != nil {
+			lists["issues.onOpened"] = i.OnOpened.Actions
+		}
+		addCommands("issues.slashCommands", i.SlashCommands)
+	}
+	if p := cfg.PullRequests; p != nil {
+		if p.OnOpened != nil {
+			lists["pullRequests.onOpened"] = p.OnOpened.Actions
+		}
+		if p.OnNoLinkedIssue != nil {
+			lists["pullRequests.onNoLinkedIssue"] = p.OnNoLinkedIssue.Actions
+		}
+		if p.OnBlockedIssue != nil {
+			lists["pullRequests.onBlockedIssue"] = p.OnBlockedIssue.Actions
+		}
+		if p.OnPass != nil {
+			lists["pullRequests.onPass"] = p.OnPass.Actions
+		}
+		addCommands("pullRequests.slashCommands", p.SlashCommands)
+	}
+	require.NotEmpty(t, lists)
+
+	for where, actions := range lists {
+		for _, a := range actions {
+			_, err = defaultActionRunnerRegistry.Get(a.kind)
+			require.NoError(t, err, "unknown action %q in %s", a.kind, where)
+		}
+	}
 }
