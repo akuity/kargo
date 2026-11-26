@@ -1,62 +1,11 @@
 import { HealthStatus, healthStatusToEnum } from '@ui/features/common/health-status/utils';
 import { GoverningStage, TargetRow } from '@ui/features/project/targets/model/target-rows';
-import { Round } from '@ui/features/stage/utils/promotion-rollout';
 import { Target } from '@ui/gen/api/v2/models';
 
-// governing is what the one Stage this tab is about observes of a Target.
-// Rows here are built against that Stage alone, so there is never more than
-// one pairing to pick from; a Target whose labels stop matching has none.
+// governing is where a Target stands with the one Stage this tab is about.
+// Rows here are built from that Stage's statuses alone, so there is never
+// more than one pairing to pick from.
 export const governing = (row: TargetRow): GoverningStage | undefined => row.stages[0];
-
-export type RoundTally = {
-  // Targets the latest round named, and how it went for each of them.
-  inRound: number;
-  succeeded: number;
-  failed: number;
-  inFlight: number;
-  aborted: number;
-  // Targets the round never named, having joined the Stage after it began.
-  notInRound: number;
-};
-
-// roundTally reads the Stage's latest round back from the rows themselves, so
-// the figures on the tile and the squares below it are one count and cannot
-// disagree.
-export const roundTally = (rows: TargetRow[]): RoundTally => {
-  const tally: RoundTally = {
-    inRound: 0,
-    succeeded: 0,
-    failed: 0,
-    inFlight: 0,
-    aborted: 0,
-    notInRound: 0
-  };
-  for (const row of rows) {
-    switch (governing(row)?.phase) {
-      case 'Succeeded':
-        tally.inRound++;
-        tally.succeeded++;
-        break;
-      case 'Failed':
-      case 'Errored':
-        tally.inRound++;
-        tally.failed++;
-        break;
-      case 'Pending':
-      case 'Running':
-        tally.inRound++;
-        tally.inFlight++;
-        break;
-      case 'Aborted':
-        tally.inRound++;
-        tally.aborted++;
-        break;
-      default:
-        tally.notInRound++;
-    }
-  }
-  return tally;
-};
 
 export type HealthTally = {
   // Targets something has actually assessed. Targets are not health-checked
@@ -98,17 +47,19 @@ export const healthTally = (rows: TargetRow[]): HealthTally => {
 export const assessedHealth = (rows: TargetRow[]): boolean =>
   rows.some((row) => healthStatusToEnum(governing(row)?.health?.status) !== HealthStatus.UNDEFINED);
 
-// neverPromoted counts the Targets this Stage has never landed Freight on. A
-// Target with Freight from an earlier round still counts as promoted, however
-// far behind that Freight now is.
-export const neverPromoted = (rows: TargetRow[]): number =>
-  rows.filter((row) => !row.freight.length).length;
-
-// childPromotionName is the Promotion a round created to promote to one
-// Target, once it has created one. It is how a Target reaches the steps and
-// logs of its own promotion rather than the round's summary of them.
-export const childPromotionName = (round: Round | undefined, target: string): string | undefined =>
-  round?.status?.targets?.find(({ name }) => name === target)?.promotion;
+// neverPromotedNote is what the Never promoted tile says under its count.
+// Having no Freight is not the same as never having been promoted to: a
+// Target whose first promotion failed, or that a rollout has named and not yet
+// reached, has no Freight either, and is counted under its own state. So the
+// note reads Freight off the rows, and says every Target has some only when
+// every row does.
+export const neverPromotedNote = (neverPromoted: number, rows: TargetRow[]): string => {
+  const withoutFreight = rows.filter(({ freight }) => freight.length === 0).length;
+  if (withoutFreight > neverPromoted) {
+    return `${withoutFreight} ${withoutFreight === 1 ? 'has' : 'have'} no Freight`;
+  }
+  return neverPromoted ? 'no Freight yet' : 'all have Freight';
+};
 
 // owningTargetSet names the TargetSet a Target was generated from. Targets may
 // also be written by hand, and then nothing owns them.

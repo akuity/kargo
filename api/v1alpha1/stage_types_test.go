@@ -309,6 +309,79 @@ func TestStage_IsFreightAvailable(t *testing.T) {
 	}
 }
 
+func TestStage_PromotionInProgress(t *testing.T) {
+	testCases := []struct {
+		name     string
+		stage    *Stage
+		expected bool
+	}{
+		{
+			name: "stage is nil",
+		},
+		{
+			name:  "nothing current",
+			stage: &Stage{},
+		},
+		{
+			name: "only last references",
+			stage: &Stage{
+				Status: StageStatus{
+					LastPromotion:        &PromotionReference{Name: "fake-promotion"},
+					LastPromotionRequest: &PromotionRequestReference{Name: "fake-request"},
+					LastPromotionRollout: &PromotionRolloutReference{Name: "fake-rollout"},
+				},
+			},
+		},
+		{
+			name: "current Promotion",
+			stage: &Stage{
+				Status: StageStatus{
+					CurrentPromotion: &PromotionReference{Name: "fake-promotion"},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "current PromotionRequest",
+			stage: &Stage{
+				Status: StageStatus{
+					CurrentPromotionRequest: &PromotionRequestReference{Name: "fake-request"},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "current PromotionRollout that has started",
+			stage: &Stage{
+				Status: StageStatus{
+					CurrentPromotionRollout: &PromotionRolloutReference{
+						Name:  "fake-rollout",
+						Phase: PromotionRolloutPhaseRunning,
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "current PromotionRollout that has yet to start",
+			stage: &Stage{
+				Status: StageStatus{
+					CurrentPromotionRollout: &PromotionRolloutReference{
+						Name:  "fake-rollout",
+						Phase: PromotionRolloutPhasePending,
+					},
+				},
+			},
+			expected: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(t, testCase.expected, testCase.stage.PromotionInProgress())
+		})
+	}
+}
+
 func TestStage_LastPromotionName(t *testing.T) {
 	testCases := []struct {
 		name     string

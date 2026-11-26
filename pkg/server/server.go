@@ -26,6 +26,7 @@ import (
 	rollouts "github.com/akuity/kargo/pkg/api/stubs/rollouts"
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
+	"github.com/akuity/kargo/pkg/database/targetstatusstore"
 	"github.com/akuity/kargo/pkg/database/targetstore"
 	"github.com/akuity/kargo/pkg/event"
 	httputil "github.com/akuity/kargo/pkg/http"
@@ -479,4 +480,13 @@ func (s *server) rolloutStore() promotionrolloutstore.Store {
 		return nil
 	}
 	return promotionrolloutstore.New(s.db, s.events)
+}
+
+// targetStatusStore returns the store that reads what is on record about
+// promotion to Targets, or nil when the server runs without a database.
+func (s *server) targetStatusStore() targetstatusstore.Store {
+	if s.db == nil {
+		return nil
+	}
+	return targetstatusstore.New(s.db)
 }

@@ -78,12 +78,23 @@ global:
   affinity: {}
   ## @param global.priorityClassName [nullable] Default priority class for all Kargo pods.
   # priorityClassName:
-  ## @param global.securityContext Default security context for all Kargo pods.
-  securityContext: {}
+  ## Default security context for all Kargo containers
+  securityContext:
+    ## @param global.securityContext.runAsNonRoot Require containers to run as a non-root user.
+    runAsNonRoot: true
+    ## @param global.securityContext.allowPrivilegeEscalation Prevent containers from gaining more privileges than their parent process.
+    allowPrivilegeEscalation: false
+    capabilities:
+      ## @param global.securityContext.capabilities.drop Linux capabilities to drop from containers.
+      drop:
+      - ALL
+    seccompProfile:
+      ## @param global.securityContext.seccompProfile.type Seccomp profile applied to containers.
+      type: RuntimeDefault
 
   ## Distributed tracing settings shared by all Kargo components.
   tracing:
-    ## @param global.tracing.enabled Whether Kargo's components export traces using OpenTelemetry. When enabled, every component sets `TRACING_ENABLED` and exports spans over OTLP to the configured endpoint. Further OpenTelemetry settings not covered below (headers, TLS, resource attributes, and so on) can be supplied as standard `OTEL_*` environment variables via `global.env`.
+    ## @param global.tracing.enabled Whether Kargo's components export traces over OTLP to the configured endpoint. `true` sets `OTEL_SDK_DISABLED=false` in every component; `false` sets `OTEL_SDK_DISABLED=true`. Further OpenTelemetry settings not covered below (headers, TLS, resource attributes, and so on) can be supplied as standard `OTEL_*` environment variables via `global.env`.
     enabled: false
     otlp:
       ## @param global.tracing.otlp.endpoint The OTLP endpoint traces are exported to (sets `OTEL_EXPORTER_OTLP_ENDPOINT`), for example `http://otel-collector.observability.svc:4318`. When empty, the OpenTelemetry SDK's default of `localhost:4318` (for `http/protobuf`) or `localhost:4317` (for `grpc`) applies, which suits a collector running as a sidecar or as a DaemonSet with host networking.
@@ -202,7 +213,7 @@ nats:
       ## @param nats.external.tokenSecret.key Key within the `Secret` specified by `nats.external.tokenSecret.name` that contains the token.
       key: token
     userPasswordSecret:
-      ## @param nats.external.userPasswordSecret.name Name of a `Secret` in the release namespace containing a username and password with which Kargo components authenticate to the NATS server specified by `nats.external.url`. The default keys match those of a `kubernetes.io/basic-auth` `Secret`. Mutually exclusive with the other `nats.external.*Secret.name` settings.
+      ## @param nats.external.userPasswordSecret.name Name of a `Secret` in the release namespace containing a username and password with which Kargo components authenticate to the NATS server specified by `nats.external.url`. The default keys match those of a `kubernetes.io/basic-auth` `Secret`. Both are mounted as files that are re-read on every reconnect, so updates to the `Secret` take effect without restarting Kargo components. Mutually exclusive with the other `nats.external.*Secret.name` settings.
       name: ""
       ## @param nats.external.userPasswordSecret.usernameKey Key within the `Secret` specified by `nats.external.userPasswordSecret.name` that contains the username.
       usernameKey: username
@@ -473,6 +484,9 @@ api:
       #     redirectURI: <http(s)>://<api.host>/dex/callback
       #     tenant: <tenant ID>
 
+      ## @param api.oidc.dex.automountServiceAccountToken Whether to mount a Kubernetes API token in Dex server pods. Applies to both the pods and their ServiceAccount. Dex keeps its state in memory and reads its configuration from a mounted Secret, so it does not need one.
+      automountServiceAccountToken: false
+
       ## ServiceAccount specific settings
       serviceAccount:
         ## @param api.oidc.dex.serviceAccount.labels Additional labels to add to the Dex server ServiceAccount.
@@ -533,8 +547,17 @@ api:
       annotations: {}
       ## @param api.oidc.dex.podAnnotations Annotations to add to the Dex server pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
       podAnnotations: {}
-      ## @param api.oidc.dex.securityContext Security context for Dex server pods. Defaults to `global.securityContext`.
-      securityContext: {}
+      ## @param api.oidc.dex.securityContext [object] Security context for the Dex server container. When empty, `global.securityContext` applies. The default is the hardened global default plus a numeric `runAsUser` and `runAsGroup` for the image's `dex` user, without which `runAsNonRoot` cannot be verified.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        seccompProfile:
+          type: RuntimeDefault
 
       probes:
         ## @param api.oidc.dex.probes.enabled Whether startup, liveness, and readiness probes should be included in the Dex server deployment. It is sometimes advantageous to disable these during local development.
@@ -599,6 +622,9 @@ api:
   podLabels: {}
   ## @param api.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
+
+  ## @param api.automountServiceAccountToken Whether to mount a Kubernetes API token in API server pods. Applies to both the pods and their ServiceAccount. The API server uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
+  automountServiceAccountToken: true
 
   ## ServiceAccount specific settings
   serviceAccount:
@@ -849,6 +875,9 @@ controller:
   ## @param controller.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
 
+  ## @param controller.automountServiceAccountToken Whether to mount a Kubernetes API token in controller pods. Applies to both the pods and their ServiceAccount. The controller uses it to reach the Kubernetes API, and Argo CD, unless kubeconfig Secrets are configured for both. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
+  automountServiceAccountToken: true
+
   ## All settings relating to the service account for the controller
   serviceAccount:
     ## @param controller.serviceAccount.iamRole Specifies the ARN of an AWS IAM role to be used by the controller in an IRSA-enabled EKS cluster.
@@ -973,6 +1002,10 @@ garbageCollector:
 
   ## @param garbageCollector.schedule When to run the garbage collector.
   schedule: "0 * * * *"
+  ## @param garbageCollector.timeZone [nullable] IANA time zone for the garbage collector schedule. When empty, Kubernetes uses the time zone of the controller manager.
+  timeZone: ""
+  ## @param garbageCollector.startingDeadlineSeconds [nullable] Maximum number of seconds after a missed schedule when the garbage collector Job may still start. When empty, Kubernetes applies no starting deadline.
+  startingDeadlineSeconds:
 
   ## @param garbageCollector.suspend Whether to suspend the garbage collector CronJob. When `true`, the CronJob remains in place but stops launching new Jobs.
   suspend: false
@@ -982,6 +1015,10 @@ garbageCollector:
   failedJobsHistoryLimit: 1
   ## @param garbageCollector.ttlSecondsAfterFinished Optional automatic cleanup delay (in seconds) for completed garbage collector Jobs. Each Job will be eligible for deletion this many seconds after it finishes. Leave empty/unset to retain Jobs indefinitely (subject to the `*JobsHistoryLimit` knobs).
   ttlSecondsAfterFinished:
+  ## @param garbageCollector.activeDeadlineSeconds [nullable] Maximum duration in seconds of the complete garbage collector Job, including retries. When empty, Kubernetes applies no active deadline.
+  activeDeadlineSeconds:
+  ## @param garbageCollector.backoffLimit Number of failed garbage collector Job retries before Kubernetes marks the Job failed. Defaults to the Kubernetes Job default of `6`.
+  backoffLimit: 6
 
   ## @param garbageCollector.workers The number of concurrent workers to run. Tuning this too low will result in slow garbage collection. Tuning this too high will result in too many API calls and may result in throttling.
   workers: 3
@@ -1002,6 +1039,9 @@ garbageCollector:
   podLabels: {}
   ## @param garbageCollector.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
+
+  ## @param garbageCollector.automountServiceAccountToken Whether to mount a Kubernetes API token in garbage collector pods. Applies to both the pods and their ServiceAccount. The garbage collector uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
+  automountServiceAccountToken: true
 
   ## ServiceAccount specific settings
   serviceAccount:
@@ -1092,6 +1132,9 @@ externalWebhooksServer:
   podLabels: {}
   ## @param externalWebhooksServer.podAnnotations Optional annotations to add to the external webhook server pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
+
+  ## @param externalWebhooksServer.automountServiceAccountToken Whether to mount a Kubernetes API token in external webhooks server pods. Applies to both the pods and their ServiceAccount. The external webhooks server uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
+  automountServiceAccountToken: true
 
   ## ServiceAccount specific settings
   serviceAccount:
@@ -1301,6 +1344,9 @@ managementController:
   ## @param managementController.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
 
+  ## @param managementController.automountServiceAccountToken Whether to mount a Kubernetes API token in management controller pods. Applies to both the pods and their ServiceAccount. The management controller uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
+  automountServiceAccountToken: true
+
   ## ServiceAccount specific settings
   serviceAccount:
     ## @param managementController.serviceAccount.labels Additional labels to add to the managementController ServiceAccount.
@@ -1422,6 +1468,9 @@ webhooksServer:
   podLabels: {}
   ## @param webhooksServer.podAnnotations Optional annotations to add to the webhook server pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
+
+  ## @param webhooksServer.automountServiceAccountToken Whether to mount a Kubernetes API token in webhooks server pods. Applies to both the pods and their ServiceAccount. The webhooks server uses it to reach the Kubernetes API unless a kubeconfig Secret is configured. Set this to false only if those kubeconfigs authenticate without the mounted token (a kubeconfig can still reference the ServiceAccount token path).
+  automountServiceAccountToken: true
 
   ## ServiceAccount specific settings
   serviceAccount:
@@ -1569,6 +1618,9 @@ database:
     ## @param database.migrations.podAnnotations Optional annotations to add to the migration Job's pod. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
     podAnnotations: {}
 
+    ## @param database.migrations.automountServiceAccountToken Whether to mount a Kubernetes API token in the migration Job's pod. Applies to both the pod and its ServiceAccount. The Job only talks to the database, so it does not need one.
+    automountServiceAccountToken: false
+
     serviceAccount:
       ## @param database.migrations.serviceAccount.labels Additional labels to add to the migration Job's ServiceAccount.
       labels: {}
@@ -1650,6 +1702,9 @@ database:
     ## @param database.postgres.podAnnotations Optional annotations to add to the bundled PostgreSQL pod. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
     podAnnotations: {}
 
+    ## @param database.postgres.automountServiceAccountToken Whether to mount a Kubernetes API token in the bundled PostgreSQL pod. Applies to both the pod and its ServiceAccount. PostgreSQL does not call the Kubernetes API, so it does not need one.
+    automountServiceAccountToken: false
+
     serviceAccount:
       ## @param database.postgres.serviceAccount.labels Additional labels to add to the bundled PostgreSQL ServiceAccount.
       labels: {}
@@ -1683,8 +1738,17 @@ database:
     ## @param database.postgres.affinity Specifies pod affinity for the bundled PostgreSQL pod. Defaults to `global.affinity`.
     affinity: {}
     # priorityClassName:
-    ## @param database.postgres.securityContext Security context for the bundled PostgreSQL container. Defaults to `global.securityContext`.
-    securityContext: {}
+    ## @param database.postgres.securityContext [object] Security context for the bundled PostgreSQL container. When empty, `global.securityContext` applies. The default is the hardened global default, running as the image's `postgres` user and group (UID and GID 999).
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 999
+      runAsGroup: 999
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      seccompProfile:
+        type: RuntimeDefault
   external:
     ## @param database.external.secretName Name of an existing Secret in Kargo's namespace that holds the connection string of an external PostgreSQL database under the key named by `database.external.secretKey`. Cannot be combined with `database.postgres.enabled`.
     secretName: ""

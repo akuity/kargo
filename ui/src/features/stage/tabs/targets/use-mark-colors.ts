@@ -1,11 +1,6 @@
 import { theme } from 'antd';
 import { useMemo } from 'react';
 
-import {
-  PromotionPhase,
-  promotionPhasePresentations,
-  promotionPhases
-} from '@ui/features/common/promotion-status/promotion-phase';
 import { useStateColors } from '@ui/features/project/targets/shared/use-state-colors';
 import { ColorMapHex } from '@ui/features/stage/utils';
 
@@ -35,13 +30,15 @@ export const useMarkColors = (): MarkColors => {
 
   return useMemo(
     () => ({
-      phase: Object.fromEntries(
-        promotionPhases.map((phase) => [
-          phase,
-          token[promotionPhasePresentations[phase].colorToken]
-        ])
-      ) as Record<PromotionPhase, string>,
       state,
+      // Health is painted as it is wherever the UI shows it: green, blue
+      // while it settles, red when it is not, grey when nobody knows.
+      health: {
+        Healthy: token.colorSuccess,
+        Progressing: token.colorInfo,
+        Unhealthy: token.colorError,
+        Unknown: token.colorTextQuaternary
+      },
       freight: freightPalette
     }),
     [token, state]

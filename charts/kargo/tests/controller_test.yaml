@@ -98,6 +98,22 @@ tests:
             name: http-metrics
             protocol: TCP
 
+  - it: mounts a service account token in the pod by default
+    template: templates/controller/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: true
+
+  - it: does not mount a service account token in the pod when controller.automountServiceAccountToken is false
+    template: templates/controller/deployment.yaml
+    set:
+      controller.automountServiceAccountToken: false
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+
 ---
 suite: controller/configmap.yaml
 values:
@@ -583,3 +599,24 @@ tests:
     asserts:
       - hasDocuments:
           count: 0
+
+---
+suite: controller/service-account.yaml
+values:
+  - ../test/values-unittest.yaml
+templates:
+  - templates/controller/service-account.yaml
+tests:
+  - it: enables token automounting on the ServiceAccount by default
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: true
+
+  - it: disables token automounting on the ServiceAccount when controller.automountServiceAccountToken is false
+    set:
+      controller.automountServiceAccountToken: false
+    asserts:
+      - equal:
+          path: automountServiceAccountToken
+          value: false

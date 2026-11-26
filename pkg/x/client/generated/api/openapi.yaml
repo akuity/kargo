@@ -2011,8 +2011,10 @@ paths:
         update strategy, or the one the body gives in its place, is
         resolved against how many that leaves; both are recorded
         with the rollout for good. A Target the Stage does not
-        govern is refused. Everything else about the rollout is
-        assigned by the server.
+        govern is refused. So is a rollout to no Targets: while the
+        Stage governs none, the response is a 409, and the same
+        request succeeds once its selectors match a Target.
+        Everything else about the rollout is assigned by the server.
         This is a promotion: it requires the promote verb on the
         Stage. A server that does not create PromotionRollouts
         responds 501.
@@ -2098,7 +2100,9 @@ paths:
         them: a PromotionRollout on a server that creates
         PromotionRollouts, and a PromotionRequest otherwise. Either
         way, the body's targets and updateStrategy narrow which
-        Targets are promoted to and at what pace.
+        Targets are promoted to and at what pace. A PromotionRollout
+        is not created for a Stage that governs no Targets: the
+        response is a 409 until its selectors match one.
       operationId: PromoteToStage
       parameters:
       - description: Project name
@@ -2146,7 +2150,10 @@ paths:
         "promotionRequests"; each key is present only when it has
         entries. Each promotes to every Target its Stage governs, at
         the Stage's pace. A Stage that could not be promoted to is
-        reported under "errors", with a 207 status.
+        reported under "errors", with a 207 status, and the rest
+        are still promoted to. On a server that creates
+        PromotionRollouts, that includes a Stage that governs no
+        Targets.
       operationId: PromoteDownstream
       parameters:
       - description: Project name
@@ -2264,6 +2271,129 @@ paths:
       summary: Abort a running Verification process
       tags:
       - Verifications
+  /v1beta1/projects/{project}/target-statuses:
+    get:
+      description: |-
+        List where a project's Targets stand with the Stages that
+        govern them, one page at a time: one entry per Target and
+        governing Stage, ordered by Target name and then Stage name.
+        Nothing records a Target's status. Each entry is derived, on
+        request, from the Promotions and PromotionRollouts on record,
+        and which Stages govern a Target from the Stages' selectors
+        as they are now. A Target no Stage governs has no entry.
+
+        Each entry has one state, the first of these that holds:
+        Promoting -- the last Promotion to the Target is running.
+        Pending -- the last Promotion has yet to start, or a
+        PromotionRollout that has not finished names the Target and
+        has not reached it yet.
+        NotAttempted -- a PromotionRollout that names the Target
+        ended, without succeeding, before creating a Promotion to it,
+        and there has been no Promotion to it since. A later rollout
+        that does not name the Target changes nothing.
+        NeverPromoted -- there has never been a Promotion to the
+        Target.
+        Failed -- the last Promotion failed, errored or was aborted.
+        Behind -- the last Promotion succeeded, and the Freight it
+        left on the Target is not the Stage's current Freight.
+        UpToDate -- the last Promotion succeeded and the Target is
+        not known to be behind.
+
+        A state says how promotion went, not how the Target is
+        doing: Target health is not recorded, so nothing here
+        reports it. Entries are read from the database's mirror of
+        Promotions, so they trail the cluster by its sync.
+      operationId: ListTargetStatuses
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Only entries for this Stage
+        in: query
+        name: stage
+        schema:
+          type: string
+      - description: Only entries in one of these states; repeat to give several
+        explode: true
+        in: query
+        name: state
+        schema:
+          items:
+            enum:
+            - Promoting
+            - Pending
+            - Failed
+            - NotAttempted
+            - NeverPromoted
+            - Behind
+            - UpToDate
+            type: string
+          type: array
+        style: form
+      - description: "The previous page's continue, to read the page after it; resend\
+          \ stage and state"
+        in: query
+        name: continue
+        schema:
+          type: string
+      - description: "The page size, at most 500; 100 if omitted"
+        in: query
+        name: limit
+        schema:
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TargetStatusList"
+          description: A page of Target statuses
+      security:
+      - BearerAuth: []
+      summary: List Target statuses
+      tags:
+      - Core
+  /v1beta1/projects/{project}/target-statuses/summary:
+    get:
+      description: |-
+        Count a project's Targets by where they stand with the
+        Stages that govern them: for each Stage, how many of the
+        Targets it governs are in each state; and for the project,
+        how many Targets are in each state, a Target governed by
+        several Stages counted once, under the worst state any of
+        them reports. The states and the entries counted are those
+        the Target status list serves, and are counted in the
+        database rather than read. Targets behind their Stage's
+        current Freight are counted as well, whatever their state.
+        Target health is not recorded, so nothing here reports it.
+      operationId: GetTargetStatusSummary
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Only count the Targets this Stage governs
+        in: query
+        name: stage
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TargetStatusSummary"
+          description: Counts of Targets by state
+      security:
+      - BearerAuth: []
+      summary: Summarize Target statuses
+      tags:
+      - Core
   /v1beta1/projects/{project}/targets:
     get:
       description: |-
@@ -2431,6 +2561,59 @@ paths:
       tags:
       - Core
       x-codegen-request-body-name: body
+  /v1beta1/projects/{project}/targets/{target-name}/promotions:
+    get:
+      description: |-
+        List the Promotions to one of a project's Targets, newest
+        first, one page at a time: those of every Stage, or of one.
+        They are read from the database's record of Promotions,
+        which outlives the Promotions themselves, so the list
+        reaches further back than the project's Promotions do. A
+        Target is recorded by name, so this is the history of the
+        name: a Target that has had no Promotion, or that does not
+        exist, has an empty one.
+      operationId: ListTargetPromotions
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Target name
+        in: path
+        name: target-name
+        required: true
+        schema:
+          type: string
+      - description: Only Promotions of this Stage
+        in: query
+        name: stage
+        schema:
+          type: string
+      - description: "The previous page's continue, to read the page after it; resend\
+          \ stage"
+        in: query
+        name: continue
+        schema:
+          type: string
+      - description: "The page size, at most 500; 100 if omitted"
+        in: query
+        name: limit
+        schema:
+          type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TargetPromotionList"
+          description: A page of the Target's Promotions
+      security:
+      - BearerAuth: []
+      summary: List a Target's Promotions
+      tags:
+      - Core
   /v1beta1/projects/{project}/warehouses:
     get:
       description: |-
@@ -4468,6 +4651,290 @@ components:
           additionalProperties:
             $ref: "#/components/schemas/ImageStageMap"
           type: object
+      type: object
+    TargetFreight:
+      example:
+        name: name
+        origin: "{}"
+      properties:
+        name:
+          description: Name is the Freight's name.
+          type: string
+        origin:
+          allOf:
+          - $ref: "#/components/schemas/FreightOrigin"
+          description: Origin is where the Freight comes from.
+          type: object
+      type: object
+    TargetPromotion:
+      example:
+        createdAt: createdAt
+        finishedAt: finishedAt
+        freight: freight
+        name: name
+        phase: phase
+        rollout: 0
+        stage: stage
+      properties:
+        createdAt:
+          description: CreatedAt is when the Promotion was created.
+          type: string
+        finishedAt:
+          description: FinishedAt is when the Promotion finished. It is absent until
+            it has.
+          type: string
+        freight:
+          description: Freight is the name of the Freight promoted.
+          type: string
+        name:
+          description: Name is the Promotion's name.
+          type: string
+        phase:
+          description: |-
+            Phase is the Promotion's phase. One that has yet to be picked up is
+            Pending.
+          type: string
+        rollout:
+          description: |-
+            Rollout is the number, among the Stage's, of the PromotionRollout that
+            created the Promotion. It is absent for one created on its own.
+          type: integer
+        stage:
+          description: Stage is the name of the Stage that promoted.
+          type: string
+      type: object
+    TargetPromotionList:
+      example:
+        continue: continue
+        items:
+        - createdAt: createdAt
+          finishedAt: finishedAt
+          freight: freight
+          name: name
+          phase: phase
+          rollout: 0
+          stage: stage
+        - createdAt: createdAt
+          finishedAt: finishedAt
+          freight: freight
+          name: name
+          phase: phase
+          rollout: 0
+          stage: stage
+      properties:
+        continue:
+          description: |-
+            Continue is set when there may be more: pass it as continue to read
+            the next page.
+          type: string
+        items:
+          description: "Items are the Promotions, newest first."
+          items:
+            $ref: "#/components/schemas/TargetPromotion"
+          type: array
+      type: object
+    TargetState:
+      enum:
+      - Promoting
+      - Pending
+      - Failed
+      - NotAttempted
+      - NeverPromoted
+      - Behind
+      - UpToDate
+      type: string
+      x-enum-varnames:
+      - StatePromoting
+      - StatePending
+      - StateFailed
+      - StateNotAttempted
+      - StateNeverPromoted
+      - StateBehind
+      - StateUpToDate
+    TargetStatusEntry:
+      example:
+        behind: true
+        freight:
+        - name: name
+          origin: "{}"
+        - name: name
+          origin: "{}"
+        inFlight: true
+        labels:
+          key: labels
+        lastPromotion: "{}"
+        rollout: 0
+        stage: stage
+        state: "{}"
+        target: target
+      properties:
+        behind:
+          description: |-
+            Behind is whether the Freight the Target is on is not the Stage's
+            current Freight. It cuts across State: a Target whose last Promotion
+            failed, or that a rollout never attempted, is usually behind as well.
+            It is false while either side is unknown, as for a Target nothing has
+            been promoted to.
+          type: boolean
+        freight:
+          description: |-
+            Freight is what the Target is on for the Stage, one piece per origin,
+            ordered by origin: what the newest Promotion to succeed left there. It
+            is empty until one has succeeded.
+          items:
+            $ref: "#/components/schemas/TargetFreight"
+          type: array
+        inFlight:
+          description: |-
+            InFlight is whether a promotion to the Target is on its way or under
+            way: a Promotion to it is pending or running, or a PromotionRollout
+            that has not finished names it and has not reached it yet.
+          type: boolean
+        labels:
+          additionalProperties:
+            type: string
+          description: Labels are the Target's labels.
+          type: object
+        lastPromotion:
+          allOf:
+          - $ref: "#/components/schemas/TargetPromotion"
+          description: |-
+            LastPromotion is the Stage's newest Promotion to the Target, whatever
+            its phase. It is absent until there has been one.
+          type: object
+        rollout:
+          description: |-
+            Rollout is the number, among the Stage's, of the PromotionRollout the
+            State comes from when no Promotion says it: the one a Pending Target is
+            waiting for, or the one that did not attempt a NotAttempted Target. It
+            is absent otherwise.
+          type: integer
+        stage:
+          description: Stage is the name of the Stage that governs the Target.
+          type: string
+        state:
+          allOf:
+          - $ref: "#/components/schemas/TargetState"
+          description: State is the one word for where the Target stands with the
+            Stage.
+          type: object
+        target:
+          description: Target is the Target's name.
+          type: string
+      type: object
+    TargetStatusList:
+      example:
+        continue: continue
+        items:
+        - behind: true
+          freight:
+          - name: name
+            origin: "{}"
+          - name: name
+            origin: "{}"
+          inFlight: true
+          labels:
+            key: labels
+          lastPromotion: "{}"
+          rollout: 0
+          stage: stage
+          state: "{}"
+          target: target
+        - behind: true
+          freight:
+          - name: name
+            origin: "{}"
+          - name: name
+            origin: "{}"
+          inFlight: true
+          labels:
+            key: labels
+          lastPromotion: "{}"
+          rollout: 0
+          stage: stage
+          state: "{}"
+          target: target
+      properties:
+        continue:
+          description: |-
+            Continue is set when there may be more: pass it as continue to read
+            the next page.
+          type: string
+        items:
+          description: "Items are the entries, ordered by Target name and then Stage\
+            \ name."
+          items:
+            $ref: "#/components/schemas/TargetStatusEntry"
+          type: array
+      type: object
+    TargetStatusStageSummary:
+      example:
+        behind: 6
+        stage: stage
+        states:
+          key: 1
+      properties:
+        behind:
+          description: |-
+            Behind is how many of those Targets are behind the Stage, whatever
+            their State.
+          type: integer
+        stage:
+          description: Stage is the Stage's name.
+          type: string
+        states:
+          additionalProperties:
+            format: int64
+            type: integer
+          description: |-
+            States counts the Targets the Stage governs, by State. Every State is
+            present, and the counts add up to the number of Targets it governs.
+          type: object
+      type: object
+    TargetStatusSummary:
+      example:
+        behind: 0
+        stages:
+        - behind: 6
+          stage: stage
+          states:
+            key: 1
+        - behind: 6
+          stage: stage
+          states:
+            key: 1
+        states:
+          key: 5
+        targets: 5
+      properties:
+        behind:
+          description: |-
+            Behind is how many of those Targets are behind any Stage that governs
+            them, whatever their State.
+          type: integer
+        stages:
+          description: |-
+            Stages holds the same counts for each Stage that governs Targets,
+            ordered by Stage name.
+          items:
+            $ref: "#/components/schemas/TargetStatusStageSummary"
+          type: array
+        states:
+          additionalProperties:
+            format: int64
+            type: integer
+          description: |-
+            States counts the Targets some Stage governs, by State. Every State is
+            present. A Target governed by several Stages is counted once, under
+            the worst State any of them reports, in the order Promoting, Pending,
+            Failed, NotAttempted, NeverPromoted, Behind, UpToDate. The counts add
+            up to the number of governed Targets.
+          type: object
+        targets:
+          description: |-
+            Targets is how many Targets the Project has, including any that no
+            Stage governs.
+          type: integer
       type: object
     UpdateConfigMapRequest:
       example:
@@ -14407,12 +14874,14 @@ components:
     PromotionRolloutReference:
       properties:
         finishedAt:
-          description: FinishedAt is the time at which the PromotionRollout completed.
+          description: |-
+            FinishedAt is the time at which the PromotionRollout completed. It is
+            absent for one that has not.
           type: string
         message:
           description: |-
             Message is a human-readable description of how the PromotionRollout
-            ended.
+            ended. It is empty for one that has not.
           type: string
         name:
           description: Name is the name of the PromotionRollout.
@@ -15648,6 +16117,19 @@ components:
             Fanning Freight out to Targets is a Kargo Enterprise-only feature. Kargo
             OSS maintains this field all the same, but the PromotionRequest it refers
             to never gets further than being marked Errored for that reason.
+
+            +optional
+          type: object
+        currentPromotionRollout:
+          allOf:
+          - $ref: "#/components/schemas/PromotionRolloutReference"
+          description: |-
+            CurrentPromotionRollout is a reference to the PromotionRollout this Stage
+            is promoting through. A PromotionRollout does not start until its Stage
+            names it here, and the Stage names the next one only once it has recorded
+            the one before it and is not still to verify the Freight it is on. The
+            reference stays until the Stage has recorded how that PromotionRollout
+            ended. It is absent for a Stage that governs no Targets.
 
             +optional
           type: object

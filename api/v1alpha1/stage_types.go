@@ -165,9 +165,13 @@ func (s *Stage) IsTargetAware() bool {
 }
 
 // PromotionInProgress returns true if there is a promotion currently in-flight
-// according to the stage status.
+// according to the stage status. A PromotionRollout the Stage has let start
+// counts from the moment the Stage names it, whether or not it has started
+// yet.
 func (s *Stage) PromotionInProgress() bool {
-	return s != nil && (s.Status.CurrentPromotion != nil || s.Status.CurrentPromotionRequest != nil)
+	return s != nil && (s.Status.CurrentPromotion != nil ||
+		s.Status.CurrentPromotionRequest != nil ||
+		s.Status.CurrentPromotionRollout != nil)
 }
 
 // LastPromotionName returns a name of last promotion, promotion rollout or
@@ -559,6 +563,15 @@ type StageStatus struct {
 	//
 	// +optional
 	LastPromotionRequest *PromotionRequestReference `json:"lastPromotionRequest,omitempty"`
+	// CurrentPromotionRollout is a reference to the PromotionRollout this Stage
+	// is promoting through. A PromotionRollout does not start until its Stage
+	// names it here, and the Stage names the next one only once it has recorded
+	// the one before it and is not still to verify the Freight it is on. The
+	// reference stays until the Stage has recorded how that PromotionRollout
+	// ended. It is absent for a Stage that governs no Targets.
+	//
+	// +optional
+	CurrentPromotionRollout *PromotionRolloutReference `json:"currentPromotionRollout,omitempty"`
 	// LastPromotionRollout is a reference to the last PromotionRollout whose
 	// outcome this Stage has recorded. It is absent for a Stage that governs no
 	// Targets, and only ever moves forward: its number marks how far through
@@ -950,8 +963,9 @@ type PromotionRequestReference struct {
 
 // PromotionRolloutReference contains the relevant information about a
 // PromotionRollout as observed by a Stage. A PromotionRollout is not a
-// Kubernetes resource, so the reference is how a reader of the Stage sees how
-// its last round of fan-out ended without asking the API server.
+// Kubernetes resource, so the reference is how a reader of the Stage sees
+// which round of fan-out the Stage is in, and how its last one ended, without
+// asking the API server.
 type PromotionRolloutReference struct {
 	// Name is the name of the PromotionRollout.
 	Name string `json:"name"`
@@ -963,9 +977,10 @@ type PromotionRolloutReference struct {
 	// Phase is a high-level summary of the PromotionRollout's lifecycle.
 	Phase PromotionRolloutPhase `json:"phase,omitempty"`
 	// Message is a human-readable description of how the PromotionRollout
-	// ended.
+	// ended. It is empty for one that has not.
 	Message string `json:"message,omitempty"`
-	// FinishedAt is the time at which the PromotionRollout completed.
+	// FinishedAt is the time at which the PromotionRollout completed. It is
+	// absent for one that has not.
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
 }
 

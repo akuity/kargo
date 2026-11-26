@@ -13,15 +13,13 @@ func TestServerConfigFromEnv_TracingEnabled(t *testing.T) {
 		value    string
 		expected bool
 	}{
-		{name: "unset", expected: false},
-		{name: "false", value: "false", expected: false},
-		{name: "true", value: "true", expected: true},
+		{name: "unset", expected: true},
+		{name: "false", value: "false", expected: true},
+		{name: "true", value: "true", expected: false},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			if testCase.value != "" {
-				t.Setenv("TRACING_ENABLED", testCase.value)
-			}
+			t.Setenv("OTEL_SDK_DISABLED", testCase.value)
 			require.Equal(t, testCase.expected, ServerConfigFromEnv().TracingEnabled)
 		})
 	}

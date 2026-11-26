@@ -110,6 +110,81 @@ describe('childPromotions()', () => {
     ]);
     expect(children.map((entry) => entry.target)).toEqual(['east-2', 'west-1', 'east-1']);
   });
+
+  describe('a round that ended before it reached every Target it names', () => {
+    // The round tolerated no failure: east-2 failed, and it stopped fanning
+    // out with west-1 and west-2 still to come.
+    const ended = (phase: string) =>
+      request({
+        spec: {
+          stage: 'prod-us',
+          freight: 'abc',
+          targets: [{ name: 'east-1' }, { name: 'east-2' }, { name: 'west-1' }, { name: 'west-2' }]
+        },
+        status: {
+          phase,
+          targets: [
+            { name: 'east-1', promotion: 'promo-east-1', phase: 'Succeeded' },
+            { name: 'east-2', promotion: 'promo-east-2', phase: 'Failed' }
+          ]
+        }
+      });
+    const phases = (children: ChildPromotion[]) =>
+      Object.fromEntries(children.map((entry) => [entry.target, entry.phase]));
+
+    test.each(['Failed', 'Errored', 'Aborted'])(
+      '%s: the Targets it never reached were not attempted',
+      (phase) => {
+        expect(phases(childPromotions(ended(phase)))).toEqual({
+          'east-1': 'Succeeded',
+          'east-2': 'Failed',
+          'west-1': 'NotAttempted',
+          'west-2': 'NotAttempted'
+        });
+      }
+    );
+
+    test('while it is still running, the same Targets are Pending', () => {
+      expect(phases(childPromotions(ended('Running')))).toMatchObject({
+        'west-1': 'Pending',
+        'west-2': 'Pending'
+      });
+    });
+
+    test('they are tallied apart from every Promotion, and none of them as pending', () => {
+      expect(childrenSummary(childPromotions(ended('Failed')))).toEqual({
+        succeeded: 1,
+        failed: 1,
+        notAttempted: 2
+      });
+    });
+
+    test('they follow what failed and lead what is settled', () => {
+      expect(childPromotions(ended('Failed')).map((entry) => entry.target)).toEqual([
+        'east-2',
+        'west-1',
+        'west-2',
+        'east-1'
+      ]);
+    });
+
+    test('a retry of what did not succeed promotes to them too', () => {
+      expect(retryTargets(childPromotions(ended('Failed')))).toEqual([
+        'east-2',
+        'west-1',
+        'west-2'
+      ]);
+    });
+
+    test('a Promotion it did make, and nothing picked up, is still Pending', () => {
+      const round = ended('Failed');
+      round.status?.targets?.push({ name: 'west-1', promotion: 'promo-west-1' });
+      expect(phases(childPromotions(round))).toMatchObject({
+        'west-1': 'Pending',
+        'west-2': 'NotAttempted'
+      });
+    });
+  });
 });
 
 describe('childrenSummary()', () => {
@@ -121,6 +196,16 @@ describe('childrenSummary()', () => {
         child({ target: 'c', phase: 'Failed' })
       ])
     ).toEqual({ succeeded: 2, failed: 1 });
+  });
+
+  test('a Target that was not attempted is counted as that', () => {
+    expect(
+      childrenSummary([
+        child({ target: 'a', phase: 'Failed' }),
+        child({ target: 'b', phase: 'NotAttempted' }),
+        child({ target: 'c', phase: 'NotAttempted' })
+      ])
+    ).toEqual({ failed: 1, notAttempted: 2 });
   });
 
   test('a round with no children tallies nothing', () => {
@@ -299,11 +384,12 @@ describe('retryTargets()', () => {
         child({ target: 'failed', phase: 'Failed' }),
         child({ target: 'errored', phase: 'Errored' }),
         child({ target: 'aborted', phase: 'Aborted' }),
-        child({ target: 'never-reached', phase: 'Pending' }),
+        child({ target: 'not-created-yet', phase: 'Pending' }),
+        child({ target: 'never-reached', phase: 'NotAttempted' }),
         child({ target: 'running', phase: 'Running' }),
         child({ target: 'ok', phase: 'Succeeded' })
       ])
-    ).toEqual(['failed', 'errored', 'aborted', 'never-reached', 'running']);
+    ).toEqual(['failed', 'errored', 'aborted', 'not-created-yet', 'never-reached', 'running']);
   });
 
   test('a round that went entirely well leaves nothing to retry', () => {
@@ -371,6 +457,25 @@ describe('childPhaseFilters()', () => {
     const filters = childPhaseFilters([child({ target: 'a', phase: 'Aborted' })]);
     expect(filters.map((filter) => filter.phase)).toContain('Aborted');
     expect(childPhaseFilters([]).map((filter) => filter.phase)).not.toContain('Aborted');
+  });
+
+  test('not attempted closes the row, once the round has ended short of a Target', () => {
+    expect(
+      childPhaseFilters([
+        child({ target: 'a', phase: 'Failed' }),
+        child({ target: 'b', phase: 'NotAttempted' }),
+        child({ target: 'c', phase: 'NotAttempted' })
+      ])
+    ).toEqual([
+      { count: 3 },
+      { phase: 'Failed', count: 1 },
+      { phase: 'Errored', count: 0 },
+      { phase: 'Running', count: 0 },
+      { phase: 'Pending', count: 0 },
+      { phase: 'Succeeded', count: 0 },
+      { phase: 'NotAttempted', count: 2 }
+    ]);
+    expect(childPhaseFilters([]).map((filter) => filter.phase)).not.toContain('NotAttempted');
   });
 });
 

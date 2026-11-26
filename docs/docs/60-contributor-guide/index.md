@@ -35,7 +35,9 @@ consider every submission.
 
 1. **Wait for the issue to be unblocked.** When an issue is ready for external
    contribution, a maintainer will remove all blocking labels. **Do not begin
-   work while any blocking labels are present.**
+   work while any blocking labels are present.** This applies to bug reports
+   too. A maintainer needs to confirm a bug, and usually reproduce it, before a
+   fix is worth writing.
 
 1. **Open a pull request** that references the unblocked issue using
    `Closes #<number>` in the PR body.
@@ -48,7 +50,7 @@ automatically converted to a draft until the issue is unblocked.
 
 | Label | Meaning |
 | ----- | ------- |
-| `needs/kind` | Not yet triaged by a maintainer. |
+| `needs/priority` | Not yet triaged by a maintainer. |
 | `kind/proposal` | Feature request under consideration. Not yet unblocked. |
 | `needs discussion` | Needs further discussion before any work begins. |
 | `needs research` | Needs investigation or research before work begins. |

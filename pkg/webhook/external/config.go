@@ -6,6 +6,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 
 	"github.com/akuity/kargo/pkg/os"
+	"github.com/akuity/kargo/pkg/telemetry"
 	"github.com/akuity/kargo/pkg/types"
 )
 
@@ -37,7 +38,7 @@ func ServerConfigFromEnv() ServerConfig {
 		tlsCfg := TLSConfigFromEnv()
 		cfg.TLSConfig = &tlsCfg
 	}
-	cfg.TracingEnabled = types.MustParseBool(os.GetEnv("TRACING_ENABLED", "false"))
+	cfg.TracingEnabled = telemetry.ConfigFromEnv().Enabled
 	return cfg
 }
 

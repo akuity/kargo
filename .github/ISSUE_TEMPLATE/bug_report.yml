@@ -2,6 +2,16 @@ name: Bug Report
 description: Report a bug to help us improve
 labels: ["kind/bug"]
 body:
+- type: markdown
+  attributes:
+    value: |
+      **Please read before submitting.**
+
+      Bug reports are triaged by maintainers on a best-effort basis.
+
+      **Do NOT begin work on a fix until a maintainer has triaged this issue and all [blocking labels](https://docs.kargo.io/contributor-guide#blocking-labels) have been removed from it.** A maintainer needs to confirm a bug, and usually reproduce it, before a fix is worth writing. Pull requests linked to issues that still carry blocking labels will be automatically converted to drafts.
+
+      See the [Contributor Guide](https://docs.kargo.io/contributor-guide) for full details on the contribution process.
 - type: checkboxes
   id: duplicate-check
   attributes:

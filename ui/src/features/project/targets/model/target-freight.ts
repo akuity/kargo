@@ -1,35 +1,4 @@
-import { isPromotionRequestPhaseTerminal } from '@ui/features/stage/utils/promotion-request';
-import { FreightCollection, FreightReference, PromotionRequest } from '@ui/gen/api/v2/models';
-
-// roundPhase is the phase a round reports for one Target: the child Promotion's
-// when there is one, the round's own when it ended before a child could be
-// created, and Pending while the round has yet to reach the Target. A Target
-// the round never named has no phase -- the round says nothing about it.
-export const roundPhase = (
-  request: PromotionRequest | undefined,
-  target: string | undefined
-): string | undefined => {
-  if (!(request?.spec?.targets || []).some((named) => named.name === target)) {
-    return undefined;
-  }
-  const status = request?.status?.targets?.find((named) => named.name === target);
-  if (status) {
-    // A child that exists but has not been picked up yet has no phase; it is
-    // Pending in every sense that matters here.
-    return status.phase || 'Pending';
-  }
-  const requestPhase = request?.status?.phase;
-  return isPromotionRequestPhaseTerminal(requestPhase) ? requestPhase : 'Pending';
-};
-
-// collectionUpToDate compares what a Target runs for a Stage against what the
-// Stage runs. Collection IDs are deterministic in their contents, so equal IDs
-// mean equal Freight; either side missing leaves the question open.
-export const collectionUpToDate = (
-  currentFreight: FreightCollection | undefined,
-  collectionID: string | undefined
-): boolean | undefined =>
-  currentFreight?.id && collectionID ? currentFreight.id === collectionID : undefined;
+import { FreightCollection, FreightReference, TargetFreight } from '@ui/gen/api/v2/models';
 
 // freightNames lists the Freight a collection holds, one per origin, in a
 // stable order.
@@ -74,4 +43,31 @@ export const freightByOrigin = (
       };
     })
     .sort((lhs, rhs) => lhs.origin.localeCompare(rhs.origin));
+};
+
+// originKey is how a FreightCollection keys one origin's Freight, so that a
+// Target's collection and its Stage's pair up origin by origin.
+const originKey = (origin?: { kind?: string; name?: string }): string =>
+  `${origin?.kind || 'Warehouse'}/${origin?.name || ''}`;
+
+// entryCollection reads the Freight a status entry says a Target is on back
+// into the shape a Stage's own Freight takes, so the two can be compared
+// origin by origin. An entry names each piece of Freight and its origin and
+// no more; resolve, when given, fills in the artifacts it carries, which is
+// what a reader recognises it by. A Target with no Freight has no collection.
+export const entryCollection = (
+  freight: TargetFreight[] | undefined,
+  resolve?: (name: string) => FreightReference | undefined
+): FreightCollection | undefined => {
+  if (!freight?.length) {
+    return undefined;
+  }
+  return {
+    items: Object.fromEntries(
+      freight.map(({ name = '', origin }) => [
+        originKey(origin),
+        { ...resolve?.(name), name, origin }
+      ])
+    )
+  };
 };

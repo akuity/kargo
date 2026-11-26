@@ -241,14 +241,13 @@ annotations:
 
 {{/*
 Environment variables that configure distributed tracing, for inclusion in
-the ConfigMap of every Kargo component. Emits nothing when tracing is disabled.
-Beyond the Kargo-specific on/off switch, these are the standard OTEL_*
-variables that the OpenTelemetry SDK reads on its own.
+the ConfigMap of every Kargo component. OTEL_SDK_DISABLED is always set, as
+components trace when it is unset; the rest only when tracing is enabled.
 */}}
 {{- define "kargo.tracing.configMapData" -}}
-{{- with .Values.global.tracing }}
-{{- if .enabled -}}
-TRACING_ENABLED: "true"
+{{- with .Values.global.tracing -}}
+OTEL_SDK_DISABLED: {{ ternary "false" "true" .enabled | quote }}
+{{- if .enabled }}
 OTEL_EXPORTER_OTLP_PROTOCOL: {{ quote .otlp.protocol }}
 {{- if .otlp.endpoint }}
 OTEL_EXPORTER_OTLP_ENDPOINT: {{ quote .otlp.endpoint }}
@@ -395,6 +394,7 @@ spec:
   # Each attempt gets a fresh Pod whose logs survive for inspection.
   restartPolicy: Never
   serviceAccountName: kargo-migrate
+  automountServiceAccountToken: {{ .Values.database.migrations.automountServiceAccountToken | default false }}
   {{- with .Values.database.migrations.affinity | default .Values.global.affinity }}
   affinity:
     {{- toYaml . | nindent 4 }}
@@ -668,6 +668,11 @@ to, an external NATS server. Each entry names the Secret and key, the filename
 it is projected to under /etc/kargo/nats, and the environment variable that
 points pkg/nats.ConfigFromEnv at that file. The list is empty when nats.enabled
 is true.
+
+Credentials that can be rotated belong here rather than in kargo.nats.env.
+Kargo re-reads these files on every reconnect, and the kubelet updates them
+when the Secret changes, so a rotation reaches running Pods without a restart.
+An environment variable is fixed for the life of the container.
 */}}
 {{- define "kargo.nats.secretFiles" -}}
 {{- include "kargo.nats.validateAuth" . -}}
@@ -679,6 +684,10 @@ is true.
 {{- end -}}
 {{- with dig "credsSecret" "name" "" $ext -}}
 {{- $files = append $files (dict "env" "NATS_CREDS_FILE" "path" "user.creds" "secretName" . "key" $ext.credsSecret.key) -}}
+{{- end -}}
+{{- with dig "userPasswordSecret" "name" "" $ext -}}
+{{- $files = append $files (dict "env" "NATS_USERNAME_FILE" "path" "username" "secretName" . "key" $ext.userPasswordSecret.usernameKey) -}}
+{{- $files = append $files (dict "env" "NATS_PASSWORD_FILE" "path" "password" "secretName" . "key" $ext.userPasswordSecret.passwordKey) -}}
 {{- end -}}
 {{- with dig "tls" "caSecret" "name" "" $ext -}}
 {{- $files = append $files (dict "env" "NATS_TLS_CA_FILE" "path" "ca.crt" "secretName" . "key" $ext.tls.caSecret.key) -}}
@@ -733,26 +742,16 @@ Usage:
       key: {{ .key }}
 {{- end }}
 {{- end }}
-{{- with .Values.nats.external.userPasswordSecret }}
-{{- if .name }}
-- name: NATS_USERNAME
-  valueFrom:
-    secretKeyRef:
-      name: {{ .name }}
-      key: {{ .usernameKey }}
-- name: NATS_PASSWORD
-  valueFrom:
-    secretKeyRef:
-      name: {{ .name }}
-      key: {{ .passwordKey }}
-{{- end }}
-{{- end }}
 {{- end }}
 {{- end -}}
 
 {{/*
 kargo.nats.volumeMount renders the volumeMount for files used to connect to
 NATS, if applicable. Empty otherwise. Pair with kargo.nats.volume.
+
+The volume is mounted as a directory. Do not mount its files individually with
+subPath: the kubelet never updates a subPath mount, so rotated credentials
+would not reach the Pod.
 
 Usage:
   volumeMounts:

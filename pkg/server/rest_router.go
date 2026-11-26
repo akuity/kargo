@@ -9,6 +9,7 @@ import (
 	"github.com/akuity/kargo/pkg/server/middleware"
 	"github.com/akuity/kargo/pkg/server/promotionrollouts"
 	"github.com/akuity/kargo/pkg/server/targets"
+	"github.com/akuity/kargo/pkg/server/targetstatuses"
 )
 
 // nolint: lll
@@ -52,7 +53,10 @@ import (
 // @in header
 // @name Authorization
 // @description Bearer token authentication. Obtain token via OIDC/PKCE flow with your identity provider.
-func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
+func (s *server) setupRESTRouter(
+	ctx context.Context,
+	authOpts ...AuthMiddlewareOpt,
+) (*gin.Engine, error) {
 	router := gin.New()
 	if err := ConfigureEngine(router, s.cfg); err != nil {
 		return nil, err
@@ -91,9 +95,7 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 	router.Use(LoggingMiddleware(s.cfg))
 	router.Use(middleware.HandleErrors())
 	router.Use(middleware.Recover())
-	if s.cfg.AdminConfig != nil || s.cfg.OIDCConfig != nil {
-		router.Use(NewAuthMiddleware(ctx, s.cfg, s.client.InternalClient()))
-	}
+	router.Use(NewAuthMiddleware(ctx, s.cfg, s.client.InternalClient(), authOpts...))
 
 	v1beta1 := router.Group("/v1beta1")
 	{
@@ -177,8 +179,16 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 		{
 			// Cluster Analysis Templates (Argo Rollouts)
 			shared.GET("/cluster-analysis-templates", requireRollouts, s.listClusterAnalysisTemplates)
-			shared.GET("/cluster-analysis-templates/:cluster-analysis-template", requireRollouts, s.getClusterAnalysisTemplate)
-			shared.DELETE("/cluster-analysis-templates/:cluster-analysis-template", requireRollouts, s.deleteClusterAnalysisTemplate)
+			shared.GET(
+				"/cluster-analysis-templates/:cluster-analysis-template",
+				requireRollouts,
+				s.getClusterAnalysisTemplate,
+			)
+			shared.DELETE(
+				"/cluster-analysis-templates/:cluster-analysis-template",
+				requireRollouts,
+				s.deleteClusterAnalysisTemplate,
+			)
 
 			// Cluster Promotion Tasks
 			shared.GET("/cluster-promotion-tasks", s.listClusterPromotionTasks)
@@ -255,6 +265,15 @@ func (s *server) setupRESTRouter(ctx context.Context) (*gin.Engine, error) {
 			// Targets live in the database; their handlers authorize each
 			// request themselves, since no Kubernetes client does it for them.
 			targets.New(s.targetStore(), s.authorize, s.client).Register(project)
+
+			// Target statuses
+			// Where each Target stands with the Stages that govern it, read
+			// from the database; these handlers authorize themselves too.
+			targetstatuses.New(
+				s.targetStatusStore(),
+				s.authorize,
+				s.client,
+			).Register(project)
 
 			// PromotionRollouts
 			// PromotionRollouts live in the database too; see above.

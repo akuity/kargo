@@ -38,10 +38,10 @@ require (
 	github.com/akuity/kargo/pkg/x/promotion/stepconfig v0.0.0
 	github.com/aws/aws-lambda-go v1.55.1
 	github.com/aws/aws-sdk-go-v2 v1.48.0
-	github.com/aws/aws-sdk-go-v2/config v1.33.18
-	github.com/aws/aws-sdk-go-v2/credentials v1.21.0
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.67.6
-	github.com/aws/aws-sdk-go-v2/service/sts v1.52.0
+	github.com/aws/aws-sdk-go-v2/config v1.33.20
+	github.com/aws/aws-sdk-go-v2/credentials v1.21.2
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.69.0
+	github.com/aws/aws-sdk-go-v2/service/sts v1.53.0
 	github.com/aws/smithy-go v1.28.9
 	github.com/awslabs/aws-lambda-go-api-proxy v0.16.2
 	github.com/bmatcuk/doublestar/v4 v4.10.4
@@ -50,7 +50,7 @@ require (
 	github.com/cyphar/filepath-securejoin v0.7.0
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/expr-lang/expr v1.17.8
-	github.com/fluxcd/pkg/kustomize v1.44.0
+	github.com/fluxcd/pkg/kustomize v1.45.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-git/go-git/v5 v5.19.3
 	github.com/go-logr/logr v1.4.4
@@ -68,7 +68,7 @@ require (
 	github.com/klauspost/compress v1.20.4
 	github.com/microsoft/azure-devops-go-api/azuredevops/v7 v7.1.0
 	github.com/nats-io/nats-server/v2 v2.15.3
-	github.com/nats-io/nats.go v1.55.0
+	github.com/nats-io/nats.go v1.56.0
 	github.com/nats-io/nkeys v0.4.17
 	github.com/oapi-codegen/runtime v1.9.0
 	github.com/oklog/ulid/v2 v2.1.2
@@ -84,7 +84,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
 	github.com/stretchr/testify v1.12.1
-	github.com/tidwall/sjson v1.2.9
+	github.com/tidwall/sjson v1.2.10
 	github.com/xeipuuv/gojsonschema v1.2.0
 	gitlab.com/gitlab-org/api/client-go v1.46.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.72.0
@@ -102,7 +102,7 @@ require (
 	golang.org/x/sync v0.25.0
 	golang.org/x/text v0.44.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
-	google.golang.org/api v0.313.0
+	google.golang.org/api v0.316.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.22.1
 	k8s.io/api v0.37.2
@@ -114,7 +114,7 @@ require (
 	k8s.io/klog/v2 v2.140.0
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3
 	oras.land/oras-go/v2 v2.7.0
-	sigs.k8s.io/controller-runtime v0.25.2
+	sigs.k8s.io/controller-runtime v0.25.3
 	sigs.k8s.io/e2e-framework v0.7.0
 	sigs.k8s.io/kustomize/api v0.21.2
 	sigs.k8s.io/kustomize/kyaml v0.21.2
@@ -153,7 +153,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.12 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.25 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.12 // indirect
-	github.com/aws/aws-sdk-go-v2/service/signin v1.13.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.14.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.39.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.44.5 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
@@ -342,7 +342,7 @@ require (
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/swaggo/swag v1.16.6 // indirect
 	github.com/tetratelabs/wazero v1.11.0 // indirect
-	github.com/tidwall/gjson v1.20.2 // indirect
+	github.com/tidwall/gjson v1.20.4 // indirect
 	github.com/tidwall/match v1.2.0 // indirect
 	github.com/tidwall/pretty v1.3.0 // indirect
 	github.com/tilt-dev/clusterid v0.1.6 // indirect

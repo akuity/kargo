@@ -114,7 +114,13 @@ func TestCreate(t *testing.T) {
 	disabledStore := &fakeStore{targets: fleet.rows}
 	var disabledAuthorizations []can.Access
 	var authorizations []can.Access
-	recordingStore := &fakeStore{}
+	recordingStore := &fakeStore{targets: fleet.rows}
+	noTargetsStore := &fakeStore{}
+	// A Project whose only Target is one the Stage does not govern.
+	euOnly := fakeTargets{rows: []database.TargetRow{
+		targetRow("eu-west", map[string]string{"region": "eu"}),
+	}}
+	noneGovernedStore := &fakeStore{targets: euOnly.rows}
 	happyStore := &fakeStore{targets: fleet.rows}
 
 	runTestCases(t, []testCase{
@@ -281,6 +287,7 @@ func TestCreate(t *testing.T) {
 		{
 			name:      "the promote verb on the Stage is what is checked",
 			store:     recordingStore,
+			targets:   fleet,
 			authorize: recordAuthorizations(&authorizations),
 			objects:   objects,
 			method:    http.MethodPost,
@@ -496,18 +503,48 @@ func TestCreate(t *testing.T) {
 			},
 		},
 		{
-			name:    "a Stage governing no Targets records a rollout to none",
-			store:   &fakeStore{},
+			name:    "a Stage governing no Targets is refused",
+			store:   noTargetsStore,
 			objects: objects,
 			method:  http.MethodPost,
 			url:     stageURL("prod"),
 			body:    body("fake-freight"),
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusCreated, w.Code)
-				rollout := &kargoapi.PromotionRollout{}
-				require.NoError(t, json.Unmarshal(w.Body.Bytes(), rollout))
-				require.NotNil(t, rollout.Spec.Targets)
-				require.Empty(t, rollout.Spec.Targets)
+				// Nothing is wrong with the request: it is at odds with the
+				// state of the Stage, and succeeds once the Stage governs a
+				// Target.
+				require.Equal(t, http.StatusConflict, w.Code)
+				require.Contains(t, w.Body.String(), `Stage \"prod\" governs no Targets right now`)
+				// No rollout was recorded.
+				require.Zero(t, noTargetsStore.calls)
+			},
+		},
+		{
+			name:    "a Stage governing none of the Project's Targets is refused",
+			store:   noneGovernedStore,
+			targets: euOnly,
+			objects: objects,
+			method:  http.MethodPost,
+			url:     stageURL("prod"),
+			body:    body("fake-freight"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusConflict, w.Code)
+				require.Contains(t, w.Body.String(), "governs no Targets right now")
+				require.Zero(t, noneGovernedStore.calls)
+			},
+		},
+		{
+			// A name is checked against the Targets the Stage governs before
+			// how many there are, so the caller is told which name is wrong.
+			name:    "a Target named for a Stage governing none is a bad request",
+			store:   &fakeStore{},
+			objects: objects,
+			method:  http.MethodPost,
+			url:     stageURL("prod"),
+			body:    body("fake-freight", "us-east"),
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, w.Code)
+				require.Contains(t, w.Body.String(), `target is not selected`)
 			},
 		},
 		{

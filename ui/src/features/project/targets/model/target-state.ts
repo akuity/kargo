@@ -1,11 +1,15 @@
 import { GlobalToken } from 'antd';
 
-// TargetState is the one word a surface uses for a Target, or for a Target
-// under one of the Stages that govern it. Behind is a state of its own rather
-// than a flavour of Healthy: a Target running Freight its Stage has moved on
-// from is working, but it is not where the pipeline wants it.
-export type TargetState =
-  'Healthy' | 'Behind' | 'Progressing' | 'Unhealthy' | 'Unknown' | 'NotPromoted';
+import { TargetState as ServerTargetState } from '@ui/gen/api/v2/models';
+
+// TargetState is where a Target stands with a Stage that governs it, as the
+// server derives it from the Promotions and PromotionRollouts on record. It
+// is the one word every surface uses for a Target, or for a Target under one
+// of the Stages that govern it.
+//
+// It says how promotion to the Target went, not how the Target is doing:
+// nothing records a Target's health, so none of these words speaks of it.
+export type TargetState = ServerTargetState;
 
 // StateColorToken names the Ant theme token a state is painted with. Resolve
 // it against the live theme with theme.useToken() so the page follows dark
@@ -21,7 +25,7 @@ export type StateColorToken = Extract<
 >;
 
 export type TargetStatePresentation = {
-  // label names the state in a legend or a tile heading.
+  // label names the state in a legend, a tile heading or a table cell.
   label: string;
   // short names it after a count, as in "113 behind".
   short: string;
@@ -29,71 +33,103 @@ export type TargetStatePresentation = {
   // A hollow state draws as an outline rather than a fill wherever one Target
   // is one mark: nothing has promoted to it yet, so it reads as an empty slot.
   hollow?: boolean;
+  // attention marks a state worth looking at: it sorts to the front of a grid
+  // and names what is wrong in a group's caption.
+  attention?: boolean;
 };
 
+// targetStatePresentations is the one mapping from the server's states to the
+// words and colours the Targets surfaces paint with. Each reuses a mark the UI
+// already had: a Promotion's phase colours for Promoting, Pending and Failed,
+// the rollout page's "Not attempted" grey, the hollow "never promoted" slot,
+// and the warning colour that has always meant behind the Stage.
 export const targetStatePresentations: Record<TargetState, TargetStatePresentation> = {
-  Healthy: { label: 'Healthy', short: 'healthy', colorToken: 'colorSuccess' },
+  UpToDate: { label: 'Up to date', short: 'up to date', colorToken: 'colorSuccess' },
   Behind: { label: 'Behind Stage', short: 'behind', colorToken: 'colorWarning' },
-  Progressing: { label: 'Progressing', short: 'progressing', colorToken: 'colorInfo' },
-  Unhealthy: { label: 'Unhealthy', short: 'unhealthy', colorToken: 'colorError' },
-  Unknown: { label: 'Unknown', short: 'unknown', colorToken: 'colorTextQuaternary' },
-  NotPromoted: {
-    label: 'Not promoted',
-    short: 'not promoted',
+  Promoting: { label: 'Promoting', short: 'promoting', colorToken: 'colorInfo' },
+  Pending: { label: 'Pending', short: 'pending', colorToken: 'colorFillSecondary' },
+  Failed: { label: 'Failed', short: 'failed', colorToken: 'colorError', attention: true },
+  NotAttempted: {
+    label: 'Not attempted',
+    short: 'not attempted',
+    colorToken: 'colorTextQuaternary'
+  },
+  NeverPromoted: {
+    label: 'Never promoted',
+    short: 'never promoted',
     colorToken: 'colorFillSecondary',
     hollow: true
   }
 };
 
 // stateOrder lists the states in the order every bar draws its segments and
-// every legend lists its counts: what is settled, what has drifted, what is
-// moving, then what is wrong, unknown, or absent.
+// every legend and filter lists its counts: what is settled, what has
+// drifted, what is moving, then what went wrong, what was left out, and what
+// nothing has reached.
 export const stateOrder: readonly TargetState[] = [
-  'Healthy',
+  'UpToDate',
   'Behind',
-  'Progressing',
-  'Unhealthy',
-  'Unknown',
-  'NotPromoted'
+  'Promoting',
+  'Pending',
+  'Failed',
+  'NotAttempted',
+  'NeverPromoted'
 ];
 
-// statePrecedence lists the states worst first. A Target governed by several
-// Stages shows the worst state any of them reports: a Target is only as well
-// off as its worst Stage. A round still moving outranks a health reading,
-// which describes the Freight that round is on its way to replace.
+// statePrecedence lists the states worst first, as the server counts them. A
+// Target governed by several Stages shows the worst state any of them
+// reports: a Target is only as far along as the Stage it is furthest behind
+// for.
 export const statePrecedence: readonly TargetState[] = [
-  'Progressing',
-  'Unhealthy',
-  'NotPromoted',
-  'Unknown',
+  'Promoting',
+  'Pending',
+  'Failed',
+  'NotAttempted',
+  'NeverPromoted',
   'Behind',
-  'Healthy'
+  'UpToDate'
 ];
 
-// stateDisplayOrder lists the states in the order the summary tiles read them,
-// for anything else that lists every state beside them. It orders the display
-// only; which state outranks which is statePrecedence's to say.
-export const stateDisplayOrder: readonly TargetState[] = [
-  'Healthy',
-  'Progressing',
-  'Unhealthy',
-  'Unknown',
-  'NotPromoted',
-  'Behind'
-];
+// isTargetState reports whether a word is one of the vocabulary.
+export const isTargetState = (state?: string): state is TargetState =>
+  !!state && Object.hasOwn(targetStatePresentations, state);
+
+// toTargetState reads a state off the wire. A word this UI does not know --
+// from a newer server, say -- is drawn as nothing having reached the Target,
+// which claims the least.
+export const toTargetState = (state?: string): TargetState =>
+  isTargetState(state) ? state : 'NeverPromoted';
+
+// worstState is the state a Target shows when several Stages govern it. A
+// Target no Stage governs has never been promoted to by any of them.
+export const worstState = (states: TargetState[]): TargetState =>
+  statePrecedence.find((state) => states.includes(state)) ?? 'NeverPromoted';
 
 export type StateCounts = Record<TargetState, number>;
 
 // emptyStateCounts returns a fresh tally with every state at zero, so callers
 // may index any state without a fallback.
 export const emptyStateCounts = (): StateCounts => ({
-  Healthy: 0,
+  UpToDate: 0,
   Behind: 0,
-  Progressing: 0,
-  Unhealthy: 0,
-  Unknown: 0,
-  NotPromoted: 0
+  Promoting: 0,
+  Pending: 0,
+  Failed: 0,
+  NotAttempted: 0,
+  NeverPromoted: 0
 });
+
+// toStateCounts reads a tally off the wire, every state present whatever the
+// server left out.
+export const toStateCounts = (counts?: Partial<Record<string, number>>): StateCounts => {
+  const tally = emptyStateCounts();
+  for (const [state, count] of Object.entries(counts || {})) {
+    if (isTargetState(state)) {
+      tally[state] = count || 0;
+    }
+  }
+  return tally;
+};
 
 // totalStateCount sums a tally.
 export const totalStateCount = (counts: StateCounts): number =>

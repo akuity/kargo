@@ -2,10 +2,14 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tag, Tooltip } from 'antd';
 import { useMemo } from 'react';
 
-import { PromotionRequestSummary } from '@ui/gen/api/v2/models';
-
-import { getPromotionPhasePresentation } from './promotion-phase';
-import { describeRound, roundBadgePhase, roundBadgeText, roundSegments } from './round-progress';
+import { getRoundTargetPhasePresentation } from './promotion-phase';
+import {
+  RoundSummary,
+  describeRound,
+  roundBadgePhase,
+  roundBadgeText,
+  roundSegments
+} from './round-progress';
 
 // RoundBadge is the compact sibling of RoundProgressBar: the same round, said
 // as a figure instead of drawn. It shows how many Targets have succeeded over
@@ -17,7 +21,7 @@ export const RoundBadge = ({
   summary,
   className
 }: {
-  summary?: PromotionRequestSummary;
+  summary?: RoundSummary;
   className?: string;
 }) => {
   const progress = useMemo(() => roundSegments(summary), [summary]);
@@ -25,7 +29,7 @@ export const RoundBadge = ({
   if (!phase) {
     return null;
   }
-  const { icon, tagColor, spin } = getPromotionPhasePresentation(phase);
+  const { icon, tagColor, spin } = getRoundTargetPhasePresentation(phase);
   const description = describeRound(progress);
   return (
     <Tooltip title={description}>

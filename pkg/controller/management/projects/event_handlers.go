@@ -151,6 +151,8 @@ func (e *projectStageHealthEnqueuer[T]) Update(
 		promotionRequestRefName(newStage.Status.CurrentPromotionRequest) ||
 		promotionRequestRefName(oldStage.Status.LastPromotionRequest) !=
 			promotionRequestRefName(newStage.Status.LastPromotionRequest) ||
+		promotionRolloutRefName(oldStage.Status.CurrentPromotionRollout) !=
+			promotionRolloutRefName(newStage.Status.CurrentPromotionRollout) ||
 		promotionRolloutRefName(oldStage.Status.LastPromotionRollout) !=
 			promotionRolloutRefName(newStage.Status.LastPromotionRollout) {
 		logger.Info("Stage's PromotionRequest or PromotionRollout changed, enqueueing Project")

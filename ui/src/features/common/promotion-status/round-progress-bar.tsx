@@ -2,10 +2,8 @@ import { Tooltip, theme } from 'antd';
 import classNames from 'classnames';
 import { useMemo } from 'react';
 
-import { PromotionRequestSummary } from '@ui/gen/api/v2/models';
-
-import { getPromotionPhasePresentation } from './promotion-phase';
-import { describeRound, roundSegments } from './round-progress';
+import { getRoundTargetPhasePresentation } from './promotion-phase';
+import { RoundSummary, describeRound, roundSegments } from './round-progress';
 
 type Size = 'compact' | 'full';
 
@@ -22,7 +20,7 @@ export const RoundProgressBar = ({
   size = 'compact',
   className
 }: {
-  summary?: PromotionRequestSummary;
+  summary?: RoundSummary;
   size?: Size;
   className?: string;
 }) => {
@@ -31,7 +29,7 @@ export const RoundProgressBar = ({
 
   // Each phase's color is the theme token its presentation names, so the bar
   // and the Promotion status icons and chips share one vocabulary.
-  const colorFor = (phase: string) => token[getPromotionPhasePresentation(phase).colorToken];
+  const colorFor = (phase: string) => token[getRoundTargetPhasePresentation(phase).colorToken];
 
   const height = size === 'full' ? 8 : 4;
   const succeeded = progress.segments.find((s) => s.phase === 'Succeeded')?.count ?? 0;

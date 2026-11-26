@@ -1,16 +1,18 @@
 import { faArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Flex, Typography, theme } from 'antd';
-import { ReactNode, useMemo } from 'react';
+import { Fragment, ReactNode, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
-import { TargetRow } from '@ui/features/project/targets/model/target-rows';
+import { TargetRow, stateCounts } from '@ui/features/project/targets/model/target-rows';
+import { totalStateCount } from '@ui/features/project/targets/model/target-state';
+import { Figures } from '@ui/features/project/targets/model/target-status';
 import { surfaceClassName } from '@ui/features/project/targets/shared/surface';
 import { Round, isRolloutRound, roundPath } from '@ui/features/stage/utils/promotion-rollout';
 
 import { MarkBar, MarkDot } from './mark-visuals';
 import { Marking, tally } from './marks';
-import { healthTally, neverPromoted, roundTally } from './summary';
+import { healthTally, neverPromotedNote } from './summary';
 
 const tileClassName = `flex-1 min-w-[180px] px-4 py-3 ${surfaceClassName}`;
 
@@ -36,25 +38,32 @@ const Figure = ({ value, suffix }: { value: ReactNode; suffix?: ReactNode }) => 
 
 /**
  * TargetTiles answers, in one row, the four questions a Stage's fleet raises:
- * what Freight is on it, how its latest round went, how healthy it is, and how
- * much of it has never been promoted to at all.
+ * what Freight is on it, how much of it is up to date and what is keeping the
+ * rest, how healthy it is when anything has said, and how much of it has never
+ * been promoted to at all.
  *
- * Every figure is counted from the same rows the squares below are drawn from,
- * so the tiles and the grid can never disagree.
+ * The counts are the server's for this Stage, read by the same rules as the
+ * squares below, so the two agree.
  */
 export const TargetTiles = ({
   project,
   stageName,
   rows,
+  figures,
   round,
+  stageFreight,
   freightMarks,
   freightLabel
 }: {
   project: string;
   stageName: string;
   rows: TargetRow[];
-  // The Stage's latest round, when it has had one.
+  // The Stage's counts by state, from the server.
+  figures: Figures;
+  // The Stage's latest round, when it has had one, which the tile links to.
   round?: Round;
+  // The Freight the Stage itself is on: what up to date means.
+  stageFreight: string[];
   // The Freight vocabulary, shared with the grid's Freight colouring so a
   // piece of Freight is the same colour in both.
   freightMarks: Marking;
@@ -63,15 +72,25 @@ export const TargetTiles = ({
   const { token } = theme.useToken();
 
   const freight = useMemo(() => tally(rows, freightMarks), [rows, freightMarks]);
-  const promoted = useMemo(() => roundTally(rows), [rows]);
   const health = useMemo(() => healthTally(rows), [rows]);
-  const never = useMemo(() => neverPromoted(rows), [rows]);
+  // A Stage the summary has not caught up with yet is counted from the rows,
+  // which are read by the same rules.
+  const counts = useMemo(
+    () => (figures.total ? figures.counts : stateCounts(rows)),
+    [figures, rows]
+  );
+  const total = totalStateCount(counts);
+  const inFlight = counts.Promoting + counts.Pending;
 
-  const roundFreight = round?.spec?.freight;
   const roundLink = roundPath(project, stageName, round);
-  // A round that never reached a Target -- blocked, or still being admitted --
-  // has nothing to report per Target. The drawer explains why above the tabs.
-  const reached = promoted.inRound > 0;
+  // What keeps the rest from being up to date, worst first, each only when
+  // there is any of it.
+  const reasons = [
+    ...(counts.Failed ? [{ text: `${counts.Failed} failed`, color: token.colorError }] : []),
+    ...(inFlight ? [{ text: `${inFlight} in flight` }] : []),
+    ...(counts.NotAttempted ? [{ text: `${counts.NotAttempted} not attempted` }] : []),
+    ...(counts.Behind ? [{ text: `${counts.Behind} behind` }] : [])
+  ];
 
   return (
     <Flex gap={12} wrap>
@@ -89,31 +108,23 @@ export const TargetTiles = ({
         </Flex>
       </Tile>
 
-      <Tile heading={`Last round${roundFreight ? ` · ${freightLabel(roundFreight)}` : ''}`}>
-        <Figure
-          value={reached ? promoted.succeeded : '—'}
-          suffix={reached ? `/ ${promoted.inRound}` : undefined}
-        />
+      <Tile
+        heading={`Up to date${stageFreight.length ? ` · ${stageFreight.map(freightLabel).join(' + ')}` : ''}`}
+      >
+        <Figure value={counts.UpToDate} suffix={`/ ${total}`} />
         <Typography.Text type='secondary' className='text-xs'>
-          {!round ? (
-            'never promoted'
-          ) : !reached ? (
-            'not attempted'
-          ) : (
-            <>
-              {promoted.failed > 0 && (
-                <span style={{ color: token.colorError }}>{promoted.failed} failed</span>
-              )}
-              {promoted.failed === 0 && promoted.inFlight > 0 && `${promoted.inFlight} in flight`}
-              {promoted.failed === 0 &&
-                promoted.inFlight === 0 &&
-                (promoted.aborted > 0 ? `${promoted.aborted} aborted` : 'all succeeded')}
-              {promoted.notInRound > 0 && ` · ${promoted.notInRound} joined later`}
-            </>
-          )}
-          {/* The round has a page of its own, which opens on the Promotions
-              tab with this round expanded: every child Promotion, and where
-              the failures fell. */}
+          {reasons.length
+            ? reasons.map(({ text, color }, index) => (
+                <Fragment key={text}>
+                  {index > 0 && ' · '}
+                  <span style={color ? { color } : undefined}>{text}</span>
+                </Fragment>
+              ))
+            : counts.NeverPromoted
+              ? 'the rest never promoted'
+              : 'all up to date'}
+          {/* The latest round has a page of its own: every child Promotion,
+              and where the failures fell. */}
           {roundLink && (
             <>
               {' · '}
@@ -142,9 +153,9 @@ export const TargetTiles = ({
       )}
 
       <Tile heading='Never promoted'>
-        <Figure value={never} />
+        <Figure value={counts.NeverPromoted} />
         <Typography.Text type='secondary' className='text-xs'>
-          {never ? 'no Freight yet' : 'all have Freight'}
+          {neverPromotedNote(counts.NeverPromoted, rows)}
         </Typography.Text>
       </Tile>
     </Flex>

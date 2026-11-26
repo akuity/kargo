@@ -2,6 +2,7 @@ package governance
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/google/go-github/v76/github"
@@ -90,6 +91,113 @@ func Test_issueHandler_handleOpened(t *testing.T) {
 			err := h.handleOpened(t.Context(), event)
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectLabelsAdded, labelsAdded)
+		})
+	}
+}
+
+func Test_issueHandler_handleOpened_onOpened(t *testing.T) {
+	onOpened := &onOpenedConfig{
+		Actions: []action{mustAction("comment", "policy")},
+	}
+	testCases := []struct {
+		name         string
+		cfg          issuesConfig
+		addLabelsErr error
+		assert       func(
+			t *testing.T,
+			labels []string,
+			comments []string,
+			err error,
+		)
+	}{
+		{
+			name: "runs onOpened actions after enforcing required labels",
+			cfg: issuesConfig{
+				RequiredLabelPrefixes: []string{"kind"},
+				OnOpened:              onOpened,
+			},
+			assert: func(
+				t *testing.T,
+				labels []string,
+				comments []string,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"needs/kind"}, labels)
+				require.Equal(t, []string{"policy"}, comments)
+			},
+		},
+		{
+			// Without required prefixes, the handler must not return
+			// before reaching the onOpened actions.
+			name: "runs onOpened actions with no required prefixes",
+			cfg:  issuesConfig{OnOpened: onOpened},
+			assert: func(
+				t *testing.T,
+				labels []string,
+				comments []string,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Empty(t, labels)
+				require.Equal(t, []string{"policy"}, comments)
+			},
+		},
+		{
+			name: "required-label failure does not skip onOpened actions",
+			cfg: issuesConfig{
+				RequiredLabelPrefixes: []string{"kind"},
+				OnOpened:              onOpened,
+			},
+			addLabelsErr: errors.New("labels boom"),
+			assert: func(
+				t *testing.T,
+				_ []string,
+				comments []string,
+				err error,
+			) {
+				require.ErrorContains(t, err, "labels boom")
+				require.Equal(t, []string{"policy"}, comments)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			var labels, comments []string
+			issuesClient := &fakeIssuesClient{
+				AddLabelsToIssueFn: func(
+					_ context.Context,
+					_, _ string,
+					_ int,
+					added []string,
+				) ([]*github.Label, *github.Response, error) {
+					labels = append(labels, added...)
+					return nil, nil, testCase.addLabelsErr
+				},
+				CreateCommentFn: func(
+					_ context.Context,
+					_, _ string,
+					_ int,
+					comment *github.IssueComment,
+				) (*github.IssueComment, *github.Response, error) {
+					comments = append(comments, comment.GetBody())
+					return comment, nil, nil
+				},
+			}
+			event := &github.IssuesEvent{
+				Action: github.Ptr(issueActionOpened),
+				Issue:  &github.Issue{Number: github.Ptr(42)},
+			}
+			h := &issueHandler{
+				repoContext: repoContext{
+					cfg:          config{Issues: &testCase.cfg},
+					owner:        "akuity",
+					repo:         "kargo",
+					issuesClient: issuesClient,
+				},
+			}
+			err := h.handleOpened(t.Context(), event)
+			testCase.assert(t, labels, comments, err)
 		})
 	}
 }

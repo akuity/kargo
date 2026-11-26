@@ -11,8 +11,8 @@ import (
 
 func Test_prHandler_handleOpened(t *testing.T) {
 	// Cases here focus on what the handler does that isn't already proven
-	// by direct unit tests on repoContext: orchestrating the four steps
-	// (assign → inherit → enforce → apply policy), and honoring the
+	// by direct unit tests on repoContext: orchestrating the steps
+	// (assign → inherit → enforce → onOpened → apply policy), and honoring the
 	// applyPolicyOnly bypass on reopen / ready_for_review. Branch-level
 	// coverage of policy outcomes lives in Test_repoContext_applyPRPolicy
 	// and Test_repoContext_isPRExempt; coverage of inheritance and
@@ -57,7 +57,7 @@ func Test_prHandler_handleOpened(t *testing.T) {
 		)
 	}{
 		{
-			// Happy path on `opened`: all four steps must run end-to-end.
+			// Happy path on `opened`: all steps must run end-to-end.
 			// The PR is assigned to its author, inheritable labels from
 			// the linked issue land on the PR, required-label enforcement
 			// fills the remaining gap (needs/priority), and OnPass fires.
@@ -87,8 +87,8 @@ func Test_prHandler_handleOpened(t *testing.T) {
 			},
 		},
 		{
-			// Step 3 (required-label enforcement) must run before step 4
-			// (policy), even when step 4 is about to close the PR. Both
+			// Step 3 (required-label enforcement) must run before step 5
+			// (policy), even when step 5 is about to close the PR. Both
 			// the needs/* labels and the policy/no-linked-issue label end
 			// up on the PR.
 			name:   "opened, no linked issue: enforce runs before policy closes",
@@ -143,14 +143,14 @@ func Test_prHandler_handleOpened(t *testing.T) {
 				// added for the still-missing required prefixes.
 				require.Contains(t, labels, "needs/area")
 				require.Contains(t, labels, "needs/priority")
-				// Step 4 (apply policy) ran — OnPass fired.
+				// Step 5 (apply policy) ran — OnPass fired.
 				require.Equal(t, map[string]struct{}{"PR passes policy.": {}}, comments)
 				require.False(t, closed)
 			},
 		},
 		{
-			// applyPolicyOnly path: steps 1-3 (assign, inherit, enforce)
-			// must be skipped. Only step 4 runs. A maintainer sender on a
+			// applyPolicyOnly path: steps 1-4 (assign, inherit, enforce, onOpened)
+			// must be skipped. Only step 5 runs. A maintainer sender on a
 			// non-maintainer author's PR is treated as exempt; OnPass
 			// fires without policy violations or label churn.
 			name:   "ready_for_review with maintainer sender: only policy runs",
@@ -570,6 +570,94 @@ func Test_parseLinkedIssue(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			result := parseLinkedIssue(testCase.body)
 			require.Equal(t, testCase.expected, result)
+		})
+	}
+}
+
+func Test_prHandler_handleOpened_onOpened(t *testing.T) {
+	cfg := config{
+		PullRequests: &pullRequestsConfig{
+			OnOpened: &onOpenedConfig{
+				Actions: []action{mustAction("comment", "hello")},
+			},
+			OnNoLinkedIssue: &onNoLinkedIssueConfig{
+				Actions: []action{mustAction("comment", "policy")},
+			},
+		},
+	}
+	testCases := []struct {
+		name          string
+		action        string
+		failCommentOn string
+		assert        func(t *testing.T, comments []string, err error)
+	}{
+		{
+			name:   "opened: onOpened actions run before policy",
+			action: prActionOpened,
+			assert: func(t *testing.T, comments []string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"hello", "policy"}, comments)
+			},
+		},
+		{
+			// Authors flip PRs back to ready repeatedly; the opened
+			// actions must not re-run each time.
+			name:   "ready_for_review: onOpened actions do not run",
+			action: prActionReadyForReview,
+			assert: func(t *testing.T, comments []string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"policy"}, comments)
+			},
+		},
+		{
+			name:          "onOpened failure does not skip policy",
+			action:        prActionOpened,
+			failCommentOn: "hello",
+			assert: func(t *testing.T, comments []string, err error) {
+				require.ErrorContains(t, err, "comment boom")
+				require.Equal(t, []string{"hello", "policy"}, comments)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			var comments []string
+			issuesClient := &fakeIssuesClient{
+				CreateCommentFn: func(
+					_ context.Context,
+					_, _ string,
+					_ int,
+					comment *github.IssueComment,
+				) (*github.IssueComment, *github.Response, error) {
+					comments = append(comments, comment.GetBody())
+					if comment.GetBody() == testCase.failCommentOn {
+						return nil, nil, errors.New("comment boom")
+					}
+					return comment, nil, nil
+				},
+			}
+			event := &github.PullRequestEvent{
+				Action: github.Ptr(testCase.action),
+				PullRequest: &github.PullRequest{
+					Number: github.Ptr(1),
+					User:   &github.User{Login: github.Ptr("external")},
+				},
+				Sender: &github.User{Login: github.Ptr("external")},
+			}
+			h := &prHandler{
+				repoContext: repoContext{
+					cfg:          cfg,
+					owner:        "akuity",
+					repo:         "kargo",
+					issuesClient: issuesClient,
+					prsClient:    &fakePullRequestsClient{},
+				},
+			}
+			opts := &handlePROpenedOpts{
+				applyPolicyOnly: testCase.action != prActionOpened,
+			}
+			err := h.handleOpened(t.Context(), event, opts)
+			testCase.assert(t, comments, err)
 		})
 	}
 }

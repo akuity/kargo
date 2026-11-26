@@ -35,6 +35,7 @@ spec:
       {{- end }}
     spec:
       serviceAccountName: kargo-dex-server
+      automountServiceAccountToken: {{ .Values.api.oidc.dex.automountServiceAccountToken | default false }}
       {{- with .Values.api.oidc.dex.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}

@@ -41,6 +41,10 @@
       "description": "The description of the pull request. Kargo generates a description based on the commit messages if it is not explicitly specified.",
       "minLength": 1
     },
+    "disableFooter": {
+      "type": "boolean",
+      "description": "Indicates whether to leave out the link to the Stage in the Kargo UI that Kargo appends to the description by default. Default is false."
+    },
     "labels": {
       "type": "array",
       "description": "Labels to add to the pull request.",

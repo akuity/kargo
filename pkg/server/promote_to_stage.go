@@ -82,7 +82,9 @@ type promoteToStageRequest struct {
 // @Description them: a PromotionRollout on a server that creates
 // @Description PromotionRollouts, and a PromotionRequest otherwise. Either
 // @Description way, the body's targets and updateStrategy narrow which
-// @Description Targets are promoted to and at what pace.
+// @Description Targets are promoted to and at what pace. A PromotionRollout
+// @Description is not created for a Stage that governs no Targets: the
+// @Description response is a 409 until its selectors match one.
 // @Success 201 {object} kargoapi.Promotion "Promotion; a PromotionRollout or PromotionRequest for a Stage with Targets"
 // @Router /v1beta1/projects/{project}/stages/{stage}/promotions [post]
 func (s *server) promoteToStage(c *gin.Context) {

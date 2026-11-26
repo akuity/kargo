@@ -8,6 +8,7 @@ import { useGraphContext } from '../context/graph-context';
 import { StageNode } from '../nodes/stage-node';
 import { SubscriptionNode } from '../nodes/subscription-node';
 import { WarehouseNode } from '../nodes/warehouse-node';
+import { getWarehouseState, isSubscriptionFailing } from '../nodes/warehouse-state';
 
 import { repoSubscriptionIndexer } from './node-indexer';
 import { repoSubscriptionSizer, stageSizer, warehouseSizer } from './node-sizer';
@@ -34,8 +35,12 @@ export const CustomWarehouseNode = (props: {
   const handleId = props.data?.value?.metadata?.name || '';
   const height = warehouseSizer.size().height;
 
+  // The live Warehouse, the one the graph decides discovering from, so that
+  // the node never pairs that with a state a step behind it.
+  const warehouse = graphContext?.warehouseByName?.[handleId] || props.data.value;
+
   const WarehouseNodeBox = graphContext?.ready ? (
-    <WarehouseNode warehouse={props.data.value} />
+    <WarehouseNode warehouse={warehouse} />
   ) : (
     <NodePlaceholder {...warehouseSizer.size()} />
   );
@@ -95,8 +100,19 @@ export const CustomRepoSubscriptionNode = (props: {
     return null;
   }
 
+  // The parent the layout was given goes stale as watch events arrive, so the
+  // failing state is read from the live Warehouse instead.
+  const parentName = props.data.subscriptionParent?.metadata?.name || '';
+  const parent = graphContext?.warehouseByName?.[parentName] || props.data.subscriptionParent;
+
+  // Not failing while the Warehouse is still shown as discovering, which it
+  // can be for a moment after a quick discovery has already failed.
+  const failing =
+    !graphContext?.discoveringWarehouses.has(parentName) &&
+    isSubscriptionFailing(getWarehouseState(parent), props.data.value);
+
   const RepoSubscriptionNodeBox = graphContext?.ready ? (
-    <SubscriptionNode subscription={props.data.value} />
+    <SubscriptionNode subscription={props.data.value} failing={failing} />
   ) : (
     <NodePlaceholder {...repoSubscriptionSizer.size()} />
   );
