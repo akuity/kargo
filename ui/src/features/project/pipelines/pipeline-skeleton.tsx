@@ -121,7 +121,7 @@ export const PipelineSkeleton = (props: {
         style={{ transform: `scale(${scale ?? 1})` }}
       >
         {nodes.map((node, i) => (
-          <div key={i} className='flex items-center'>
+          <div key={i} className='flex items-center dark:opacity-60'>
             {i > 0 && <Edge />}
             <NodePlaceholder size={node.size} lines={node.lines} />
           </div>

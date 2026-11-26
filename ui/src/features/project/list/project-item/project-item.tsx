@@ -220,14 +220,13 @@ const placeholderBar = classNames('rounded', placeholderFill);
 // ProjectItemSkeleton is a card's outline at the card's own size -- the tile
 // and the name, a well with two meters, then the footer -- for the list to
 // show while its projects load. It leaves out the description, which not
-// every project has. Dimmed as the list's previous results are while the next
-// ones load; on the card rather than the grid, whose opacity the pulse drives.
+// every project has.
 export const ProjectItemSkeleton = () => (
   <div
     aria-hidden
     className={classNames(
       cardSurface,
-      'border-[color:var(--kargo-color-border-secondary)] opacity-60'
+      'border-[color:var(--kargo-color-border-secondary)] dark:opacity-60'
     )}
   >
     <div className='flex items-center gap-x-3'>

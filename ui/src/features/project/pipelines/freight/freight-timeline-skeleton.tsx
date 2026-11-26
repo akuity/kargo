@@ -41,7 +41,7 @@ const FreightCardPlaceholder = () => (
 
 // A card under the row Warehouse titles sit in, titled when it opens a run.
 const FreightPlaceholder = (props: { titled: boolean }) => (
-  <div className='flex flex-col gap-1 min-w-0'>
+  <div className='flex flex-col gap-1 min-w-0 dark:opacity-60'>
     <div className='flex items-center gap-1.5 h-5'>
       {props.titled && (
         <>
