@@ -32,6 +32,7 @@ webhooks:
     resources: ["freights"]
     operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
+  timeoutSeconds: {{ .Values.webhooks.timeoutSeconds }}
 - name: promotion.kargo.akuity.io
   admissionReviewVersions: ["v1"]
   sideEffects: None
@@ -50,6 +51,7 @@ webhooks:
     resources: ["promotions"]
     operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
+  timeoutSeconds: {{ .Values.webhooks.timeoutSeconds }}
 - name: stage.kargo.akuity.io
   admissionReviewVersions: ["v1"]
   sideEffects: None
@@ -68,6 +70,7 @@ webhooks:
     resources: ["stages"]
     operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
+  timeoutSeconds: {{ .Values.webhooks.timeoutSeconds }}
 - name: warehouse.kargo.akuity.io
   admissionReviewVersions: ["v1"]
   sideEffects: None
@@ -86,6 +89,7 @@ webhooks:
     resources: ["warehouses"]
     operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
+  timeoutSeconds: {{ .Values.webhooks.timeoutSeconds }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -120,6 +124,7 @@ webhooks:
     resources: ["clusterconfigs"]
     operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
+  timeoutSeconds: {{ .Values.webhooks.timeoutSeconds }}
 - name: clusterpromotiontask.kargo.akuity.io
   admissionReviewVersions: [ "v1" ]
   sideEffects: None
@@ -138,6 +143,7 @@ webhooks:
     resources: ["clusterpromotiontasks"]
     operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
+  timeoutSeconds: {{ .Values.webhooks.timeoutSeconds }}
 - name: freight.kargo.akuity.io
   admissionReviewVersions: ["v1"]
   sideEffects: None
@@ -156,6 +162,7 @@ webhooks:
     resources: ["freights", "freights/status"]
     operations: ["CREATE", "UPDATE", "DELETE"]
   failurePolicy: Fail
+  timeoutSeconds: {{ .Values.webhooks.timeoutSeconds }}
 - name: project.kargo.akuity.io
   admissionReviewVersions: ["v1"]
   sideEffects: NoneOnDryRun
@@ -174,6 +181,7 @@ webhooks:
     resources: ["projects"]
     operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
+  timeoutSeconds: {{ .Values.webhooks.timeoutSeconds }}
 - name: projectconfig.kargo.akuity.io
   admissionReviewVersions: ["v1"]
   sideEffects: NoneOnDryRun
@@ -192,6 +200,7 @@ webhooks:
       resources: ["projectconfigs"]
       operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
+  timeoutSeconds: {{ .Values.webhooks.timeoutSeconds }}
 - name: promotion.kargo.akuity.io
   admissionReviewVersions: ["v1"]
   sideEffects: None
@@ -210,6 +219,7 @@ webhooks:
     resources: ["promotions"]
     operations: ["CREATE", "UPDATE", "DELETE"]
   failurePolicy: Fail
+  timeoutSeconds: {{ .Values.webhooks.timeoutSeconds }}
 - name: promotionrequest.kargo.akuity.io
   admissionReviewVersions: [ "v1" ]
   sideEffects: None
@@ -228,6 +238,7 @@ webhooks:
     resources: ["promotionrequests"]
     operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
+  timeoutSeconds: {{ .Values.webhooks.timeoutSeconds }}
 - name: promotiontask.kargo.akuity.io
   admissionReviewVersions: [ "v1" ]
   sideEffects: None
@@ -246,6 +257,7 @@ webhooks:
     resources: ["promotiontasks"]
     operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
+  timeoutSeconds: {{ .Values.webhooks.timeoutSeconds }}
 - name: stage.kargo.akuity.io
   admissionReviewVersions: ["v1"]
   sideEffects: None
@@ -264,6 +276,7 @@ webhooks:
     resources: ["stages"]
     operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
+  timeoutSeconds: {{ .Values.webhooks.timeoutSeconds }}
 - name: warehouse.kargo.akuity.io
   admissionReviewVersions: ["v1"]
   sideEffects: None
@@ -282,6 +295,7 @@ webhooks:
     resources: ["warehouses"]
     operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
+  timeoutSeconds: {{ .Values.webhooks.timeoutSeconds }}
 - name: replicated-resource-mutate.kargo.akuity.io
   admissionReviewVersions: ["v1"]
   sideEffects: None
@@ -308,6 +322,7 @@ webhooks:
     - key: kargo.akuity.io/project
       operator: Exists
   failurePolicy: Fail
+  timeoutSeconds: {{ .Values.webhooks.timeoutSeconds }}
 - name: replicated-resource-delete.kargo.akuity.io
   admissionReviewVersions: ["v1"]
   sideEffects: None
@@ -334,4 +349,5 @@ webhooks:
     - key: kargo.akuity.io/project
       operator: Exists
   failurePolicy: Ignore
+  timeoutSeconds: {{ .Values.webhooks.timeoutSeconds }}
 {{- end }}

@@ -85,9 +85,10 @@
 
 ### Webhooks
 
-| Name                | Description                                                                                      | Value  |
-| ------------------- | ------------------------------------------------------------------------------------------------ | ------ |
-| `webhooks.register` | Whether to create `ValidatingWebhookConfiguration` and `MutatingWebhookConfiguration` resources. | `true` |
+| Name                      | Description                                                                                      | Value  |
+| ------------------------- | ------------------------------------------------------------------------------------------------ | ------ |
+| `webhooks.register`       | Whether to create `ValidatingWebhookConfiguration` and `MutatingWebhookConfiguration` resources. | `true` |
+| `webhooks.timeoutSeconds` | Timeout, in seconds, for calls to the admission webhooks. Must be between 1 and 30.              | `10`   |
 
 ### KubeConfigs
 
