@@ -1810,11 +1810,6 @@ func Test_argoCDUpdater_mustPerformUpdate_desiredTargetRevision(t *testing.T) {
 	}
 }
 
-// Test_argoCDUpdater_applicationSetOwnedChartRevision reproduces
-// https://github.com/akuity/kargo/issues/8147. When an ApplicationSet owns a
-// chart source's targetRevision, argocd-update must wait for the ApplicationSet
-// to apply the desired revision before starting a sync. Syncing earlier would
-// deploy the stale chart version and force a second sync.
 func Test_argoCDUpdater_applicationSetOwnedChartRevision(t *testing.T) {
 	const (
 		promotionName = "fake-promotion"
