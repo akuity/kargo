@@ -2,7 +2,7 @@ import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import classNames from 'classnames';
 import { PropsWithChildren } from 'react';
-import { matchPath, NavLink, useLocation } from 'react-router-dom';
+import { Link, matchPath, useLocation } from 'react-router-dom';
 
 type Variant = 'primary' | 'resource';
 
@@ -63,15 +63,21 @@ export const NavItem = ({
   children
 }: PropsWithChildren<Props>) => {
   const { pathname } = useLocation();
-  const inActivePaths = Boolean(
-    activePaths?.some((pattern) => matchPath({ path: pattern, end: false }, pathname) !== null)
-  );
   const v = variants[variant];
 
-  const itemClass = (current: boolean) =>
-    classNames(itemBase, v.item, current ? v.current : v.idle);
+  // Matched here rather than by NavLink, which only sets aria-current for its
+  // own path and so would hide `activePaths` matches from screen readers.
+  // Like NavLink, an item covers the pages beneath it -- except '/', which
+  // would otherwise match every page.
+  const matches = (pattern: string, end: boolean) =>
+    matchPath({ path: pattern, end }, pathname) !== null;
+  const current =
+    !external &&
+    (matches(path, path === '/') || Boolean(activePaths?.some((p) => matches(p, false))));
 
-  const renderContent = (current: boolean) => (
+  const className = classNames(itemBase, v.item, current ? v.current : v.idle);
+
+  const content = (
     <>
       <FontAwesomeIcon
         icon={icon}
@@ -88,13 +94,13 @@ export const NavItem = ({
   );
 
   return external ? (
-    <a className={itemClass(false)} href={path} target='_blank' rel='noopener noreferrer'>
-      {renderContent(false)}
+    <a className={className} href={path} target='_blank' rel='noopener noreferrer'>
+      {content}
       <span className='sr-only'> (opens in a new tab)</span>
     </a>
   ) : (
-    <NavLink to={path} className={({ isActive }) => itemClass(isActive || inActivePaths)}>
-      {({ isActive }) => renderContent(isActive || inActivePaths)}
-    </NavLink>
+    <Link to={path} className={className} aria-current={current ? 'page' : undefined}>
+      {content}
+    </Link>
   );
 };
