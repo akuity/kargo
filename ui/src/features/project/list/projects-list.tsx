@@ -114,8 +114,10 @@ export const ProjectsList = () => {
             {total} project{total === 1 ? '' : 's'}
           </Typography.Text>
         )}
+        {/* AntD draws the track in the page's own color, which loses it on a
+            light page. Dark sets its own track in the theme config. */}
         <Segmented<View>
-          className='ml-auto'
+          className="ml-auto [[data-theme='light']_&]:!bg-[color:var(--kargo-color-fill-secondary)]"
           value={view}
           onChange={handleViewChange}
           options={[
