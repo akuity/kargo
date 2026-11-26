@@ -65,7 +65,8 @@ const (
 // list its Promotions; see require. A create is a promotion, so it is
 // authorized by the promote verb on the Stage instead, which the handler
 // checks once it knows the Stage; before that, a server that does not
-// create rollouts refuses it.
+// create rollouts refuses it. Aborting a rollout is a promotion action too,
+// and is authorized the same way.
 //
 // A rollout belongs to one Stage and is numbered among its rollouts, so it
 // is created and read under the Stage, as a Promotion is created; the
@@ -76,6 +77,7 @@ func (h *Handler) Register(project *gin.RouterGroup) {
 	stage := project.Group("/stages/:stage/promotion-rollouts", requireDatabase)
 	stage.POST("", middleware.RequireFeature(h.creator != nil, errCreateDisabled), h.create)
 	stage.GET("/:number", h.require(can.Get()), h.get)
+	stage.POST("/:number/abort", h.abort)
 }
 
 // require returns middleware that checks the caller may read the Project's

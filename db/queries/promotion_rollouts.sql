@@ -219,3 +219,42 @@ WHERE project_name = sqlc.arg(project_name)
         OR updated_at = sqlc.narg(updated_at)
     )
 RETURNING *;
+
+-- Records a request to abort one of a Stage's rollouts, by its number, and
+-- returns the row as it now stands. Only a rollout that has not finished can
+-- be aborted; one that has is left alone and nothing is returned. The first
+-- request is kept: a second leaves who asked and when as they were.
+--
+-- A Pending rollout has created no Promotions, so it ends here, as Aborted
+-- with the given reason and message, never having started. A Running one
+-- keeps its status, which the reconciler owns: it acts on the request. Every
+-- SET expression reads the row as it was before the update.
+-- name: AbortPromotionRollout :one
+UPDATE promotion_rollouts SET
+    abort_requested_at = COALESCE(abort_requested_at, clock_timestamp()),
+    abort_requested_by = CASE
+        WHEN abort_requested_at IS NULL THEN sqlc.arg(requested_by)::text
+        ELSE abort_requested_by
+    END,
+    status_phase = CASE
+        WHEN status_phase = 'Pending' THEN 'Aborted'
+        ELSE status_phase
+    END,
+    status_reason = CASE
+        WHEN status_phase = 'Pending' THEN sqlc.arg(status_reason)::text
+        ELSE status_reason
+    END,
+    status_message = CASE
+        WHEN status_phase = 'Pending' THEN sqlc.arg(status_message)::text
+        ELSE status_message
+    END,
+    status_finished_at = CASE
+        WHEN status_phase = 'Pending' THEN clock_timestamp()
+        ELSE status_finished_at
+    END,
+    updated_at = GREATEST(clock_timestamp(), updated_at + interval '1 microsecond')
+WHERE project_name = sqlc.arg(project_name)
+    AND stage_name = sqlc.arg(stage_name)
+    AND number = sqlc.arg(number)
+    AND status_phase IN ('Pending', 'Running')
+RETURNING *;

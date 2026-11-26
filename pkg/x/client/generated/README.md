@@ -72,6 +72,7 @@ All URIs are relative to *http://localhost*
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *CoreAPI* | [**AbortPromotion**](docs/CoreAPI.md#abortpromotion) | **Post** /v1beta1/projects/{project}/promotions/{promotion}/abort | Abort a Promotion
+*CoreAPI* | [**AbortPromotionRollout**](docs/CoreAPI.md#abortpromotionrollout) | **Post** /v1beta1/projects/{project}/stages/{stage}/promotion-rollouts/{number}/abort | Abort a PromotionRollout
 *CoreAPI* | [**ApproveFreight**](docs/CoreAPI.md#approvefreight) | **Post** /v1beta1/projects/{project}/freight/{freight-name-or-alias}/approve | Approve Freight for promotion to a Stage
 *CoreAPI* | [**CreateProjectConfigMap**](docs/CoreAPI.md#createprojectconfigmap) | **Post** /v1beta1/projects/{project}/configmaps | Create a project-level ConfigMap
 *CoreAPI* | [**CreatePromotionRollout**](docs/CoreAPI.md#createpromotionrollout) | **Post** /v1beta1/projects/{project}/stages/{stage}/promotion-rollouts | Create a PromotionRollout

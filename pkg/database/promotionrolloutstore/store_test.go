@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/database"
 )
 
@@ -228,6 +229,29 @@ func TestToAPI(t *testing.T) {
 			},
 			assert: func(t *testing.T, rollout *kargoapi.PromotionRollout) {
 				require.Nil(t, rollout.Annotations)
+			},
+		},
+		{
+			name: "a request to abort is served as a Promotion's is",
+			row: func() database.PromotionRolloutRow {
+				row := base
+				row.AbortRequestedAt = &finished
+				row.AbortRequestedBy = "alice"
+				return row
+			},
+			assert: func(t *testing.T, rollout *kargoapi.PromotionRollout) {
+				req, ok := api.AbortPromotionAnnotationValue(rollout.Annotations)
+				require.True(t, ok)
+				require.Equal(t, kargoapi.AbortActionTerminate, req.Action)
+				require.Equal(t, "alice", req.Actor)
+				require.Equal(t, "someone", rollout.Annotations[kargoapi.AnnotationKeyCreateActor])
+			},
+		},
+		{
+			name: "a rollout not asked to abort carries no abort annotation",
+			row:  func() database.PromotionRolloutRow { return base },
+			assert: func(t *testing.T, rollout *kargoapi.PromotionRollout) {
+				require.NotContains(t, rollout.Annotations, kargoapi.AnnotationKeyAbort)
 			},
 		},
 		{

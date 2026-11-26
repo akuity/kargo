@@ -49,6 +49,10 @@ func inUTC(row database.PromotionRolloutRow) database.PromotionRolloutRow {
 		finishedAt := row.StatusFinishedAt.UTC()
 		row.StatusFinishedAt = &finishedAt
 	}
+	if row.AbortRequestedAt != nil {
+		requestedAt := row.AbortRequestedAt.UTC()
+		row.AbortRequestedAt = &requestedAt
+	}
 	return row
 }
 
@@ -98,7 +102,7 @@ func TestStoreIntegration(t *testing.T) {
 	for _, project := range []string{
 		"create", "numbers", "concurrent", "empty", "unique-a", "unique-b",
 		"vanished", "cascade", "list", "latest", "many", "open", "running", "update",
-		"statuses",
+		"statuses", "abort",
 	} {
 		for _, stage := range []string{"prod", "staging"} {
 			seedStage(t, project, stage, project+"/"+stage)
@@ -664,6 +668,114 @@ func TestStoreIntegration(t *testing.T) {
 					StatusPhase: "Bogus",
 				})
 				require.ErrorIs(t, err, database.ErrInvalid)
+			},
+		},
+		{
+			name: "abort ends a Pending rollout and only records the request on a Running one",
+			run: func(t *testing.T) {
+				ids := seedTargets(t, "abort", "us-east")
+				pending, err := store.Create(
+					ctx,
+					"abort",
+					newRollout("prod", "prod.01A.abc"),
+					[]uuid.UUID{ids["us-east"]},
+				)
+				require.NoError(t, err)
+				running, err := store.Create(
+					ctx,
+					"abort",
+					newRollout("staging", "staging.01A.abc"),
+					[]uuid.UUID{ids["us-east"]},
+				)
+				require.NoError(t, err)
+				started := time.Now().UTC().Truncate(time.Microsecond)
+				row := running.PromotionRolloutRow
+				row.StatusPhase = "Running"
+				row.StatusReason = "Promoting"
+				row.StatusMessage = "Waiting on 1 of 1 Promotion to complete"
+				row.StatusStartedAt = &started
+				runningRow, err := store.UpdateStatus(ctx, "abort", row)
+				require.NoError(t, err)
+
+				// A Pending rollout has started nothing, so it ends at once.
+				aborted, err := store.Abort(ctx, "abort", "prod", 1, "alice")
+				require.NoError(t, err)
+				require.Equal(t, "Aborted", aborted.StatusPhase)
+				require.Equal(t, ReasonAborted, aborted.StatusReason)
+				require.Equal(t, "Aborted by alice before it started", aborted.StatusMessage)
+				require.Nil(t, aborted.StatusStartedAt)
+				require.NotNil(t, aborted.StatusFinishedAt)
+				require.NotNil(t, aborted.AbortRequestedAt)
+				require.Equal(t, "alice", aborted.AbortRequestedBy)
+				require.True(t, aborted.UpdatedAt.After(pending.UpdatedAt))
+
+				// The abort is announced with the row before and after it,
+				// after the two creations and the start of the Running one.
+				published := forProject(t, events, "abort")
+				require.Len(t, published, 4)
+				require.Equal(t, nats.Updated, published[3].event.Kind)
+				require.Equal(t, Key{Project: "abort", Name: "prod.01A.abc"}, published[3].event.Key)
+				require.Equal(t, inUTC(pending.PromotionRolloutRow), inUTC(*published[3].event.Old))
+				require.Equal(t, inUTC(aborted), inUTC(*published[3].event.New))
+
+				// The reconciler's claim of the rollout, based on the row as it
+				// read it before the abort, is refused.
+				claim := pending.PromotionRolloutRow
+				claim.StatusPhase = "Running"
+				_, err = store.UpdateStatus(ctx, "abort", claim)
+				require.ErrorIs(t, err, database.ErrConflict)
+
+				// A finished rollout cannot be aborted, this one included.
+				_, err = store.Abort(ctx, "abort", "prod", 1, "bob")
+				require.ErrorIs(t, err, database.ErrConflict)
+				require.ErrorContains(t, err, "already finished as Aborted")
+				// Neither refusal announces anything.
+				require.Len(t, forProject(t, events, "abort"), 4)
+
+				// A Running rollout keeps its status, which the reconciler
+				// owns; only the request is recorded.
+				requested, err := store.Abort(ctx, "abort", "staging", 1, "alice")
+				require.NoError(t, err)
+				require.Equal(t, "Running", requested.StatusPhase)
+				require.Equal(t, "Promoting", requested.StatusReason)
+				require.Equal(t, runningRow.StatusMessage, requested.StatusMessage)
+				require.True(t, requested.StatusStartedAt.Equal(started))
+				require.Nil(t, requested.StatusFinishedAt)
+				require.NotNil(t, requested.AbortRequestedAt)
+				require.Equal(t, "alice", requested.AbortRequestedBy)
+				require.True(t, requested.UpdatedAt.After(runningRow.UpdatedAt))
+				published = forProject(t, events, "abort")
+				require.Len(t, published, 5)
+				require.Equal(t, nats.Updated, published[4].event.Kind)
+				require.Equal(t, Key{Project: "abort", Name: "staging.01A.abc"}, published[4].event.Key)
+				require.Equal(t, inUTC(runningRow), inUTC(*published[4].event.Old))
+				require.Equal(t, inUTC(requested), inUTC(*published[4].event.New))
+
+				// A second request keeps the first.
+				again, err := store.Abort(ctx, "abort", "staging", 1, "bob")
+				require.NoError(t, err)
+				require.Equal(t, "alice", again.AbortRequestedBy)
+				require.True(t, again.AbortRequestedAt.Equal(*requested.AbortRequestedAt))
+				// It changes nothing, so it is not announced.
+				require.Len(t, forProject(t, events, "abort"), 5)
+
+				// The reconciler's status writes are unaffected by the request,
+				// and leave it in place.
+				row = again
+				row.StatusPhase = "Aborted"
+				finished, err := store.UpdateStatus(ctx, "abort", row)
+				require.NoError(t, err)
+				require.Equal(t, "alice", finished.AbortRequestedBy)
+				require.NotNil(t, finished.AbortRequestedAt)
+
+				open, err := store.ListOpen(ctx)
+				require.NoError(t, err)
+				for _, key := range open {
+					require.NotEqual(t, "abort", key.Project)
+				}
+
+				_, err = store.Abort(ctx, "abort", "prod", 99, "alice")
+				require.ErrorIs(t, err, database.ErrNotFound)
 			},
 		},
 		{

@@ -4508,6 +4508,119 @@ export function useGetPromotionRollout<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export type abortPromotionRolloutResponse200 = {
+  data: void;
+  status: 200;
+};
+
+export type abortPromotionRolloutResponseSuccess = abortPromotionRolloutResponse200 & {
+  headers: Headers;
+};
+export type abortPromotionRolloutResponse = abortPromotionRolloutResponseSuccess;
+
+export const getAbortPromotionRolloutUrl = (project: string, stage: string, number: number) => {
+  return `/v1beta1/projects/${project}/stages/${stage}/promotion-rollouts/${number}/abort`;
+};
+
+/**
+ * Abort one of a Stage's PromotionRollouts, by its number among
+ * them. A Pending rollout has created no Promotions, so it ends
+ * at once, as Aborted. A Running one is asked to stop: it
+ * creates no more Promotions, those still running are aborted,
+ * and it ends as Aborted once they have stopped. Until then the
+ * request is served as the rollout's kargo.akuity.io/abort
+ * annotation, as a Promotion's is. Asking again changes
+ * nothing. A rollout that has already finished cannot be
+ * aborted, and the response is a 409. Stopping a rollout is a
+ * promotion action: it requires the promote verb on the Stage.
+ * @summary Abort a PromotionRollout
+ */
+export const abortPromotionRollout = async (
+  project: string,
+  stage: string,
+  number: number,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<abortPromotionRolloutResponse> => {
+  return customFetch<abortPromotionRolloutResponse>(
+    getAbortPromotionRolloutUrl(project, stage, number),
+    {
+      ...options,
+      method: 'POST'
+    }
+  );
+};
+
+export const getAbortPromotionRolloutMutationKey = () => ['abortPromotionRollout'] as const;
+
+export const getAbortPromotionRolloutMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof abortPromotionRollout>>,
+    TError,
+    AbortPromotionRolloutMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof abortPromotionRollout>>,
+  TError,
+  AbortPromotionRolloutMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAbortPromotionRolloutMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof abortPromotionRollout>>,
+    AbortPromotionRolloutMutationVariables
+  > = (props) => {
+    const { project, stage, number } = props ?? {};
+
+    return abortPromotionRollout(project, stage, number, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AbortPromotionRolloutMutationResult = NonNullable<
+  Awaited<ReturnType<typeof abortPromotionRollout>>
+>;
+
+export type AbortPromotionRolloutMutationError = ErrorType<unknown>;
+export type AbortPromotionRolloutMutationVariables = {
+  project: string;
+  stage: string;
+  number: number;
+};
+
+/**
+ * @summary Abort a PromotionRollout
+ */
+export const useAbortPromotionRollout = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof abortPromotionRollout>>,
+      TError,
+      AbortPromotionRolloutMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof abortPromotionRollout>>,
+  TError,
+  AbortPromotionRolloutMutationVariables,
+  TContext
+> => {
+  return useMutation(getAbortPromotionRolloutMutationOptions(options), queryClient);
+};
 export type promoteToStageResponse201 = {
   data: Promotion;
   status: 201;

@@ -99,7 +99,12 @@ type Store interface {
 		context.Context, []Rollout,
 	) (map[uuid.UUID][]database.ListPromotionRolloutTargetStatusesRow, error)
 	UpdateStatus(context.Context, string, database.PromotionRolloutRow) (database.PromotionRolloutRow, error)
+	Abort(context.Context, string, string, int64, string) (database.PromotionRolloutRow, error)
 }
+
+// ReasonAborted is the reason recorded on a PromotionRollout that ended
+// because a user aborted it, whether it had started or not.
+const ReasonAborted = "Aborted"
 
 type store struct {
 	queries *database.Queries
@@ -445,6 +450,86 @@ func (s *store) publishUpdated(ctx context.Context, old, updated database.Promot
 			"project", key.Project, "promotionRollout", key.Name,
 		)
 	}
+}
+
+// Abort records a request, by the named user, to abort the Stage's
+// PromotionRollout of the given number, and returns the row as stored. A
+// Pending rollout has created no Promotions, so it ends at once, as Aborted
+// with ReasonAborted. A Running one only records the request, which the
+// reconciler acts on; see the migration that added the request. A rollout
+// asked to abort before keeps the first request, and is not an error.
+// database.ErrNotFound says there is no such rollout, and
+// database.ErrConflict that it has already finished.
+func (s *store) Abort(
+	ctx context.Context,
+	project string,
+	stage string,
+	number int64,
+	requestedBy string,
+) (database.PromotionRolloutRow, error) {
+	message := "Aborted before it started"
+	if requestedBy != "" {
+		message = fmt.Sprintf("Aborted by %s before it started", requestedBy)
+	}
+	// The event about the abort carries the row as it was, so the row is
+	// read first, only when there is somewhere to publish to. The abort has
+	// no version precondition, so a write in between is announced as the
+	// abort's, as for an unconditional UpdateStatus.
+	var old *database.PromotionRolloutRow
+	if s.events != nil {
+		current, err := s.queries.GetPromotionRolloutByNumber(ctx, database.GetPromotionRolloutByNumberParams{
+			ProjectName: project,
+			StageName:   stage,
+			Number:      number,
+		})
+		if errors.Is(err, pgx.ErrNoRows) {
+			err = database.ErrNotFound
+		}
+		if err != nil {
+			return database.PromotionRolloutRow{}, rolloutError(err, project, fmt.Sprintf("%s #%d", stage, number))
+		}
+		old = &current
+	}
+	row, err := s.queries.AbortPromotionRollout(ctx, database.AbortPromotionRolloutParams{
+		RequestedBy:   requestedBy,
+		StatusReason:  ReasonAborted,
+		StatusMessage: message,
+		ProjectName:   project,
+		StageName:     stage,
+		Number:        number,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		err = s.abortMissed(ctx, project, stage, number)
+	}
+	if err != nil {
+		return database.PromotionRolloutRow{}, rolloutError(err, project, fmt.Sprintf("%s #%d", stage, number))
+	}
+	// Only the first request changes the rollout. A repeated one keeps it,
+	// so it is not announced.
+	if old != nil && old.AbortRequestedAt == nil {
+		s.publishUpdated(ctx, *old, row)
+	}
+	return row, nil
+}
+
+// abortMissed explains an abort that matched no row: either the rollout does
+// not exist, or it has already finished.
+func (s *store) abortMissed(ctx context.Context, project, stage string, number int64) error {
+	current, err := s.queries.GetPromotionRolloutByNumber(ctx, database.GetPromotionRolloutByNumberParams{
+		ProjectName: project,
+		StageName:   stage,
+		Number:      number,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return database.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	return fmt.Errorf(
+		"%w: the PromotionRollout has already finished as %s",
+		database.ErrConflict, current.StatusPhase,
+	)
 }
 
 // updateMissed explains an update that matched no row: either the rollout

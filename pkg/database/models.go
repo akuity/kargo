@@ -43,6 +43,8 @@ type PromotionRolloutRow struct {
 	StatusStartedAt  *time.Time
 	StatusFinishedAt *time.Time
 	StageID          string
+	AbortRequestedAt *time.Time
+	AbortRequestedBy string
 }
 
 type PromotionRolloutTargetRow struct {
