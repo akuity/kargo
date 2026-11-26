@@ -199,6 +199,29 @@ func Test_repositoryClient_getImageByTag(t *testing.T) {
 			},
 		},
 		{
+			name: "non-image with platform constraint",
+			client: &repositoryClient{
+				repoRef: testRepoRef,
+				remoteGetFn: func(
+					name.Reference,
+					...remote.Option,
+				) (*remote.Descriptor, error) {
+					return &remote.Descriptor{}, nil
+				},
+				getImageFromRemoteDescFn: func(
+					context.Context,
+					*remote.Descriptor,
+				) (*image, error) {
+					return nil, nil
+				},
+			},
+			platformConstraint: &platformConstraint{os: "linux", arch: "amd64"},
+			assertions: func(t *testing.T, img *image, err error) {
+				require.NoError(t, err)
+				require.Nil(t, img)
+			},
+		},
+		{
 			name: "success with satisfied platform constraint",
 			client: &repositoryClient{
 				repoRef: testRepoRef,
@@ -444,15 +467,35 @@ func Test_repositoryClient_getImageFromV1ImageIndex(t *testing.T) {
 		assertions func(*testing.T, *image, error)
 	}{
 		{
-			name: "empty list or index not supported",
+			name: "index with only non-image descriptors is ignored",
 			idx: &mockImageIndex{
 				indexManifest: &v1.IndexManifest{
-					Manifests: []v1.Descriptor{{}},
+					Manifests: []v1.Descriptor{
+						{},
+						{
+							Platform: &v1.Platform{
+								OS:           unknown,
+								Architecture: unknown,
+							},
+						},
+					},
 				},
 			},
 			client: &repositoryClient{},
-			assertions: func(t *testing.T, _ *image, err error) {
-				require.ErrorContains(t, err, "empty V2 manifest list or OCI index is not supported")
+			assertions: func(t *testing.T, img *image, err error) {
+				require.NoError(t, err)
+				require.Nil(t, img)
+			},
+		},
+		{
+			name: "empty index is ignored",
+			idx: &mockImageIndex{
+				indexManifest: &v1.IndexManifest{},
+			},
+			client: &repositoryClient{},
+			assertions: func(t *testing.T, img *image, err error) {
+				require.NoError(t, err)
+				require.Nil(t, img)
 			},
 		},
 		{
