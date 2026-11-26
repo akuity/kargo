@@ -1,7 +1,7 @@
 import { faStar, faUser } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { keepPreviousData } from '@tanstack/react-query';
-import { Empty, Flex, Pagination, Segmented, Tooltip, Typography } from 'antd';
+import { Divider, Empty, Flex, Pagination, Segmented, Tooltip, Typography } from 'antd';
 import classNames from 'classnames';
 import { useEffect, useState } from 'react';
 
@@ -23,7 +23,9 @@ const PAGE_SIZE_OPTIONS = [12, 24, 48, 96];
 // A page at the smallest size, which fills whole rows too.
 const SKELETON_COUNT = PAGE_SIZE_OPTIONS[0];
 
-const gridClassName = 'grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4';
+// Columns are at least 360px, but never wider than the list itself: a page too
+// narrow for that gets one card that fits rather than one that overflows.
+const gridClassName = 'grid grid-cols-[repeat(auto-fill,minmax(min(100%,360px),1fr))] gap-4';
 
 // Which projects the list shows. One at a time: "mine" and "starred" are two
 // different questions, and answering both at once rarely helped.
@@ -103,11 +105,11 @@ export const ProjectsList = () => {
 
   return (
     <>
-      <Flex align='center' gap={12} wrap className='mb-5'>
+      <Flex align='center' gap={12} wrap>
         <ProjectListFilter
           initialValue={filter}
           onChange={handleFilterChange}
-          className='max-w-[400px] flex-[1_1_240px]'
+          className='max-w-[480px] flex-[1_1_240px]'
         />
         {!loading && (
           <Typography.Text type='secondary' className='text-xs'>
@@ -135,6 +137,7 @@ export const ProjectsList = () => {
           ]}
         />
       </Flex>
+      <Divider className='!mb-5 !mt-4' />
 
       {loading ? (
         <div

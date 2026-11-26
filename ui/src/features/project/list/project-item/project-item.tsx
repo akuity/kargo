@@ -38,7 +38,7 @@ const cardBorder: Record<ProjectReadiness['state'], string> = {
 // the pipeline it opens onto read as one product. Shared with the card's
 // placeholder, so the two take the same room.
 const cardSurface = classNames(
-  'relative flex min-w-0 flex-col rounded-[10px] border border-solid px-4 pb-3 pt-3.5',
+  'relative flex min-w-0 flex-col rounded-[10px] border border-solid px-5 pb-4 pt-4',
   'bg-[color:var(--kargo-color-bg-container)]',
   'shadow-[shadow:var(--stage-node-shadow,0_0_#0000)]'
 );
@@ -47,7 +47,7 @@ const cardSurface = classNames(
 // behind it -- the same well a Stage carries its freight in. On dark the page
 // sits far below the card, so the well is lifted a little off it.
 const statsWell = classNames(
-  'mt-3.5 grid auto-cols-[minmax(0,1fr)] grid-flow-col gap-4 rounded-lg px-3 py-2.5',
+  'mt-4 grid auto-cols-[minmax(0,1fr)] grid-flow-col gap-4 rounded-lg px-3 py-3',
   'bg-[color:var(--kargo-color-bg-layout)]',
   'dark:bg-[color:color-mix(in_srgb,var(--kargo-color-bg-layout)_70%,var(--kargo-color-bg-container))]'
 );
@@ -181,7 +181,7 @@ export const ProjectItem = ({ project, starred, onToggleStar }: ProjectItemProps
           cards whose descriptions run to different lengths. */}
       <div
         className={classNames(
-          'mt-auto flex min-h-4 items-center justify-between gap-2 pt-2.5 text-[11px] leading-4',
+          'mt-auto flex min-h-4 items-center justify-between gap-2 pt-3 text-[11px] leading-4',
           'text-[color:var(--kargo-color-text-tertiary)]'
         )}
       >
@@ -246,7 +246,7 @@ export const ProjectItemSkeleton = () => (
         </div>
       ))}
     </div>
-    <div className='mt-auto flex min-h-4 items-center pb-1 pt-3.5'>
+    <div className='mt-auto flex min-h-4 items-center pb-1 pt-4'>
       <div className={classNames(placeholderBar, 'h-2 w-1/3')} />
     </div>
   </div>
