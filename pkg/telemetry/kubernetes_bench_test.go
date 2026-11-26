@@ -14,16 +14,24 @@ import (
 //	go test -run '^$' -bench KubernetesRequest -benchtime 50000x -count 5 ./pkg/telemetry/
 func BenchmarkKubernetesRequest(b *testing.B) {
 	requests := []struct {
-		name string
-		url  string
+		name   string
+		method string
+		url    string
 	}{
 		{
-			name: "get-stage",
-			url:  "https://kube/apis/kargo.akuity.io/v1alpha1/namespaces/smoke/stages/dev",
+			name:   "get-stage",
+			method: http.MethodGet,
+			url:    "https://kube/apis/kargo.akuity.io/v1alpha1/namespaces/smoke/stages/dev",
 		},
 		{
-			name: "list-analysisruns",
-			url:  "https://kube/apis/argoproj.io/v1alpha1/namespaces/smoke/analysisruns?labelSelector=a%3Db",
+			name:   "list-analysisruns",
+			method: http.MethodGet,
+			url:    "https://kube/apis/argoproj.io/v1alpha1/namespaces/smoke/analysisruns?labelSelector=a%3Db",
+		},
+		{
+			name:   "create-promotion",
+			method: http.MethodPost,
+			url:    "https://kube/apis/kargo.akuity.io/v1alpha1/namespaces/smoke/promotions",
 		},
 	}
 	for _, r := range requests {
@@ -45,7 +53,7 @@ func BenchmarkKubernetesRequest(b *testing.B) {
 				defer span.End()
 				b.ReportAllocs()
 				for b.Loop() {
-					req, err := http.NewRequestWithContext(ctx, http.MethodGet, r.url, nil)
+					req, err := http.NewRequestWithContext(ctx, r.method, r.url, nil)
 					if err != nil {
 						b.Fatal(err)
 					}
