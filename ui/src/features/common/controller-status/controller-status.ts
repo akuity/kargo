@@ -27,7 +27,11 @@ export const getControllerStatus = (
     return { controllerName, isControllerDead: false };
   }
 
-  const heartbeat = heartbeats[controllerName];
+  // own entries only: a shard named after an Object.prototype member, such as
+  // "constructor", must not find one there
+  const heartbeat = Object.hasOwn(heartbeats, controllerName)
+    ? heartbeats[controllerName]
+    : undefined;
 
   return {
     controllerName,

@@ -11,7 +11,10 @@ import {
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { RepoSubscription, WarehouseExpanded } from '@ui/extend/types';
-import { getControllerStatus } from '@ui/features/common/controller-status/controller-status';
+import {
+  ControllerStatus,
+  getControllerStatus
+} from '@ui/features/common/controller-status/controller-status';
 import { useTheme } from '@ui/features/common/theme/use-theme';
 import { queryCache } from '@ui/features/utils/cache';
 import { Stage } from '@ui/gen/api/v2/models';
@@ -201,26 +204,54 @@ export const Graph = (props: GraphProps) => {
   const heartbeatsByController = dictionaryContext?.heartbeatsByController;
   const defaultControllerName = dictionaryContext?.defaultControllerName;
 
-  // A Warehouse with no controller is never discovering, whatever refresh it
-  // has been asked for, so its edges are not animated either.
+  // The controller responsible for each Warehouse, and the state the
+  // Warehouse is in given it: a Warehouse with no controller has failed,
+  // whatever discovery, refresh or failure it last reported.
+  const controllerByWarehouse = useMemo(() => {
+    const controllers: Record<string, ControllerStatus> = {};
+
+    for (const [name, warehouse] of Object.entries(warehouseByName)) {
+      controllers[name] = getControllerStatus(
+        warehouse?.spec?.shard,
+        heartbeatsByController,
+        defaultControllerName
+      );
+    }
+
+    return controllers;
+  }, [warehouseByName, heartbeatsByController, defaultControllerName]);
+
+  const stateByWarehouse = useMemo(() => {
+    const states: Record<string, WarehouseState> = {};
+
+    for (const [name, warehouse] of Object.entries(warehouseByName)) {
+      states[name] = getWarehouseState(warehouse, controllerByWarehouse[name]);
+    }
+
+    return states;
+  }, [warehouseByName, controllerByWarehouse]);
+
   const discoveringNow = useMemo(
     () =>
-      Object.keys(warehouseByName).filter((name) => {
-        const warehouse = warehouseByName[name];
-        const controller = getControllerStatus(
-          warehouse?.spec?.shard,
-          heartbeatsByController,
-          defaultControllerName
-        );
-
-        return getWarehouseState(warehouse, controller).phase === 'discovering';
-      }),
-    [warehouseByName, heartbeatsByController, defaultControllerName]
+      Object.keys(stateByWarehouse).filter(
+        (name) => stateByWarehouse[name].phase === 'discovering'
+      ),
+    [stateByWarehouse]
   );
 
   // held a moment past a quick discovery, so that its loader and edge
   // animation do not blink
-  const discoveringWarehouses = useHeldDiscovering(discoveringNow);
+  const heldDiscovering = useHeldDiscovering(discoveringNow);
+
+  // The hold outlasts a discovery, not the controller: a Warehouse whose
+  // controller is gone stops discovering at once.
+  const discoveringWarehouses = useMemo(
+    () =>
+      new Set(
+        [...heldDiscovering].filter((name) => !controllerByWarehouse[name]?.isControllerDead)
+      ),
+    [heldDiscovering, controllerByWarehouse]
+  );
 
   const [hoveredWarehouseName, setHoveredWarehouseName] = useState<string | null>(null);
 
@@ -242,8 +273,6 @@ export const Graph = (props: GraphProps) => {
   // edges into a Warehouse are drawn by its state here, from the live
   // Warehouse, rather than baked in with the layout.
   const discoveryEdges = useMemo(() => {
-    const stateByWarehouse: Record<string, WarehouseState> = {};
-
     return typedEdges.map((edge) => {
       const warehouseName = edge.data?.subscriptionWarehouse as string | undefined;
       const subscription = edge.data?.subscription as RepoSubscription | undefined;
@@ -252,8 +281,7 @@ export const Graph = (props: GraphProps) => {
         return edge;
       }
 
-      stateByWarehouse[warehouseName] ??= getWarehouseState(warehouseByName[warehouseName]);
-      const state = stateByWarehouse[warehouseName];
+      const state = stateByWarehouse[warehouseName] ?? getWarehouseState(undefined);
 
       if (discoveringWarehouses.has(warehouseName)) {
         return {
@@ -273,7 +301,7 @@ export const Graph = (props: GraphProps) => {
 
       return edge;
     });
-  }, [typedEdges, warehouseByName, discoveringWarehouses]);
+  }, [typedEdges, stateByWarehouse, discoveringWarehouses]);
 
   const edges = useMemo(() => {
     if (!hoveredWarehouseName || distinctEdgeWarehouses < 2) {

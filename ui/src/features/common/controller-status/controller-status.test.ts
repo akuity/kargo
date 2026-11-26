@@ -49,6 +49,12 @@ describe('getControllerStatus()', () => {
       expected: { controllerName: 'eu-west', isControllerDead: true }
     },
     {
+      name: 'shard named after an Object.prototype member',
+      shard: 'constructor',
+      heartbeats: {},
+      expected: { controllerName: 'constructor', isControllerDead: true }
+    },
+    {
       name: 'shard no controller has ever reported',
       shard: 'typo',
       heartbeats,
