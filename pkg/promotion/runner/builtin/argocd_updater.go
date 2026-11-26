@@ -449,12 +449,6 @@ updateLoop:
 	return desiredSources, nil
 }
 
-// mustPerformUpdate determines whether a new sync of app is needed. Before
-// initiating a sync, it also verifies that every Helm chart source whose
-// targetRevision is owned by another controller (e.g. an ApplicationSet) has
-// already been advanced to its desired revision. Starting a sync earlier would
-// deploy the stale chart version and require a second sync once the owner
-// updates the Application.
 func (a *argocdUpdater) mustPerformUpdate(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
@@ -472,13 +466,6 @@ func (a *argocdUpdater) mustPerformUpdate(
 	return phase, mustUpdate, err
 }
 
-// waitingForDesiredTargetRevision returns true when at least one Helm chart
-// source still points at a targetRevision other than its desiredRevision and
-// Kargo is not meant to update that field itself. For such sources,
-// desiredRevision is the chart version, so it can be compared directly with
-// targetRevision. Git sources are deliberately excluded because their
-// targetRevision is commonly a branch name or alias that cannot be compared
-// meaningfully with a commit SHA.
 func (a *argocdUpdater) waitingForDesiredTargetRevision(
 	update *stepconfig.ArgoCDAppUpdate,
 	app *argocd.Application,
@@ -504,9 +491,6 @@ func (a *argocdUpdater) waitingForDesiredTargetRevision(
 	return false
 }
 
-// checkOperationState determines, from the Application's current operation
-// state, whether a new sync must be initiated and which phase to report while
-// waiting for an existing operation to complete.
 func (a *argocdUpdater) checkOperationState(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,

@@ -214,10 +214,7 @@ func (p ArgoCDAppLabelsChanged[T]) Generic(event.TypedGenericEvent[T]) bool {
 }
 
 // ArgoCDAppSourceRevisionChanged is a predicate that fires when an
-// Application's source targetRevision changes. An ApplicationSet commonly owns
-// targetRevision and updates it from a file in Git. Steps such as argocd-update
-// wait for that change before deploying, so the Promotion reconciler must wake
-// up as soon as it is applied instead of waiting for the next poll.
+// Application's source targetRevision changes.
 type ArgoCDAppSourceRevisionChanged[T any] struct {
 	logger *logging.Logger
 }
@@ -250,9 +247,6 @@ func (p ArgoCDAppSourceRevisionChanged[T]) Generic(event.TypedGenericEvent[T]) b
 	return false
 }
 
-// sourceTargetRevisions returns the targetRevision of every source of app, in
-// the same order as the Application's spec, so revisions can be compared
-// index-by-index.
 func sourceTargetRevisions(app *argocd.Application) []string {
 	if len(app.Spec.Sources) > 0 {
 		revisions := make([]string, len(app.Spec.Sources))
