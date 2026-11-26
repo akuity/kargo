@@ -35,6 +35,9 @@ export const getControllerStatus = (
   };
 };
 
+// Where the docs explain shards and the controller each one is reconciled by.
+export const shardsDocsURL = 'https://docs.kargo.io/operator-guide/architecture/#topology';
+
 export const deadControllerReason = (controllerName: string) =>
   controllerName
     ? `Controller '${controllerName}' is dead or nonexistent`

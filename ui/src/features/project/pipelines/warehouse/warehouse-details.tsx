@@ -17,7 +17,10 @@ import { WarehouseExpanded } from '@ui/extend/types';
 import { AssembleFreight } from '@ui/features/assemble-freight/assemble-freight';
 import { useWarehouseWithClonedFreight } from '@ui/features/assemble-freight/use-warehouse-with-cloned-freight';
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
-import { deadControllerReason } from '@ui/features/common/controller-status/controller-status';
+import {
+  deadControllerReason,
+  shardsDocsURL
+} from '@ui/features/common/controller-status/controller-status';
 import { useControllerStatus } from '@ui/features/common/controller-status/use-controller-status';
 import { useGetFreight, useGetWarehouse } from '@ui/gen/api/v2/core/core';
 
@@ -93,7 +96,21 @@ export const WarehouseDetails = ({
       {warehouse && (
         <div className='flex flex-col h-full'>
           {warehouseErrorMessage && (
-            <Alert className='mb-6' title={warehouseErrorMessage} type='error' closable />
+            <Alert
+              className='mb-6'
+              title={warehouseErrorMessage}
+              type='error'
+              closable
+              // whoever is looking at the Warehouse may not be who runs the
+              // controllers; this says where the fix lies
+              action={
+                isControllerDead && (
+                  <Typography.Link href={shardsDocsURL} target='_blank' rel='noreferrer'>
+                    Learn about shards
+                  </Typography.Link>
+                )
+              }
+            />
           )}
 
           <Tabs
