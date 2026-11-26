@@ -14,6 +14,7 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/password"
+	reconcilernats "github.com/akuity/kargo/pkg/reconciler/nats"
 	"github.com/akuity/kargo/pkg/server"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
@@ -163,6 +164,11 @@ func (o *apiOptions) run(ctx context.Context) error {
 	)
 	defer sender.Shutdown()
 
+	// Writes to the resources in the database are announced to the
+	// controllers that drive them.
+	internalEvents := reconcilernats.NewPublisher(natsConn, "api")
+	defer internalEvents.Shutdown()
+
 	// The database holds Targets. It is optional: without it, the endpoints
 	// that serve them respond 501.
 	var db *database.Queries
@@ -187,6 +193,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 		),
 		sender,
 		db,
+		internalEvents,
 	)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {

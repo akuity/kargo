@@ -5,6 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	cloudevents "github.com/cloudevents/sdk-go/v2/event"
+
+	"github.com/akuity/kargo/pkg/event"
 )
 
 // EventKind says what happened to a resource.
@@ -22,9 +26,11 @@ const (
 )
 
 // Event describes a change to one resource of type T, identified by a key of
-// type K. It is the body of every message on a topic, encoded as JSON:
+// type K. On the wire it is a CloudEvent whose type is the topic's resource
+// followed by the kind, such as "PromotionRolloutUpdated", and whose data is
+// the rest of the event, encoded as JSON:
 //
-//	{"kind":"Updated","key":{"Project":"p","Name":"t"},"old":{...},"new":{...}}
+//	{"key":{"Project":"p","Name":"t"},"old":{...},"new":{...}}
 //
 // T is the database's representation of the resource, the type its store
 // reads and writes, so that an event says exactly what was committed and
@@ -34,7 +40,8 @@ const (
 // subscribing both reject an event that lacks what its kind requires, so
 // filters and mappers may rely on them.
 type Event[K comparable, T any] struct {
-	Kind EventKind `json:"kind"`
+	// Kind travels as the CloudEvent's type rather than in its data.
+	Kind EventKind `json:"-"`
 	Key  K         `json:"key"`
 	Old  *T        `json:"old,omitempty"`
 	New  *T        `json:"new,omitempty"`
@@ -61,31 +68,78 @@ func (e Event[K, T]) Validate() error {
 	return nil
 }
 
-// Topic names the subject tree events about one kind of resource travel on
-// and fixes, once, the types of their keys and rows. Declare one beside the
-// store that owns the resource and use it from both the publisher and the
-// controllers, so neither spells out the types again:
+// InternalSubjectPrefix roots the subject tree of every topic. Topics carry
+// internal events, which tell controllers what was written, so they travel
+// apart from the user-facing events published under akuity.kargo.events:
+// the two serve different purposes, and a subscriber to one never receives
+// the other, even when both are published for the same write.
 //
-//	var TargetEvents = nats.NewTopic[reconciler.Key, database.TargetRow]("kargo.targets")
+// It is under event.BasePrefix, the prefix of every subject Kargo uses. A
+// NATS server that restricts which subjects Kargo's components may use
+// allows them that tree, so a topic rooted anywhere else could be neither
+// published nor subscribed to there.
+const InternalSubjectPrefix = event.BasePrefix + ".internal"
+
+// Topic names the kind of resource a set of events is about and fixes, once,
+// the types of their keys and rows. Declare one beside the store that owns
+// the resource and use it from both the publisher and the controllers, so
+// neither spells out the types again:
 //
-// Events are published to <prefix>.created, <prefix>.updated and
-// <prefix>.deleted, and a subscription to the topic receives all three.
+//	var TargetEvents = nats.NewTopic[reconciler.Key, database.TargetRow]("Target")
+//
+// Events are CloudEvents of the types <resource>Created, <resource>Updated
+// and <resource>Deleted, published to the subjects event.SubjectFromType
+// derives from those types under InternalSubjectPrefix: a "PromotionRollout"
+// topic publishes to akuity.kargo.internal.promotion.rollout.created, and
+// so on. A subscription to the topic receives all three, and nothing
+// published for another resource, even one whose subjects share a prefix
+// with the topic's, such as a "Promotion" topic's.
 type Topic[K comparable, T any] struct {
-	prefix string
+	resource string
+	// subjectPrefix is the subject an event's kind is appended to.
+	subjectPrefix string
 }
 
-// NewTopic returns the topic rooted at prefix, such as "kargo.targets".
-func NewTopic[K comparable, T any](prefix string) Topic[K, T] {
-	return Topic[K, T]{prefix: prefix}
+// NewTopic returns the topic for the named resource, such as
+// "PromotionRollout". The name must be a valid event type, which
+// event.SubjectSuffix describes; NewTopic panics if it is not, since a topic
+// is declared once, from a literal, when its package is initialized.
+func NewTopic[K comparable, T any](resource string) Topic[K, T] {
+	subjectPrefix, err := event.SubjectFromType(InternalSubjectPrefix, resource)
+	if err != nil {
+		panic(fmt.Sprintf("invalid topic resource %q: %v", resource, err))
+	}
+	return Topic[K, T]{resource: resource, subjectPrefix: subjectPrefix}
 }
 
 // Subject returns the wildcard subject that matches every event on the
-// topic.
-func (t Topic[K, T]) Subject() string { return t.prefix + ".>" }
+// topic. It matches a single token after the topic's subject prefix, the
+// event's kind, so that it does not also match the subjects of a resource
+// whose name extends this one's.
+func (t Topic[K, T]) Subject() string { return t.subjectPrefix + ".*" }
 
-// subjectFor returns the subject events of one kind are published to.
-func (t Topic[K, T]) subjectFor(kind EventKind) string {
-	return t.prefix + "." + strings.ToLower(string(kind))
+// eventType returns the CloudEvent type of events of one kind.
+func (t Topic[K, T]) eventType(kind EventKind) string {
+	return t.resource + string(kind)
+}
+
+// Decode returns the event a CloudEvent published to the topic carries. It
+// returns an error if the CloudEvent is not one of the topic's types, or
+// carries less than its kind requires.
+func (t Topic[K, T]) Decode(evt cloudevents.Event) (Event[K, T], error) {
+	kind, ok := strings.CutPrefix(evt.Type(), t.resource)
+	if !ok {
+		return Event[K, T]{}, fmt.Errorf("event type %q is not one of topic %s's", evt.Type(), t.resource)
+	}
+	var e Event[K, T]
+	if err := evt.DataAs(&e); err != nil {
+		return Event[K, T]{}, fmt.Errorf("error decoding %s event: %w", evt.Type(), err)
+	}
+	e.Kind = EventKind(kind)
+	if err := e.Validate(); err != nil {
+		return Event[K, T]{}, fmt.Errorf("invalid %s event: %w", evt.Type(), err)
+	}
+	return e, nil
 }
 
 // Mapper turns an event into the requests a controller should reconcile.

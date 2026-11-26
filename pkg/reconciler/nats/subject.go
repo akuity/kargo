@@ -2,10 +2,11 @@
 // watched for events about resources. It also publishes those events, so
 // that writers and watchers agree on the wire format.
 //
-// A Topic fixes the subject tree and the key and row types for one kind of
-// resource, once. A publisher calls its Publish methods after each committed
-// write, and a controller subscribes to it with Subject or Mapped. Neither
-// spells out the types again.
+// A Topic fixes the event types, subjects, and key and row types for one
+// kind of resource, once. A publisher calls its Publish methods after each
+// committed write, and a controller subscribes to it with Subject or Mapped.
+// Neither spells out the types again. Events travel as structured-mode
+// CloudEvents, sent by package github.com/akuity/kargo/pkg/event/nats.
 //
 // Core NATS delivers a message only to subscribers connected when it is
 // published, so events can be lost: while a controller restarts, say. A
@@ -20,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2/event"
 	natsgo "github.com/nats-io/nats.go"
 
 	"github.com/akuity/kargo/pkg/logging"
@@ -137,7 +139,7 @@ func (s *Source[K, T, request]) Start(ctx context.Context, out chan<- request) e
 	if s.conn == nil {
 		return errors.New("a NATS connection is required")
 	}
-	if s.topic.prefix == "" {
+	if s.topic.resource == "" {
 		return errors.New("a topic is required")
 	}
 	if s.mapper == nil {
@@ -149,12 +151,13 @@ func (s *Source[K, T, request]) Start(ctx context.Context, out chan<- request) e
 		if ctx.Err() != nil {
 			return
 		}
-		var e Event[K, T]
-		if err := json.Unmarshal(msg.Data, &e); err != nil {
+		var evt cloudevents.Event
+		if err := json.Unmarshal(msg.Data, &evt); err != nil {
 			logger.Error(err, "dropping message that is not an event", "messageSubject", msg.Subject)
 			return
 		}
-		if err := e.Validate(); err != nil {
+		e, err := s.topic.Decode(evt)
+		if err != nil {
 			logger.Error(err, "dropping invalid event", "messageSubject", msg.Subject)
 			return
 		}
