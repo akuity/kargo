@@ -7,6 +7,7 @@ import { paths } from '@ui/config/paths';
 import { DESCRIPTION_ANNOTATION_KEY } from '@ui/features/common/utils';
 import type { Project } from '@ui/gen/api/v2/models';
 
+import { healthSummary } from './health-summary';
 import * as styles from './project-item.module.less';
 
 export const ProjectItem = ({
@@ -18,9 +19,9 @@ export const ProjectItem = ({
   starred: boolean;
   onToggleStar: (id: string) => void;
 }) => {
-  const stagesStats = project?.status?.stats?.stages;
-  const warehousesStats = project?.status?.stats?.warehouses;
-  const targetsStats = project?.status?.stats?.targets;
+  const stagesStats = healthSummary(project?.status?.stats?.stages);
+  const warehousesStats = healthSummary(project?.status?.stats?.warehouses);
+  const targetsStats = healthSummary(project?.status?.stats?.targets);
   const { token } = theme.useToken();
   const primaryColor = token.colorPrimary;
 
@@ -60,35 +61,21 @@ export const ProjectItem = ({
           <Typography.Text type='secondary' className='inline-block w-28'>
             Stages
           </Typography.Text>
-          <Typography.Text
-            type={
-              (stagesStats?.health?.healthy === stagesStats?.count && stagesStats?.count) || 0 > 0
-                ? 'success'
-                : 'secondary'
-            }
-          >
+          <Typography.Text type={stagesStats.allHealthy ? 'success' : 'secondary'}>
             <FontAwesomeIcon icon={faHeart} />
           </Typography.Text>{' '}
-          {stagesStats?.health?.healthy}/{stagesStats?.count}
+          {stagesStats.healthy}/{stagesStats.count}
         </div>
         <div>
           <Typography.Text type='secondary' className='inline-block w-28'>
             Warehouses
           </Typography.Text>
-          <Typography.Text
-            type={
-              (warehousesStats?.health?.healthy === warehousesStats?.count &&
-                warehousesStats?.count) ||
-              0 > 0
-                ? 'success'
-                : 'secondary'
-            }
-          >
+          <Typography.Text type={warehousesStats.allHealthy ? 'success' : 'secondary'}>
             <FontAwesomeIcon icon={faHeart} />
           </Typography.Text>{' '}
-          {warehousesStats?.health?.healthy}/{warehousesStats?.count}
+          {warehousesStats.healthy}/{warehousesStats.count}
         </div>
-        {!!targetsStats?.count && (
+        {targetsStats.count > 0 && (
           // A Project promoting to a fleet gets one more row, in the same shape
           // as the two above it. The controller leaves the block absent for a
           // Project with no Targets, and a Project whose Stages select no
@@ -98,19 +85,15 @@ export const ProjectItem = ({
               Targets
             </Typography.Text>
             <Tooltip
-              title={`${targetsStats.health?.healthy ?? 0} of ${targetsStats.count} Target${
+              title={`${targetsStats.healthy} of ${targetsStats.count} Target${
                 targetsStats.count === 1 ? '' : 's'
               } healthy`}
             >
               <span>
-                <Typography.Text
-                  type={
-                    targetsStats.health?.healthy === targetsStats.count ? 'success' : 'secondary'
-                  }
-                >
+                <Typography.Text type={targetsStats.allHealthy ? 'success' : 'secondary'}>
                   <FontAwesomeIcon icon={faBullseye} />
                 </Typography.Text>{' '}
-                {targetsStats.health?.healthy ?? 0}/{targetsStats.count}
+                {targetsStats.healthy}/{targetsStats.count}
               </span>
             </Tooltip>
           </div>
