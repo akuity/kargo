@@ -22,6 +22,7 @@ func TestSetupFromEnv(t *testing.T) {
 	}{
 		{
 			name: "tracing disabled",
+			env:  map[string]string{"OTEL_SDK_DISABLED": "true"},
 			assert: func(t *testing.T, shutdown func(), err error) {
 				require.NoError(t, err)
 				require.NotNil(t, shutdown)
@@ -35,7 +36,7 @@ func TestSetupFromEnv(t *testing.T) {
 		{
 			name: "unsupported protocol",
 			env: map[string]string{
-				"TRACING_ENABLED":             "true",
+				"OTEL_SDK_DISABLED":           "false",
 				"OTEL_EXPORTER_OTLP_PROTOCOL": "http/json",
 			},
 			assert: func(t *testing.T, shutdown func(), err error) {
@@ -47,7 +48,7 @@ func TestSetupFromEnv(t *testing.T) {
 		{
 			name: "unknown category",
 			env: map[string]string{
-				"TRACING_ENABLED":    "true",
+				"OTEL_SDK_DISABLED":  "false",
 				"TRACING_CATEGORIES": "database,bogus",
 			},
 			assert: func(t *testing.T, shutdown func(), err error) {
@@ -58,7 +59,10 @@ func TestSetupFromEnv(t *testing.T) {
 		},
 		{
 			name: "unknown category with tracing off",
-			env:  map[string]string{"TRACING_CATEGORIES": "bogus"},
+			env: map[string]string{
+				"OTEL_SDK_DISABLED":  "true",
+				"TRACING_CATEGORIES": "bogus",
+			},
 			assert: func(t *testing.T, shutdown func(), err error) {
 				require.NoError(t, err)
 				require.NotNil(t, shutdown)
@@ -68,7 +72,7 @@ func TestSetupFromEnv(t *testing.T) {
 		{
 			name: "categories set but empty",
 			env: map[string]string{
-				"TRACING_ENABLED":            "true",
+				"OTEL_SDK_DISABLED":          "false",
 				"TRACING_CATEGORIES":         "",
 				"OTEL_EXPORTER_OTLP_TIMEOUT": "100",
 			},
@@ -80,7 +84,7 @@ func TestSetupFromEnv(t *testing.T) {
 		},
 		{
 			name: "tracing enabled",
-			env:  map[string]string{"TRACING_ENABLED": "true", "OTEL_EXPORTER_OTLP_TIMEOUT": "100"},
+			env:  map[string]string{"OTEL_SDK_DISABLED": "false", "OTEL_EXPORTER_OTLP_TIMEOUT": "100"},
 			assert: func(t *testing.T, shutdown func(), err error) {
 				require.NoError(t, err)
 				require.NotNil(t, shutdown)
@@ -124,7 +128,7 @@ func TestSetupFromEnv(t *testing.T) {
 func TestSetupFromEnv_collectorDown(t *testing.T) {
 	// Not parallel: manipulates the environment and global state.
 	resetGlobals(t)
-	t.Setenv("TRACING_ENABLED", "true")
+	t.Setenv("OTEL_SDK_DISABLED", "false")
 	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://"+hangingListener(t))
 	t.Setenv("OTEL_EXPORTER_OTLP_TIMEOUT", "100")
 	t.Setenv("OTEL_BSP_MAX_QUEUE_SIZE", "8")
