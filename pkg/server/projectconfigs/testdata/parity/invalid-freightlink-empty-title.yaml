@@ -1,0 +1,11 @@
+# want: invalid
+# freightLinks title MinLength=1
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  freightLinks:
+  - title: ""
+    url: https://example.com

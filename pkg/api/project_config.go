@@ -11,6 +11,30 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
+// ProjectConfigGetter returns a Project's ProjectConfig, or nil, nil when the
+// Project has none.
+type ProjectConfigGetter interface {
+	Get(ctx context.Context, project string) (*kargoapi.ProjectConfig, error)
+}
+
+type kubernetesProjectConfigGetter struct {
+	client client.Client
+}
+
+// KubernetesProjectConfigGetter adapts a client.Client to a
+// ProjectConfigGetter. Temporary: it is deleted once every caller has an
+// API-backed getter.
+func KubernetesProjectConfigGetter(c client.Client) ProjectConfigGetter {
+	return &kubernetesProjectConfigGetter{client: c}
+}
+
+func (g *kubernetesProjectConfigGetter) Get(
+	ctx context.Context,
+	project string,
+) (*kargoapi.ProjectConfig, error) {
+	return GetProjectConfig(ctx, g.client, project)
+}
+
 // GetProjectConfig returns a pointer to the ProjectConfig resource specified by
 // the provided name. If no such resource is found, nil is returned instead.
 func GetProjectConfig(

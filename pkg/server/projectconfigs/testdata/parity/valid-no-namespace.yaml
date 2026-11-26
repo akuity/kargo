@@ -1,0 +1,6 @@
+# want: valid
+# metadata.namespace omitted
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo

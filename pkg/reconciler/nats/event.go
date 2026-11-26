@@ -7,6 +7,12 @@ import (
 	"strings"
 )
 
+// InternalSubjectPrefix roots the subjects of Kargo's internal reconcile
+// triggers, the topics stores publish to and controllers subscribe to. They
+// are kept apart from the user-facing akuity.kargo.events.* stream, which is
+// a contract with users; these subjects are not.
+const InternalSubjectPrefix = "kargo.internal"
+
 // EventKind says what happened to a resource.
 type EventKind string
 

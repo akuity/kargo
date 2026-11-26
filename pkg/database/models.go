@@ -11,6 +11,29 @@ import (
 	"github.com/google/uuid"
 )
 
+type ProjectConfigRow struct {
+	ID                       uuid.UUID
+	ProjectName              string
+	ProjectUID               string
+	Labels                   map[string]string
+	Annotations              map[string]string
+	Spec                     json.RawMessage
+	Generation               int64
+	RefreshToken             *string
+	StatusConditions         json.RawMessage
+	StatusObservedGeneration *int64
+	StatusLastHandledRefresh *string
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
+}
+
+type ProjectConfigWebhookReceiverRow struct {
+	ProjectConfigID uuid.UUID
+	Name            string
+	Path            string
+	URL             string
+}
+
 type ProjectRow struct {
 	ID        string
 	Name      string

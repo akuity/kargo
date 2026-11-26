@@ -1,0 +1,13 @@
+# want: invalid
+# Name is not name; field names are case-sensitive
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  webhookReceivers:
+  - Name: foo
+    github:
+      secretRef:
+        name: s

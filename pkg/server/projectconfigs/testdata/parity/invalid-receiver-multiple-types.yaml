@@ -1,0 +1,16 @@
+# want: invalid
+# receiver of more than one type
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  webhookReceivers:
+  - name: multi
+    github:
+      secretRef:
+        name: s
+    gitlab:
+      secretRef:
+        name: s

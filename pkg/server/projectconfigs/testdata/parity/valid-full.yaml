@@ -1,0 +1,133 @@
+# want: valid
+# every spec field populated
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+  labels:
+    team: platform
+  annotations:
+    example.com/note: hello
+spec:
+  promotionPolicies:
+  - stage: test
+    autoPromotionEnabled: true
+    autoRollback:
+      onPromotion:
+      - Failed
+      - Errored
+      onVerification:
+      - Failed
+      - Error
+  - stageSelector:
+      name: uat
+      matchLabels:
+        tier: uat
+      matchExpressions:
+      - key: region
+        operator: In
+        values:
+        - us
+        - eu
+    autoPromotionEnabled: false
+  - stageSelector:
+      name: glob:prod-*
+  - stageSelector:
+      name: regex:^qa-[0-9]+$
+  - stageSelector:
+      name: regexp:^dev-.*$
+  webhookReceivers:
+  - name: bitbucket
+    bitbucket:
+      secretRef:
+        name: s
+  - name: dockerhub
+    dockerhub:
+      secretRef:
+        name: s
+  - name: github
+    github:
+      secretRef:
+        name: s
+  - name: gitlab
+    gitlab:
+      secretRef:
+        name: s
+  - name: harbor
+    harbor:
+      secretRef:
+        name: s
+  - name: quay
+    quay:
+      secretRef:
+        name: s
+  - name: artifactory
+    artifactory:
+      secretRef:
+        name: s
+      virtualRepoName: proj-virtual
+  - name: azure
+    azure:
+      secretRef:
+        name: s
+  - name: gitea
+    gitea:
+      secretRef:
+        name: s
+  - name: generic.example
+    generic:
+      secretRef:
+        name: s
+      actions:
+      - action: Refresh
+        whenExpression: "true"
+        parameters:
+          foo: bar
+        targetSelectionCriteria:
+        - kind: Warehouse
+          name: my-warehouse
+        - kind: Warehouse
+          labelSelector:
+            matchLabels:
+              app: demo
+            matchExpressions:
+            - key: tier
+              operator: Exists
+        - kind: Warehouse
+          indexSelector:
+            matchIndices:
+            - key: subscribedURLs
+              operator: Equals
+              value: https://example.com/repo
+            - key: receiverPaths
+              operator: NotEquals
+              value: /x
+  freightLinks:
+  - title: Commit
+    url: https://example.com/${{ freight.name }}
+    description: Freight link
+    if: ${{ true }}
+  stageLinks:
+  - title: Dashboard
+    url: https://example.com/${{ stage.name }}
+    description: Stage link
+    if: ${{ true }}
+  promotionWindows:
+  - name: business-hours
+    description: Allow during business hours
+    kind: Allow
+    rrule: FREQ=DAILY
+    dtstart: TZID=America/New_York:20260101T090000
+    dtend: TZID=America/New_York:20260101T170000
+    stageSelector:
+      name: glob:prod-*
+      matchLabels:
+        tier: prod
+    projectSelector:
+      name: kargo-demo
+  - name: freeze.holidays
+    kind: Deny
+    disabled: true
+    dtstart: "20261224T000000"
+    dtend: "20261227T000000"

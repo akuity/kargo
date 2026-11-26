@@ -89,7 +89,7 @@ type webhook struct {
 
 	isAutoPromotionEnabledFn func(
 		context.Context,
-		client.Client,
+		api.ProjectConfigGetter,
 		metav1.ObjectMeta,
 	) (bool, error)
 
@@ -527,7 +527,11 @@ func (w *webhook) syncHoldAnnotations(
 	// Only stamp intent for Stages that have auto-promotion enabled. Use the
 	// live ProjectConfig rather than the cached stage.Status.AutoPromotionEnabled,
 	// which may lag behind ProjectConfig changes.
-	enabled, err := w.isAutoPromotionEnabledFn(ctx, w.client, stage.ObjectMeta)
+	enabled, err := w.isAutoPromotionEnabledFn(
+		ctx,
+		api.KubernetesProjectConfigGetter(w.client),
+		stage.ObjectMeta,
+	)
 	if err != nil {
 		logger.Error(err, "skipping auto-promotion intent annotation")
 		return

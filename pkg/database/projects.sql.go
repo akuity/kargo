@@ -38,6 +38,22 @@ func (q *Queries) DeleteReplacedProject(ctx context.Context, arg DeleteReplacedP
 	return err
 }
 
+const getProjectByName = `-- name: GetProjectByName :one
+SELECT id, name, created_at, synced_at FROM projects WHERE name = $1
+`
+
+func (q *Queries) GetProjectByName(ctx context.Context, name string) (ProjectRow, error) {
+	row := q.db.QueryRow(ctx, getProjectByName, name)
+	var i ProjectRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.SyncedAt,
+	)
+	return i, err
+}
+
 const listProjects = `-- name: ListProjects :many
 SELECT id, name, created_at, synced_at FROM projects ORDER BY name
 `

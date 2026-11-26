@@ -18,6 +18,10 @@ sql:
         promotion_freight: PromotionFreightRow
         promotion_rollout: PromotionRolloutRow
         promotion_rollout_target: PromotionRolloutTargetRow
+        url: URL
+        project_uid: ProjectUID
+        project_config: ProjectConfigRow
+        project_config_webhook_receiver: ProjectConfigWebhookReceiverRow
       overrides:
       # Labels are a string map and params an object of opaque JSON values,
       # both enforced by the schema. pgx encodes and decodes JSONB through
@@ -26,6 +30,20 @@ sql:
         go_type:
           type: map[string]string
       - column: targets.params
+        go_type:
+          import: encoding/json
+          type: RawMessage
+      - column: project_configs.labels
+        go_type:
+          type: map[string]string
+      - column: project_configs.annotations
+        go_type:
+          type: map[string]string
+      - column: project_configs.spec
+        go_type:
+          import: encoding/json
+          type: RawMessage
+      - column: project_configs.status_conditions
         go_type:
           import: encoding/json
           type: RawMessage
