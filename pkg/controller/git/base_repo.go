@@ -524,6 +524,134 @@ func (b *baseRepo) hasAnyRef(ctx context.Context, refs ...string) (bool, error) 
 	return false, nil
 }
 
+// isShallow returns true if the repository is a shallow clone.
+//
+// Equivalent to:
+//
+//	git rev-parse --is-shallow-repository
+func (b *baseRepo) isShallow(ctx context.Context) (bool, error) {
+	res, err := libExec.Exec(b.buildGitCommand(
+		ctx, "rev-parse", "--is-shallow-repository",
+	))
+	if err != nil {
+		return false, fmt.Errorf(
+			"error checking if repository is shallow: %w", err,
+		)
+	}
+	return strings.TrimSpace(string(res)) == "true", nil
+}
+
+// shallowCommits returns the set of commit SHAs recorded in the repository's
+// shallow file, or nil if the repository is not shallow.
+//
+// Equivalent to:
+//
+//	cat $(git rev-parse --git-path shallow)
+func (b *baseRepo) shallowCommits(
+	ctx context.Context,
+) (map[string]struct{}, error) {
+	res, err := libExec.Exec(b.buildGitCommand(
+		ctx, "rev-parse", "--git-path", "shallow",
+	))
+	if err != nil {
+		return nil, fmt.Errorf("error locating shallow file: %w", err)
+	}
+	shallowPath := strings.TrimSpace(string(res))
+	if !filepath.IsAbs(shallowPath) {
+		shallowPath = filepath.Join(b.dir, shallowPath)
+	}
+	// #nosec G304 -- Path is resolved by Git from the repository's own gitdir.
+	data, err := os.ReadFile(filepath.Clean(shallowPath))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf(
+			"error reading shallow file %q: %w", shallowPath, err,
+		)
+	}
+	commits := make(map[string]struct{})
+	for line := range strings.SplitSeq(string(data), "\n") {
+		sha := strings.TrimSpace(line)
+		if sha != "" {
+			commits[sha] = struct{}{}
+		}
+	}
+	return commits, nil
+}
+
+// missingCommits returns those of the specified commit IDs that do not exist
+// as commit objects in the local repository. It does not trigger the lazy
+// fetches a partial clone would otherwise make for missing objects.
+//
+// Equivalent to:
+//
+//	GIT_NO_LAZY_FETCH=1 git cat-file --batch-check="%(objectname) %(objecttype)"
+func (b *baseRepo) missingCommits(
+	ctx context.Context,
+	commitIDs []string,
+) ([]string, error) {
+	if len(commitIDs) == 0 {
+		return nil, nil
+	}
+	var stdin strings.Builder
+	for _, id := range commitIDs {
+		stdin.WriteString(id)
+		stdin.WriteByte('\n')
+	}
+	cmd := b.buildGitCommand(
+		ctx,
+		"cat-file", "--batch-check=%(objectname) %(objecttype)",
+	)
+	cmd.Env = append(cmd.Env, "GIT_NO_LAZY_FETCH=1")
+	cmd.Stdin = strings.NewReader(stdin.String())
+	out, err := libExec.Exec(cmd)
+	if err != nil {
+		return nil, fmt.Errorf("error checking local commit presence: %w", err)
+	}
+	// git prints one line per ID: "<ID> <object type>" if the object exists, or
+	// "<ID> missing" if it does not.
+	var missing []string
+	for line := range strings.Lines(string(out)) {
+		id, objectType, _ := strings.Cut(strings.TrimSpace(line), " ")
+		if objectType != "commit" {
+			missing = append(missing, id)
+		}
+	}
+	return missing, nil
+}
+
+// deepen deepens a shallow repository by the specified number of commits along
+// the given remote refs or refspecs. Any remote-tracking branch that a
+// configured fetch refspec covers is updated to the remote's current tip as
+// well. It is a no-op if depth is 0 or the repository is not shallow.
+func (b *baseRepo) deepen(
+	ctx context.Context,
+	depth uint,
+	refs ...string,
+) error {
+	if depth == 0 {
+		return nil
+	}
+	shallow, err := b.isShallow(ctx)
+	if err != nil {
+		return err
+	}
+	if !shallow {
+		return nil
+	}
+	args := append(
+		[]string{"fetch", "--deepen", fmt.Sprint(depth), "origin"},
+		refs...,
+	)
+	if _, err = libExec.Exec(b.buildGitCommand(ctx, args...)); err != nil {
+		return fmt.Errorf(
+			"error deepening repo %q by %d commits: %w", b.url, depth, err,
+		)
+	}
+	return nil
+}
+
 func (b *baseRepo) RemoteBranchExists(
 	ctx context.Context,
 	branch string,

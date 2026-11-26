@@ -408,6 +408,10 @@ func (w *workTree) CurrentBranch(ctx context.Context) (string, error) {
 	return strings.TrimSpace(string(res)), nil
 }
 
+// unadvertisedObjectMsg appears in git's output when a server refuses to serve
+// a commit requested by ID.
+const unadvertisedObjectMsg = "allow request for unadvertised object"
+
 // FetchCommits implements WorkTree.
 //
 // Equivalent to:
@@ -447,76 +451,15 @@ func (w *workTree) FetchCommits(ctx context.Context, commitIDs []string) error {
 	return nil
 }
 
-// deepen deepens a shallow repository by the specified number of commits along
-// the given remote refs. Any remote-tracking branch that a configured fetch
-// refspec covers is updated to the remote's current tip as well. It is a no-op
-// if depth is 0 or the repository is not shallow.
-func (w *workTree) deepen(
-	ctx context.Context,
-	depth uint,
-	refs ...string,
-) error {
-	if depth == 0 {
-		return nil
+// explainCommitFetchError adds an explanation to err if it reports that the
+// server refused to serve a commit requested by ID.
+func explainCommitFetchError(err error) error {
+	var exitErr *libExec.ExitError
+	if errors.As(err, &exitErr) &&
+		bytes.Contains(exitErr.Output, []byte(unadvertisedObjectMsg)) {
+		return fmt.Errorf("server does not support fetching commits by ID: %w", err)
 	}
-	shallow, err := w.isShallow(ctx)
-	if err != nil {
-		return err
-	}
-	if !shallow {
-		return nil
-	}
-	args := append(
-		[]string{"fetch", "--deepen", fmt.Sprint(depth), "origin"},
-		refs...,
-	)
-	if _, err = libExec.Exec(w.buildGitCommand(ctx, args...)); err != nil {
-		return fmt.Errorf(
-			"error deepening repo %q by %d commits: %w", w.url, depth, err,
-		)
-	}
-	return nil
-}
-
-// missingCommits returns those of the specified commit IDs that do not exist
-// as commit objects in the local repository. It does not trigger the lazy
-// fetches a partial clone would otherwise make for missing objects.
-//
-// Equivalent to:
-//
-//	GIT_NO_LAZY_FETCH=1 git cat-file --batch-check="%(objectname) %(objecttype)"
-func (w *workTree) missingCommits(
-	ctx context.Context,
-	commitIDs []string,
-) ([]string, error) {
-	if len(commitIDs) == 0 {
-		return nil, nil
-	}
-	var stdin strings.Builder
-	for _, id := range commitIDs {
-		stdin.WriteString(id)
-		stdin.WriteByte('\n')
-	}
-	cmd := w.buildGitCommand(
-		ctx,
-		"cat-file", "--batch-check=%(objectname) %(objecttype)",
-	)
-	cmd.Env = append(cmd.Env, "GIT_NO_LAZY_FETCH=1")
-	cmd.Stdin = strings.NewReader(stdin.String())
-	out, err := libExec.Exec(cmd)
-	if err != nil {
-		return nil, fmt.Errorf("error checking local commit presence: %w", err)
-	}
-	// git prints one line per ID: "<ID> <object type>" if the object exists, or
-	// "<ID> missing" if it does not.
-	var missing []string
-	for line := range strings.Lines(string(out)) {
-		id, objectType, _ := strings.Cut(strings.TrimSpace(line), " ")
-		if objectType != "commit" {
-			missing = append(missing, id)
-		}
-	}
-	return missing, nil
+	return err
 }
 
 func (w *workTree) DeleteBranch(ctx context.Context, branch string) error {

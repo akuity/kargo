@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -863,4 +864,41 @@ func TestWorkTree_deepen(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, shallowBefore, shallowAfter)
 	})
+}
+
+func Test_explainCommitFetchError(t *testing.T) {
+	testCases := []struct {
+		name   string
+		err    error
+		assert func(*testing.T, error)
+	}{
+		{
+			name: "server refused a commit requested by ID",
+			err: &libExec.ExitError{
+				Output: []byte(
+					"error: Server does not allow request for unadvertised object abc",
+				),
+				ExitCode: 128,
+			},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(
+					t, err, "server does not support fetching commits by ID",
+				)
+				var exitErr *libExec.ExitError
+				require.ErrorAs(t, err, &exitErr)
+			},
+		},
+		{
+			name: "any other error",
+			err:  errors.New("something went wrong"),
+			assert: func(t *testing.T, err error) {
+				require.EqualError(t, err, "something went wrong")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assert(t, explainCommitFetchError(testCase.err))
+		})
+	}
 }

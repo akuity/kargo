@@ -24,6 +24,18 @@ func setupRemoteRepo(
 	initFns ...func(t *testing.T, repo WorkTree),
 ) (*httptest.Server, string, RepoCredentials) {
 	t.Helper()
+	return setupRemoteRepoWithConfig(t, nil, initFns...)
+}
+
+// setupRemoteRepoWithConfig is setupRemoteRepo with the specified Git
+// configuration applied to the remote repository, e.g. to change what the
+// server will serve.
+func setupRemoteRepoWithConfig(
+	t *testing.T,
+	serverConfig map[string]string,
+	initFns ...func(t *testing.T, repo WorkTree),
+) (*httptest.Server, string, RepoCredentials) {
+	t.Helper()
 
 	creds := RepoCredentials{
 		Username: "test-user",
@@ -37,11 +49,17 @@ func setupRemoteRepo(
 	serviceDir := t.TempDir()
 	// Create the repository before gitkit can, so its default branch is main
 	// regardless of the Git configuration of the machine running the tests.
+	serverRepoDir := filepath.Join(serviceDir, "test.git")
 	_, err := libExec.Exec(exec.Command(
-		"git", "init", "--bare", "--initial-branch=main",
-		filepath.Join(serviceDir, "test.git"),
+		"git", "init", "--bare", "--initial-branch=main", serverRepoDir,
 	))
 	require.NoError(t, err)
+	for key, value := range serverConfig {
+		_, err = libExec.Exec(exec.Command(
+			"git", "-C", serverRepoDir, "config", key, value,
+		))
+		require.NoError(t, err)
+	}
 	service := gitkit.New(gitkit.Config{
 		Dir:        serviceDir,
 		AutoCreate: true,

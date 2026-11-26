@@ -15,8 +15,9 @@ import (
 
 const (
 	// initialDeepenStep is the number of commits requested on the first
-	// deepening fetch when a shallow clone lacks sufficient history to
-	// integrate remote changes. Subsequent iterations double this value.
+	// deepening fetch when a shallow clone lacks history it needs, such as the
+	// history needed to integrate remote changes or a commit requested when
+	// cloning. Subsequent iterations double this value.
 	initialDeepenStep = 16
 
 	// maxDeepenIterations caps the number of exponential deepening fetches
@@ -613,62 +614,6 @@ func (w *workTree) replayRange(
 		revs = append(revs, "^"+fp)
 	}
 	return revs, nil
-}
-
-// isShallow returns true if the repository is a shallow clone.
-//
-// Equivalent to:
-//
-//	git rev-parse --is-shallow-repository
-func (w *workTree) isShallow(ctx context.Context) (bool, error) {
-	res, err := libExec.Exec(w.buildGitCommand(
-		ctx, "rev-parse", "--is-shallow-repository",
-	))
-	if err != nil {
-		return false, fmt.Errorf(
-			"error checking if repository is shallow: %w", err,
-		)
-	}
-	return strings.TrimSpace(string(res)) == "true", nil
-}
-
-// shallowCommits returns the set of commit SHAs recorded in the repository's
-// shallow file, or nil if the repository is not shallow.
-//
-// Equivalent to:
-//
-//	cat $(git rev-parse --git-path shallow)
-func (w *workTree) shallowCommits(
-	ctx context.Context,
-) (map[string]struct{}, error) {
-	res, err := libExec.Exec(w.buildGitCommand(
-		ctx, "rev-parse", "--git-path", "shallow",
-	))
-	if err != nil {
-		return nil, fmt.Errorf("error locating shallow file: %w", err)
-	}
-	shallowPath := strings.TrimSpace(string(res))
-	if !filepath.IsAbs(shallowPath) {
-		shallowPath = filepath.Join(w.dir, shallowPath)
-	}
-	// #nosec G304 -- Path is resolved by Git from the repository's own gitdir.
-	data, err := os.ReadFile(filepath.Clean(shallowPath))
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf(
-			"error reading shallow file %q: %w", shallowPath, err,
-		)
-	}
-	commits := make(map[string]struct{})
-	for line := range strings.SplitSeq(string(data), "\n") {
-		sha := strings.TrimSpace(line)
-		if sha != "" {
-			commits[sha] = struct{}{}
-		}
-	}
-	return commits, nil
 }
 
 // symmetricDiff returns the set of commit SHAs in the symmetric difference
