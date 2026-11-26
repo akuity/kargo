@@ -18,6 +18,9 @@ type Selector interface {
 	MatchesVersion(string) bool
 	// Select selects charts from a Helm chart repository.
 	Select(context.Context) ([]string, error)
+	// Annotations retrieves OCI manifest annotations for a selected version.
+	// For classic HTTP/S repositories, it returns nil without making a request.
+	Annotations(context.Context, string) (map[string]string, error)
 }
 
 // NewSelector returns some implementation of the Selector interface that

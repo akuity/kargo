@@ -8,6 +8,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestBaseSelectorAnnotations(t *testing.T) {
+	t.Parallel()
+	selector := &httpSelector{baseSelector: &baseSelector{}}
+	annotations, err := selector.Annotations(t.Context(), "1.2.3")
+	require.NoError(t, err)
+	require.Nil(t, annotations)
+}
+
 func Test_baseSelector_semversToVersionStrings(t *testing.T) {
 	testCases := []struct {
 		name     string

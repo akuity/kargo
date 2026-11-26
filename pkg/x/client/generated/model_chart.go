@@ -19,6 +19,8 @@ var _ MappedNullable = &Chart{}
 
 // Chart struct for Chart
 type Chart struct {
+	// Annotations is a map of arbitrary metadata from the chart's OCI manifest.
+	Annotations *map[string]string `json:"annotations,omitempty"`
 	// Name specifies the name of the chart.
 	Name *string `json:"name,omitempty"`
 	// RepoURL specifies the URL of a Helm chart repository. Classic chart repositories (using HTTP/S) can contain differently named charts. When this field points to such a repository, the Name field will specify the name of the chart within the repository. In the case of a repository within an OCI registry, the URL implicitly points to a specific chart and the Name field will be empty.
@@ -44,6 +46,38 @@ func NewChart() *Chart {
 func NewChartWithDefaults() *Chart {
 	this := Chart{}
 	return &this
+}
+
+// GetAnnotations returns the Annotations field value if set, zero value otherwise.
+func (o *Chart) GetAnnotations() map[string]string {
+	if o == nil || IsNil(o.Annotations) {
+		var ret map[string]string
+		return ret
+	}
+	return *o.Annotations
+}
+
+// GetAnnotationsOk returns a tuple with the Annotations field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Chart) GetAnnotationsOk() (*map[string]string, bool) {
+	if o == nil || IsNil(o.Annotations) {
+		return nil, false
+	}
+	return o.Annotations, true
+}
+
+// HasAnnotations returns a boolean if a field has been set.
+func (o *Chart) HasAnnotations() bool {
+	if o != nil && !IsNil(o.Annotations) {
+		return true
+	}
+
+	return false
+}
+
+// SetAnnotations gets a reference to the given map[string]string and assigns it to the Annotations field.
+func (o *Chart) SetAnnotations(v map[string]string) {
+	o.Annotations = &v
 }
 
 // GetName returns the Name field value if set, zero value otherwise.
@@ -184,6 +218,9 @@ func (o Chart) MarshalJSON() ([]byte, error) {
 
 func (o Chart) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
+	if !IsNil(o.Annotations) {
+		toSerialize["annotations"] = o.Annotations
+	}
 	if !IsNil(o.Name) {
 		toSerialize["name"] = o.Name
 	}

@@ -5,8 +5,11 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { ChartAnnotations } from './chartAnnotations';
 
 export interface Chart {
+  /** Annotations is a map of arbitrary metadata from the chart's OCI manifest. */
+  annotations?: ChartAnnotations;
   /** Name specifies the name of the chart. */
   name?: string;
   /**
