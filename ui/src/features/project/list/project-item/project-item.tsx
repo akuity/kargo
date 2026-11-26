@@ -1,4 +1,4 @@
-import { faBullseye, faHeart, faStar } from '@fortawesome/free-solid-svg-icons';
+import { IconDefinition, faBullseye, faHeart, faStar } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Divider, Flex, Tooltip, theme, Typography } from 'antd';
 import { Link, generatePath } from 'react-router-dom';
@@ -7,7 +7,7 @@ import { paths } from '@ui/config/paths';
 import { DESCRIPTION_ANNOTATION_KEY } from '@ui/features/common/utils';
 import type { Project } from '@ui/gen/api/v2/models';
 
-import { healthSummary } from './health-summary';
+import { type HealthSummary, healthSummary, healthTooltip } from './health-summary';
 import * as styles from './project-item.module.less';
 
 export const ProjectItem = ({
@@ -57,48 +57,40 @@ export const ProjectItem = ({
       </Flex>
       <Divider className='my-3' />
       <Flex vertical gap={4}>
-        <div>
-          <Typography.Text type='secondary' className='inline-block w-28'>
-            Stages
-          </Typography.Text>
-          <Typography.Text type={stagesStats.allHealthy ? 'success' : 'secondary'}>
-            <FontAwesomeIcon icon={faHeart} />
-          </Typography.Text>{' '}
-          {stagesStats.healthy}/{stagesStats.count}
-        </div>
-        <div>
-          <Typography.Text type='secondary' className='inline-block w-28'>
-            Warehouses
-          </Typography.Text>
-          <Typography.Text type={warehousesStats.allHealthy ? 'success' : 'secondary'}>
-            <FontAwesomeIcon icon={faHeart} />
-          </Typography.Text>{' '}
-          {warehousesStats.healthy}/{warehousesStats.count}
-        </div>
+        <HealthRow kind='Stage' icon={faHeart} summary={stagesStats} />
+        <HealthRow kind='Warehouse' icon={faHeart} summary={warehousesStats} />
         {targetsStats.count > 0 && (
           // A Project promoting to a fleet gets one more row, in the same shape
           // as the two above it. The controller leaves the block absent for a
           // Project with no Targets, and a Project whose Stages select no
           // Targets has nothing to count, so neither shows the row.
-          <div>
-            <Typography.Text type='secondary' className='inline-block w-28'>
-              Targets
-            </Typography.Text>
-            <Tooltip
-              title={`${targetsStats.healthy} of ${targetsStats.count} Target${
-                targetsStats.count === 1 ? '' : 's'
-              } healthy`}
-            >
-              <span>
-                <Typography.Text type={targetsStats.allHealthy ? 'success' : 'secondary'}>
-                  <FontAwesomeIcon icon={faBullseye} />
-                </Typography.Text>{' '}
-                {targetsStats.healthy}/{targetsStats.count}
-              </span>
-            </Tooltip>
-          </div>
+          <HealthRow kind='Target' icon={faBullseye} summary={targetsStats} />
         )}
       </Flex>
     </Link>
   );
 };
+
+const HealthRow = ({
+  kind,
+  icon,
+  summary
+}: {
+  kind: string;
+  icon: IconDefinition;
+  summary: HealthSummary;
+}) => (
+  <div>
+    <Typography.Text type='secondary' className='inline-block w-28'>
+      {kind}s
+    </Typography.Text>
+    <Tooltip title={healthTooltip(summary, kind)}>
+      <span>
+        <Typography.Text type={summary.allHealthy ? 'success' : 'secondary'}>
+          <FontAwesomeIcon icon={icon} />
+        </Typography.Text>{' '}
+        {summary.healthy}/{summary.count}
+      </span>
+    </Tooltip>
+  </div>
+);
