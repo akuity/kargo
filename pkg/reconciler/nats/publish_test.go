@@ -27,7 +27,7 @@ type testRow struct {
 func TestNewTopic(t *testing.T) {
 	t.Parallel()
 	topic := NewTopic[testKey, testRow]("PromotionRollout")
-	require.Equal(t, "akuity.platform.internal.promotion.rollout.*", topic.Subject())
+	require.Equal(t, "akuity.kargo.internal.promotion.rollout.*", topic.Subject())
 	require.Panics(t, func() { NewTopic[testKey, testRow]("Promotion.Rollout") })
 }
 
@@ -57,7 +57,7 @@ func TestTopicPublish(t *testing.T) {
 				sent := sender.Sent()
 				require.Len(t, sent, 1)
 				require.Equal(t, "TestCreated", sent[0].Type())
-				require.Equal(t, "akuity.platform.internal.test.created", sent[0].Subject())
+				require.Equal(t, "akuity.kargo.internal.test.created", sent[0].Subject())
 				require.Equal(t, "Test", event.KindOf(sent[0]))
 				e, err := topic.Decode(sent[0])
 				require.NoError(t, err)
@@ -224,7 +224,7 @@ func TestTopicRoundTrip(t *testing.T) {
 	t.Cleanup(conn.Close)
 
 	topic := NewTopic[testKey, testRow]("Test")
-	// "TestThing" publishes to akuity.platform.internal.test.thing.*, which
+	// "TestThing" publishes to akuity.kargo.internal.test.thing.*, which
 	// a subscription to all of Test's subjects must not match.
 	extended := NewTopic[testKey, testRow]("TestThing")
 

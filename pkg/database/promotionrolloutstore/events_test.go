@@ -67,7 +67,7 @@ func TestPublish(t *testing.T) {
 				events := decodePublished(t, sender)
 				require.Len(t, events, 1)
 				e := events[0]
-				require.Equal(t, "akuity.platform.internal.promotion.rollout.created", e.subject)
+				require.Equal(t, "akuity.kargo.internal.promotion.rollout.created", e.subject)
 				require.Equal(t, nats.Created, e.event.Kind)
 				require.Equal(t, Key{Project: "demo", Name: "prod.01A.abc"}, e.event.Key)
 				require.Nil(t, e.event.Old)
@@ -84,7 +84,7 @@ func TestPublish(t *testing.T) {
 				events := decodePublished(t, sender)
 				require.Len(t, events, 1)
 				e := events[0]
-				require.Equal(t, "akuity.platform.internal.promotion.rollout.updated", e.subject)
+				require.Equal(t, "akuity.kargo.internal.promotion.rollout.updated", e.subject)
 				require.Equal(t, nats.Updated, e.event.Kind)
 				require.Equal(t, Key{Project: "demo", Name: "prod.01A.abc"}, e.event.Key)
 				require.Equal(t, old, *e.event.Old)

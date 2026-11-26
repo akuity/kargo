@@ -73,7 +73,12 @@ func (e Event[K, T]) Validate() error {
 // apart from the user-facing events published under akuity.kargo.events:
 // the two serve different purposes, and a subscriber to one never receives
 // the other, even when both are published for the same write.
-const InternalSubjectPrefix = "akuity.platform.internal"
+//
+// It is under event.BasePrefix, the prefix of every subject Kargo uses. A
+// NATS server that restricts which subjects Kargo's components may use
+// allows them that tree, so a topic rooted anywhere else could be neither
+// published nor subscribed to there.
+const InternalSubjectPrefix = event.BasePrefix + ".internal"
 
 // Topic names the kind of resource a set of events is about and fixes, once,
 // the types of their keys and rows. Declare one beside the store that owns
@@ -85,7 +90,7 @@ const InternalSubjectPrefix = "akuity.platform.internal"
 // Events are CloudEvents of the types <resource>Created, <resource>Updated
 // and <resource>Deleted, published to the subjects event.SubjectFromType
 // derives from those types under InternalSubjectPrefix: a "PromotionRollout"
-// topic publishes to akuity.platform.internal.promotion.rollout.created, and
+// topic publishes to akuity.kargo.internal.promotion.rollout.created, and
 // so on. A subscription to the topic receives all three, and nothing
 // published for another resource, even one whose subjects share a prefix
 // with the topic's, such as a "Promotion" topic's.
