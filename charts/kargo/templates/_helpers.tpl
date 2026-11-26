@@ -241,14 +241,13 @@ annotations:
 
 {{/*
 Environment variables that configure distributed tracing, for inclusion in
-the ConfigMap of every Kargo component. Emits nothing when tracing is disabled.
-Beyond the Kargo-specific on/off switch, these are the standard OTEL_*
-variables that the OpenTelemetry SDK reads on its own.
+the ConfigMap of every Kargo component. OTEL_SDK_DISABLED is always set, as
+components trace when it is unset; the rest only when tracing is enabled.
 */}}
 {{- define "kargo.tracing.configMapData" -}}
-{{- with .Values.global.tracing }}
-{{- if .enabled -}}
-TRACING_ENABLED: "true"
+{{- with .Values.global.tracing -}}
+OTEL_SDK_DISABLED: {{ ternary "false" "true" .enabled | quote }}
+{{- if .enabled }}
 OTEL_EXPORTER_OTLP_PROTOCOL: {{ quote .otlp.protocol }}
 {{- if .otlp.endpoint }}
 OTEL_EXPORTER_OTLP_ENDPOINT: {{ quote .otlp.endpoint }}

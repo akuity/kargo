@@ -14,6 +14,7 @@ import (
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/server/dex"
 	"github.com/akuity/kargo/pkg/server/oidc"
+	"github.com/akuity/kargo/pkg/telemetry"
 	"github.com/akuity/kargo/pkg/types"
 )
 
@@ -177,7 +178,7 @@ func ServerConfigFromEnv() ServerConfig {
 		types.MustParseBool(os.GetEnv("REQUEST_LOG_SOURCE_IP_ENABLED", "false"))
 	cfg.DefaultControllerName = os.GetEnv("DEFAULT_CONTROLLER_NAME", "")
 	cfg.BasePath = NormalizeBasePath(os.GetEnv("API_BASE_PATH", ""))
-	cfg.TracingEnabled = types.MustParseBool(os.GetEnv("TRACING_ENABLED", "false"))
+	cfg.TracingEnabled = telemetry.ConfigFromEnv().Enabled
 	return cfg
 }
 

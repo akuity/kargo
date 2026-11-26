@@ -94,7 +94,7 @@ global:
 
   ## Distributed tracing settings shared by all Kargo components.
   tracing:
-    ## @param global.tracing.enabled Whether Kargo's components export traces using OpenTelemetry. When enabled, every component sets `TRACING_ENABLED` and exports spans over OTLP to the configured endpoint. Further OpenTelemetry settings not covered below (headers, TLS, resource attributes, and so on) can be supplied as standard `OTEL_*` environment variables via `global.env`.
+    ## @param global.tracing.enabled Whether Kargo's components export traces over OTLP to the configured endpoint. `true` sets `OTEL_SDK_DISABLED=false` in every component; `false` sets `OTEL_SDK_DISABLED=true`. Further OpenTelemetry settings not covered below (headers, TLS, resource attributes, and so on) can be supplied as standard `OTEL_*` environment variables via `global.env`.
     enabled: false
     otlp:
       ## @param global.tracing.otlp.endpoint The OTLP endpoint traces are exported to (sets `OTEL_EXPORTER_OTLP_ENDPOINT`), for example `http://otel-collector.observability.svc:4318`. When empty, the OpenTelemetry SDK's default of `localhost:4318` (for `http/protobuf`) or `localhost:4317` (for `grpc`) applies, which suits a collector running as a sidecar or as a DaemonSet with host networking.

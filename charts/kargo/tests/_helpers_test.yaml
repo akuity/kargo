@@ -9,10 +9,11 @@ templates:
   - templates/kubernetes-webhooks-server/configmap.yaml
   - templates/management-controller/configmap.yaml
 tests:
-  - it: emits no tracing settings by default
+  - it: disables tracing by default
     asserts:
-      - notExists:
-          path: data.TRACING_ENABLED
+      - equal:
+          path: data.OTEL_SDK_DISABLED
+          value: "true"
       - notExists:
           path: data.OTEL_EXPORTER_OTLP_PROTOCOL
       - notExists:
@@ -25,8 +26,8 @@ tests:
       global.tracing.enabled: true
     asserts:
       - equal:
-          path: data.TRACING_ENABLED
-          value: "true"
+          path: data.OTEL_SDK_DISABLED
+          value: "false"
       - equal:
           path: data.OTEL_EXPORTER_OTLP_PROTOCOL
           value: http/protobuf
