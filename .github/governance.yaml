@@ -14,6 +14,20 @@ issues:
   - kind
   - priority
 
+  # Actions taken on every new issue, whoever opened it.
+  onOpened:
+    actions:
+    - comment: |
+        ## Before Starting Work
+
+        Thank you for opening this issue.
+
+        Please do not start work on this issue, and please do not ask to be assigned to it, until a maintainer has triaged it and cleared it for contribution. **This applies to bug reports too.** A maintainer needs to confirm a bug, and usually reproduce it, before a fix is worth writing.
+
+        An issue is cleared for contribution when none of the [blocking labels](https://docs.kargo.io/contributor-guide#blocking-labels) remain on it. Pull requests that reference an issue that has not been cleared are automatically converted to drafts, which maintainers do not routinely review.
+
+        Maintainers triage issues on a best-effort basis. See the [Contributor Guide](https://docs.kargo.io/contributor-guide) for details.
+
   # Slash commands available to maintainers on issues.
   slashCommands:
     discuss:
