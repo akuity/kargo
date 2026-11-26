@@ -454,6 +454,48 @@ func (a *argocdUpdater) mustPerformUpdate(
 	stepCtx *promotion.StepContext,
 	update *stepconfig.ArgoCDAppUpdate,
 	app *argocd.Application,
+) (argocd.OperationPhase, bool, error) {
+	phase, mustUpdate, err := a.checkOperationState(ctx, stepCtx, update, app)
+	if mustUpdate && a.waitingForDesiredTargetRevision(update, app) {
+		logging.LoggerFromContext(ctx).WithValues(
+			"app", app.Name,
+			"namespace", app.Namespace,
+		).Info("waiting for Application's targetRevision to reach desired revision")
+		return argocd.OperationRunning, false, nil
+	}
+	return phase, mustUpdate, err
+}
+
+func (a *argocdUpdater) waitingForDesiredTargetRevision(
+	update *stepconfig.ArgoCDAppUpdate,
+	app *argocd.Application,
+) bool {
+	sources := app.Spec.Sources
+	if len(sources) == 0 && app.Spec.Source != nil {
+		sources = argocd.ApplicationSources{*app.Spec.Source}
+	}
+	for i := range sources {
+		src := &sources[i]
+		if src.Chart == "" {
+			continue
+		}
+		srcUpdate := a.findSourceUpdate(update, *src)
+		if srcUpdate == nil || srcUpdate.UpdateTargetRevision ||
+			srcUpdate.DesiredRevision == "" {
+			continue
+		}
+		if src.TargetRevision != srcUpdate.DesiredRevision {
+			return true
+		}
+	}
+	return false
+}
+
+func (a *argocdUpdater) checkOperationState(
+	ctx context.Context,
+	stepCtx *promotion.StepContext,
+	update *stepconfig.ArgoCDAppUpdate,
+	app *argocd.Application,
 ) (phase argocd.OperationPhase, mustUpdate bool, err error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"app", app.Name, "namespace", app.Namespace,

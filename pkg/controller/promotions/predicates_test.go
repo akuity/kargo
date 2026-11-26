@@ -458,6 +458,100 @@ func TestArgoCDAppLabelsChanged_Update(t *testing.T) {
 	}
 }
 
+func TestArgoCDAppSourceRevisionChanged_Update(t *testing.T) {
+	appWithRevisions := func(revisions ...string) *argocd.Application {
+		sources := make(argocd.ApplicationSources, len(revisions))
+		for i, revision := range revisions {
+			sources[i] = argocd.ApplicationSource{TargetRevision: revision}
+		}
+		return &argocd.Application{Spec: argocd.ApplicationSpec{Sources: sources}}
+	}
+
+	testCases := []struct {
+		name string
+		e    event.TypedUpdateEvent[*argocd.Application]
+		want bool
+	}{
+		{
+			name: "ObjectOld is nil",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectNew: &argocd.Application{},
+			},
+			want: false,
+		},
+		{
+			name: "ObjectNew is nil",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{},
+			},
+			want: false,
+		},
+		{
+			name: "single source unchanged",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: appWithRevisions("v1.0.0"),
+				ObjectNew: appWithRevisions("v1.0.0"),
+			},
+			want: false,
+		},
+		{
+			name: "single source revision changed",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: appWithRevisions("v1.0.0"),
+				ObjectNew: appWithRevisions("v1.0.1"),
+			},
+			want: true,
+		},
+		{
+			name: "one of multiple sources changed",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: appWithRevisions("main", "v1.0.0"),
+				ObjectNew: appWithRevisions("main", "v1.0.1"),
+			},
+			want: true,
+		},
+		{
+			name: "legacy source revision changed",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{
+					Spec: argocd.ApplicationSpec{
+						Source: &argocd.ApplicationSource{TargetRevision: "v1.0.0"},
+					},
+				},
+				ObjectNew: &argocd.Application{
+					Spec: argocd.ApplicationSpec{
+						Source: &argocd.ApplicationSource{TargetRevision: "v1.0.1"},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "no sources",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{},
+				ObjectNew: &argocd.Application{},
+			},
+			want: false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			p := ArgoCDAppSourceRevisionChanged[*argocd.Application]{
+				logger: logging.NewDiscardLoggerOrDie(),
+			}
+			require.Equal(t, testCase.want, p.Update(testCase.e))
+		})
+	}
+}
+
+func TestArgoCDAppSourceRevisionChanged(t *testing.T) {
+	p := ArgoCDAppSourceRevisionChanged[*argocd.Application]{}
+	require.False(t, p.Create(event.TypedCreateEvent[*argocd.Application]{}))
+	require.False(t, p.Delete(event.TypedDeleteEvent[*argocd.Application]{}))
+	require.False(t, p.Generic(event.TypedGenericEvent[*argocd.Application]{}))
+}
+
 func TestArgoCDAppCreatedOrDeleted(t *testing.T) {
 	p := ArgoCDAppCreatedOrDeleted[*argocd.Application]{}
 	require.True(t, p.Create(event.TypedCreateEvent[*argocd.Application]{}))

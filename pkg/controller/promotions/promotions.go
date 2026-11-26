@@ -239,6 +239,9 @@ func SetupReconcilerWithManager(
 					ArgoCDAppLabelsChanged[*argocd.Application]{
 						logger: logger,
 					},
+					ArgoCDAppSourceRevisionChanged[*argocd.Application]{
+						logger: logger,
+					},
 					ArgoCDAppCreatedOrDeleted[*argocd.Application]{},
 				),
 			),
