@@ -23,8 +23,8 @@ Webhook events handled:
 
 | Event | Action(s) | Behavior |
 |---|---|---|
-| `issues` | `opened` | Required-label enforcement on the issue. |
-| `pull_request` | `opened` | Auto-assign, label inheritance, required-label enforcement, policy evaluation. |
+| `issues` | `opened` | Required-label enforcement on the issue, then `onOpened` actions. |
+| `pull_request` | `opened` | Auto-assign, label inheritance, required-label enforcement, `onOpened` actions, policy evaluation. |
 | `pull_request` | `reopened`, `ready_for_review` | Policy evaluation only (labeling is not re-run). |
 | `issue_comment` | `created` | Slash-command dispatch (maintainer-only). |
 | `ping` | — | Returns 200. |
@@ -40,6 +40,7 @@ branch. Top-level shape:
 maintainerAssociations: [OWNER, MEMBER]
 issues:
   requiredLabelPrefixes: [...]
+  onOpened: { actions: [...] }
   slashCommands: { ... }
 pullRequests:
   exemptions: { ... }
@@ -48,6 +49,7 @@ pullRequests:
   onPass: { actions: [...] }
   inheritedLabelPrefixes: [...]
   requiredLabelPrefixes: [...]
+  onOpened: { actions: [...] }
   slashCommands: { ... }
 ```
 
@@ -71,6 +73,21 @@ matching `<prefix>/...` must exist on the issue. For any missing prefix, a
 
 Example: with `[area, kind, priority]`, an issue lacking any
 `priority/*` label gets `needs/priority` added.
+
+#### `onOpened`
+
+Actions to run when an issue is opened, after required-label enforcement.
+They run for every new issue, whoever opened it. A failure in required-label
+enforcement does not prevent them from running.
+
+```yaml
+issues:
+  onOpened:
+    actions:
+    - comment: |
+        Thanks for opening this issue. Please don't start work on it until a
+        maintainer has triaged it.
+```
 
 #### `slashCommands`
 
@@ -187,6 +204,13 @@ them again.
 Same as the `issues.requiredLabelPrefixes` rule but applied to PRs. The
 inherited labels count toward satisfying the requirement.
 
+#### `onOpened`
+
+Same as `issues.onOpened` but applied to PRs. The actions run after
+required-label enforcement and before policy evaluation, only when a PR is
+opened, and not when it is reopened or marked ready for review. They are not
+subject to `exemptions`.
+
 #### `slashCommands`
 
 Map of command name to definition. See [Slash Commands](#slash-commands).
@@ -213,6 +237,7 @@ Comments use Go's `text/template` syntax. Variables vary by context:
 | Context | Variables |
 |---|---|
 | Slash command | `.Arg`, `.RepoFullName` |
+| `onOpened` | (none) |
 | `onNoLinkedIssue` | (none) |
 | `onBlockedIssue` | `.IssueNumber`, `.BlockingLabels` |
 
@@ -297,14 +322,15 @@ When a PR is **opened**, the bot runs in this order:
 1. Auto-assign the PR to its author.
 2. Inherit labels from the linked issue (per `inheritedLabelPrefixes`).
 3. Enforce required-label prefixes (per `requiredLabelPrefixes`).
-4. Apply PR policy.
+4. Run `onOpened` actions.
+5. Apply PR policy.
 
-Steps 1–3 are independent: a failure in one is logged and accumulated but
-does not prevent the others from running. Step 4 is the only step that
+Steps 1–5 are independent: a failure in one is logged and accumulated but
+does not prevent the others from running. Step 5 is the only step that
 honors `exemptions`.
 
-When a PR is **reopened** or marked **ready for review**, only step 4
-runs. Labeling is considered a one-shot operation at open time.
+When a PR is **reopened** or marked **ready for review**, only step 5
+runs. Labeling and `onOpened` actions are one-shot operations at open time.
 
 ## GitHub App Permissions
 
