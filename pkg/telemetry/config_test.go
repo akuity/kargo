@@ -14,8 +14,9 @@ func TestConfigFromEnv(t *testing.T) {
 	}{
 		{
 			name: "defaults",
+			env:  map[string]string{"OTEL_SDK_DISABLED": ""},
 			assert: func(t *testing.T, cfg Config) {
-				require.False(t, cfg.Enabled)
+				require.True(t, cfg.Enabled)
 				require.Equal(t, ProtocolHTTPProtobuf, cfg.Protocol)
 				require.Empty(t, cfg.TracesProtocol)
 				require.Empty(t, cfg.Categories)
@@ -24,7 +25,7 @@ func TestConfigFromEnv(t *testing.T) {
 		{
 			name: "everything set",
 			env: map[string]string{
-				"TRACING_ENABLED":                    "true",
+				"OTEL_SDK_DISABLED":                  "false",
 				"OTEL_EXPORTER_OTLP_PROTOCOL":        "grpc",
 				"OTEL_EXPORTER_OTLP_TRACES_PROTOCOL": "http/protobuf",
 				"TRACING_CATEGORIES":                 "Default, k8s",
@@ -34,6 +35,34 @@ func TestConfigFromEnv(t *testing.T) {
 				require.Equal(t, ProtocolGRPC, cfg.Protocol)
 				require.Equal(t, ProtocolHTTPProtobuf, cfg.TracesProtocol)
 				require.Equal(t, []string{"Default", " k8s"}, cfg.Categories)
+			},
+		},
+		{
+			name: "OTEL_SDK_DISABLED true",
+			env:  map[string]string{"OTEL_SDK_DISABLED": "TRUE"},
+			assert: func(t *testing.T, cfg Config) {
+				require.False(t, cfg.Enabled)
+			},
+		},
+		{
+			name: "OTEL_SDK_DISABLED mixed-case true",
+			env:  map[string]string{"OTEL_SDK_DISABLED": "tRuE"},
+			assert: func(t *testing.T, cfg Config) {
+				require.False(t, cfg.Enabled)
+			},
+		},
+		{
+			name: "OTEL_SDK_DISABLED 1",
+			env:  map[string]string{"OTEL_SDK_DISABLED": "1"},
+			assert: func(t *testing.T, cfg Config) {
+				require.True(t, cfg.Enabled)
+			},
+		},
+		{
+			name: "OTEL_SDK_DISABLED not a bool",
+			env:  map[string]string{"OTEL_SDK_DISABLED": "yes"},
+			assert: func(t *testing.T, cfg Config) {
+				require.True(t, cfg.Enabled)
 			},
 		},
 	}
