@@ -10,6 +10,7 @@ import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { WarehouseExpanded } from '@ui/extend/types';
 import { LoadingState } from '@ui/features/common';
+import { getControllerStatus } from '@ui/features/common/controller-status/controller-status';
 import { mapToNames } from '@ui/features/common/utils';
 import FreightDetails from '@ui/features/freight/freight-details';
 import WarehouseDetails from '@ui/features/project/pipelines/warehouse/warehouse-details';
@@ -82,6 +83,21 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const listWarehousesQuery = useListWarehouses(projectName);
 
   const warehouses = (listWarehousesQuery?.data?.data?.items || []) as WarehouseExpanded[];
+
+  // Whether any Warehouse has a live controller to discover artifacts for it.
+  const hasWarehouseController = useMemo(
+    () =>
+      warehouses.some((warehouse) => {
+        const controller = getControllerStatus(
+          warehouse?.spec?.shard,
+          heartbeatsByController,
+          defaultControllerName
+        );
+
+        return !controller.isControllerDead;
+      }),
+    [warehouses, heartbeatsByController, defaultControllerName]
+  );
 
   const [preferredFilter, setPreferredFilter] = useFreightTimelineControllerStore(projectName);
 
@@ -229,6 +245,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                   freights={freights}
                   project={projectName || ''}
                   hasWarehouses={warehouses.length > 0}
+                  hasWarehouseController={hasWarehouseController}
                 />
 
                 <div className='w-full flex-1 relative overflow-auto'>

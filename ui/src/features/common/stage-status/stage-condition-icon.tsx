@@ -12,6 +12,7 @@ import { Tooltip } from 'antd';
 import classNames from 'classnames';
 import { memo } from 'react';
 
+import { deadControllerReason } from '@ui/features/common/controller-status/controller-status';
 import { useToneColor } from '@ui/features/common/status-tone';
 import { Stage } from '@ui/gen/api/v2/models';
 
@@ -63,11 +64,7 @@ export const StageConditionIcon = memo(
     // The one reason that is not the Stage's own: its conditions were written
     // by the controller that has since gone silent, which is why the phase
     // above is Failed however healthy they read.
-    const deadControllerReason = controllerName
-      ? `Controller '${controllerName}' is dead or nonexistent`
-      : 'The default controller is dead or nonexistent';
-
-    const reason = isControllerDead ? deadControllerReason : message;
+    const reason = isControllerDead ? deadControllerReason(controllerName || '') : message;
 
     const mark = phaseMark[phase];
 

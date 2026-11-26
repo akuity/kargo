@@ -17,6 +17,8 @@ import { WarehouseExpanded } from '@ui/extend/types';
 import { AssembleFreight } from '@ui/features/assemble-freight/assemble-freight';
 import { useWarehouseWithClonedFreight } from '@ui/features/assemble-freight/use-warehouse-with-cloned-freight';
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
+import { deadControllerReason } from '@ui/features/common/controller-status/controller-status';
+import { useControllerStatus } from '@ui/features/common/controller-status/use-controller-status';
 import { useGetFreight, useGetWarehouse } from '@ui/gen/api/v2/core/core';
 
 import { RepoSubscriptions } from './repo-subscriptions';
@@ -39,7 +41,14 @@ export const WarehouseDetails = ({
 
   const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
 
-  const warehouseErrorMessage = useMemo(() => getWarehouseError(warehouse), [warehouse]);
+  const { controllerName, isControllerDead } = useControllerStatus(warehouse?.spec?.shard);
+
+  // With no controller, the conditions are whatever it last wrote, if it
+  // ever wrote any, and the missing controller is what needs fixing.
+  const warehouseErrorMessage = useMemo(
+    () => (isControllerDead ? deadControllerReason(controllerName) : getWarehouseError(warehouse)),
+    [warehouse, controllerName, isControllerDead]
+  );
 
   const getWarehouseQuery = useGetWarehouse(projectName || '', warehouseName || '');
 

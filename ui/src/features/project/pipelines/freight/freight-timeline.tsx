@@ -30,6 +30,7 @@ export const FreightTimeline = (props: {
   freights: Freight[];
   project: string;
   hasWarehouses: boolean;
+  hasWarehouseController: boolean;
 }) => {
   const navigate = useNavigate();
 
@@ -128,6 +129,7 @@ export const FreightTimeline = (props: {
             <FreightTimelineEmpty
               filtered={filtersActive}
               hasWarehouses={props.hasWarehouses}
+              hasWarehouseController={props.hasWarehouseController}
               promotionMode={isPromotionMode}
             />
           )}

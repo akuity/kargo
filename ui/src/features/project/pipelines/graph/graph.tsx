@@ -11,10 +11,12 @@ import {
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { RepoSubscription, WarehouseExpanded } from '@ui/extend/types';
+import { getControllerStatus } from '@ui/features/common/controller-status/controller-status';
 import { useTheme } from '@ui/features/common/theme/use-theme';
 import { queryCache } from '@ui/features/utils/cache';
 import { Stage } from '@ui/gen/api/v2/models';
 
+import { useDictionaryContext } from '../context/dictionary-context';
 import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 import { GraphContext } from '../context/graph-context';
 import { StackedNodes } from '../nodes/stacked-nodes';
@@ -195,12 +197,25 @@ export const Graph = (props: GraphProps) => {
     shownWarehouses.current = warehouseByName;
   }, [warehouseByName]);
 
+  const dictionaryContext = useDictionaryContext();
+  const heartbeatsByController = dictionaryContext?.heartbeatsByController;
+  const defaultControllerName = dictionaryContext?.defaultControllerName;
+
+  // A Warehouse with no controller is never discovering, whatever refresh it
+  // has been asked for, so its edges are not animated either.
   const discoveringNow = useMemo(
     () =>
-      Object.keys(warehouseByName).filter(
-        (name) => getWarehouseState(warehouseByName[name]).phase === 'discovering'
-      ),
-    [warehouseByName]
+      Object.keys(warehouseByName).filter((name) => {
+        const warehouse = warehouseByName[name];
+        const controller = getControllerStatus(
+          warehouse?.spec?.shard,
+          heartbeatsByController,
+          defaultControllerName
+        );
+
+        return getWarehouseState(warehouse, controller).phase === 'discovering';
+      }),
+    [warehouseByName, heartbeatsByController, defaultControllerName]
   );
 
   // held a moment past a quick discovery, so that its loader and edge
