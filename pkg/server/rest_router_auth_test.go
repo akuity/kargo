@@ -183,7 +183,7 @@ func TestSetupRESTRouter_authentication(t *testing.T) {
 				},
 			)
 			require.NoError(t, err)
-			s, ok := NewServer(testCase.cfg, kubeClient, nil, nil, nil).(*server)
+			s, ok := NewServer(testCase.cfg, kubeClient, nil, nil, nil, nil).(*server)
 			require.True(t, ok)
 			router, err := s.setupRESTRouter(t.Context())
 			require.NoError(t, err)
