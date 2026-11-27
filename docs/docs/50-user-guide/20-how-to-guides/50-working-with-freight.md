@@ -99,6 +99,14 @@ only the freight it produced, and the arrow beside the name to go back to
 freight from every `Warehouse`. The same choice is under <Hlt>Warehouse</Hlt>
 behind the _funnel icon_ in the pipeline toolbar.
 
+Each piece of freight in the timeline lists its artifacts. An artifact that
+differs from the previous piece of freight from the same `Warehouse` is shown
+in blue, and one that is the same is grayed out, so you can see at a glance
+what a piece of freight brings. Any difference counts, including an older
+version or a new tag on the same image or commit. Hover over an artifact to
+see which it is. The oldest freight from a `Warehouse` has nothing to compare
+with, so all of its artifacts are blue.
+
 To show or hide aliases, click the _gear icon_ in the pipeline toolbar, then
 turn the <Hlt>Alias</Hlt> switch on or off.
 
