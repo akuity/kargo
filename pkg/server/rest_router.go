@@ -282,7 +282,7 @@ func (s *server) setupRESTRouter(
 				s.rolloutCreator,
 				s.authorize,
 				s.client,
-				s.freightClient,
+				s.storageClient,
 			).Register(project)
 
 			// Warehouses

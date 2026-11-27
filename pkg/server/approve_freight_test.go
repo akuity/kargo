@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/storage"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/user"
@@ -304,6 +305,8 @@ func Test_server_approveFreight_noFreightsStatusPatchRequired(t *testing.T) {
 						testStageName,
 					)
 					s.authorizeFn = s.client.Authorize
+					s.storageClient = storage.NewStorageClient(s.client, nil, nil)
+					s.storageClientInternal = storage.NewStorageClient(s.client.InternalClient(), nil, nil)
 				},
 				ctxSetup: func(ctx context.Context) context.Context {
 					return user.ContextWithIdentity(ctx, promoterUser)

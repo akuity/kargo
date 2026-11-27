@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -162,7 +161,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 			return
 		}
 		if s.sender != nil && promotion.Spec.Freight != "" {
-			freight, getFreightErr := s.freightClient.GetFreight(ctx, promotion.Namespace, promotion.Spec.Freight)
+			freight, getFreightErr := s.freightClientFn().GetFreight(ctx, promotion.Namespace, promotion.Spec.Freight)
 			if getFreightErr != nil || freight == nil {
 				logging.LoggerFromContext(ctx).Error(
 					getFreightErr,
@@ -247,20 +246,24 @@ func (s *server) getFreightForPromotion(
 	var freight *kargoapi.Freight
 	var err error
 	if freightName != "" {
-		freight, err = s.freightClient.GetFreight(ctx, project, freightName)
+		freight, err = s.freightClientFn().GetFreight(ctx, project, freightName)
 		if err != nil {
-			if apierrors.IsNotFound(err) {
-				return nil, libhttp.ErrorStr(
-					fmt.Sprintf("Freight %q not found in project %q", freightName, project),
-					http.StatusNotFound,
-				)
-			}
 			return nil, err
 		}
 	} else {
-		if freight, err = s.freightClient.GetFreightByAlias(ctx, project, alias); err != nil {
+		if freight, err = s.freightClientFn().GetFreightByAlias(ctx, project, alias); err != nil {
 			return nil, err
 		}
+	}
+	if freight == nil {
+		freightID := freightName
+		if freightID == "" {
+			freightID = alias
+		}
+		return nil, libhttp.ErrorStr(
+			fmt.Sprintf("Freight %q not found in project %q", freightID, project),
+			http.StatusNotFound,
+		)
 	}
 	return freight, nil
 }

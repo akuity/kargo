@@ -36,7 +36,7 @@ func (s *server) getFreightLinks(c *gin.Context) {
 	project := c.Param("project")
 	nameOrAlias := c.Param("freight-name-or-alias")
 
-	freight, err := s.freightClient.GetFreightByNameOrAlias(ctx, project, nameOrAlias)
+	freight, err := s.freightClientFn().GetFreightByNameOrAlias(ctx, project, nameOrAlias)
 	if err != nil {
 		_ = c.Error(err)
 		return

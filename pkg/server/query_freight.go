@@ -214,7 +214,7 @@ func (s *server) queryFreight(c *gin.Context) {
 			_ = c.Error(err)
 			return
 		}
-		freight, err = api.ListFreightAvailableToStage(ctx, s.freightClient, stage)
+		freight, err = api.ListFreightAvailableToStage(ctx, s.freightClientFn(), stage)
 		if err != nil {
 			_ = c.Error(fmt.Errorf("get available freight for stage: %w", err))
 			return

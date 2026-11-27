@@ -52,7 +52,7 @@ func (s *server) patchFreightMetadata(c *gin.Context) {
 		return
 	}
 
-	err := s.freightClient.PatchFreightMetadata(ctx, project, freightName, req.Metadata)
+	err := s.freightClientFn().PatchFreightMetadata(ctx, project, freightName, req.Metadata)
 
 	if err != nil {
 		_ = c.Error(err)

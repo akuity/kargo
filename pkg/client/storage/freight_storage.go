@@ -72,10 +72,15 @@ func (storage *Client) CreateFreight(
 	return current, created, nil
 }
 
+// DeleteFreight deletes existing freight.
+// If freight does not exist, it returns apierrors.NotFound error - caller should handle idempotency, if necessary
 func (storage *Client) DeleteFreight(ctx context.Context, project string, nameOrAlias string) error {
 	freight, err := storage.GetFreightByNameOrAlias(ctx, project, nameOrAlias)
 	if err != nil {
 		return err
+	}
+	if freight == nil {
+		return apierrors.NewNotFound(freightGR, nameOrAlias)
 	}
 
 	return storage.client.Delete(ctx, freight)
@@ -148,6 +153,9 @@ func (storage *Client) PatchFreightAlias(
 	if err != nil {
 		return err
 	}
+	if freight == nil {
+		return apierrors.NewNotFound(freightGR, nameOrAlias)
+	}
 
 	// Make sure this alias isn't already used by some other piece of Freight
 	freightList := kargoapi.FreightList{}
@@ -190,6 +198,9 @@ func (storage *Client) PatchFreightMetadata(
 	if err != nil {
 		return err
 	}
+	if freight == nil {
+		return apierrors.NewNotFound(freightGR, freightName)
+	}
 
 	newStatus := *freight.Status.DeepCopy()
 	if newStatus.Metadata == nil {
@@ -210,6 +221,10 @@ func (storage *Client) ApproveFreight(ctx context.Context,
 	freight, err := storage.GetFreightByNameOrAlias(ctx, project, nameOrAlias)
 	if err != nil {
 		return err
+	}
+
+	if freight == nil {
+		return apierrors.NewNotFound(freightGR, nameOrAlias)
 	}
 
 	stage := &kargoapi.Stage{}
@@ -456,11 +471,11 @@ func (storage *Client) MarkFreightsCurrentlyInStage(
 		freightNamesSet[freightName] = struct{}{}
 		freight, err := storage.GetFreight(ctx, project, freightName)
 		if err != nil {
-			if apierrors.IsNotFound(err) {
-				logger.Error(err, "freight is current but not found", "freightName", freightName)
-				continue
-			}
 			return err
+		}
+		if freight == nil {
+			logger.Error(err, "freight is current but not found", "freightName", freightName)
+			continue
 		}
 		freights = append(freights, freight)
 	}
@@ -548,11 +563,11 @@ func (storage *Client) MarkFreightsVerifiedInStage(
 
 		freight, err := storage.GetFreight(ctx, project, freightName)
 		if err != nil {
-			if apierrors.IsNotFound(err) {
-				logger.Error(err, "freight is verified but not found", "freightName", freightName)
-				continue
-			}
 			return err
+		}
+		if freight == nil {
+			logger.Error(err, "freight is verified but not found", "freightName", freightName)
+			continue
 		}
 
 		// Evaluated before the patch so the event is emitted only on the first

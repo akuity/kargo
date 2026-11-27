@@ -56,7 +56,7 @@ func (s *server) listFreightFromOrigin(c *gin.Context) {
 		Name: originName,
 	}
 
-	freight, err := s.freightClient.ListFreightFromOrigin(ctx, project, origin, opts)
+	freight, err := s.freightClientFn().ListFreightFromOrigin(ctx, project, origin, opts)
 	if err != nil {
 		if strings.Contains(err.Error(), "unsupported AvailabilityStrategy") {
 			err = libhttp.Error(err, http.StatusBadRequest)

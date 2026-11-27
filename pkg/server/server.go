@@ -63,7 +63,8 @@ type server struct {
 
 	storageClient         *storage.Client
 	storageClientInternal *storage.Client
-	freightClient         freightclient.FreightClient
+
+	freightClientFn func() freightclient.FreightClient
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -157,7 +158,6 @@ func NewServer(
 	// TODO: this is temporary measure to pass InternalClient to approve_freight
 	// Once switched to DB, all auth needs to be made explicit and this client will be deleted
 	s.storageClientInternal = storage.NewStorageClient(kubeClient.InternalClient(), sender, db)
-	s.freightClient = s.storageClient
 
 	s.getStageFn = api.GetStage
 	s.createPromotionFn = kubeClient.Create
@@ -178,6 +178,7 @@ func NewServer(
 	s.getAnalysisTemplateFn = rollouts.GetAnalysisTemplate
 	s.getClusterAnalysisTemplateFn = rollouts.GetClusterAnalysisTemplate
 	s.getAnalysisRunFn = rollouts.GetAnalysisRun
+	s.freightClientFn = s.freightClient
 
 	return s
 }
@@ -449,4 +450,8 @@ func (s *server) targetStatusStore() targetstatusstore.Store {
 		return nil
 	}
 	return targetstatusstore.New(s.db)
+}
+
+func (s *server) freightClient() freightclient.FreightClient {
+	return s.storageClient
 }

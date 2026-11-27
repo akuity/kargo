@@ -28,6 +28,7 @@ import (
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/client/storage"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/rbac"
@@ -166,6 +167,9 @@ func testRESTEndpoint(
 			// Mirror the Fn wiring NewServer performs; serverSetup may override.
 			s.createPromotionFn = s.client.Create
 			s.getStageFn = api.GetStage
+			s.storageClient = storage.NewStorageClient(s.client, s.sender, nil)
+			s.storageClientInternal = storage.NewStorageClient(s.client.InternalClient(), s.sender, nil)
+			s.freightClientFn = s.freightClient
 
 			if testCase.serverSetup != nil {
 				testCase.serverSetup(t, s)
@@ -267,6 +271,9 @@ func testRESTWatchEndpoint(
 				s.client,
 				rbac.RolesDatabaseConfig{KargoNamespace: testKargoNamespace},
 			)
+			s.storageClient = storage.NewStorageClient(s.client, s.sender, nil)
+			s.storageClientInternal = storage.NewStorageClient(s.client.InternalClient(), s.sender, nil)
+			s.freightClientFn = s.freightClient
 
 			u := url
 			if testCase.url != "" {

@@ -34,7 +34,7 @@ func (s *server) patchFreightAliasHandler(c *gin.Context) {
 		return
 	}
 
-	err := s.freightClient.PatchFreightAlias(ctx, project, nameOrAlias, newAlias)
+	err := s.freightClientFn().PatchFreightAlias(ctx, project, nameOrAlias, newAlias)
 	if err != nil {
 		_ = c.Error(err)
 		return

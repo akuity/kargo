@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/storage"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	eventfake "github.com/akuity/kargo/pkg/event/fake"
 	"github.com/akuity/kargo/pkg/server/config"
@@ -175,7 +176,7 @@ func Test_server_markFreightsCurrentlyInStage(t *testing.T) {
 					WithObjects(testProject, newFreight, secondNewFreight, oldFreight).
 					WithStatusSubresource(newFreight, secondNewFreight, oldFreight),
 				serverSetup: func(_ *testing.T, s *server) {
-					s.sender = multiSender
+					s.storageClient = storage.NewStorageClient(s.client, multiSender, nil)
 				},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
@@ -210,7 +211,7 @@ func Test_server_markFreightsCurrentlyInStage(t *testing.T) {
 					WithObjects(testProject, newFreight).
 					WithStatusSubresource(newFreight),
 				serverSetup: func(_ *testing.T, s *server) {
-					s.sender = unverifiedSender
+					s.storageClient = storage.NewStorageClient(s.client, unverifiedSender, nil)
 				},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
@@ -228,7 +229,7 @@ func Test_server_markFreightsCurrentlyInStage(t *testing.T) {
 					WithObjects(testProject, newFreightVerified).
 					WithStatusSubresource(newFreightVerified),
 				serverSetup: func(_ *testing.T, s *server) {
-					s.sender = verifiedSender
+					s.storageClient = storage.NewStorageClient(s.client, verifiedSender, nil)
 				},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
@@ -246,7 +247,7 @@ func Test_server_markFreightsCurrentlyInStage(t *testing.T) {
 					WithObjects(testProject, newFreightCurrent).
 					WithStatusSubresource(newFreightCurrent),
 				serverSetup: func(_ *testing.T, s *server) {
-					s.sender = alreadyCurrentSender
+					s.storageClient = storage.NewStorageClient(s.client, alreadyCurrentSender, nil)
 				},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
@@ -442,7 +443,7 @@ func Test_server_markFreightsVerifiedInStage(t *testing.T) {
 					WithObjects(testProject, testFreight).
 					WithStatusSubresource(testFreight),
 				serverSetup: func(_ *testing.T, s *server) {
-					s.sender = newlyVerifiedSender
+					s.storageClient = storage.NewStorageClient(s.client, newlyVerifiedSender, nil)
 				},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
@@ -466,7 +467,7 @@ func Test_server_markFreightsVerifiedInStage(t *testing.T) {
 					WithObjects(testProject, testFreight, secondFreight).
 					WithStatusSubresource(testFreight, secondFreight),
 				serverSetup: func(_ *testing.T, s *server) {
-					s.sender = multiSender
+					s.storageClient = storage.NewStorageClient(s.client, multiSender, nil)
 				},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
@@ -495,7 +496,7 @@ func Test_server_markFreightsVerifiedInStage(t *testing.T) {
 					WithObjects(testProject, testFreightAlreadyVerified).
 					WithStatusSubresource(testFreightAlreadyVerified),
 				serverSetup: func(_ *testing.T, s *server) {
-					s.sender = reverifiedSender
+					s.storageClient = storage.NewStorageClient(s.client, reverifiedSender, nil)
 				},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)

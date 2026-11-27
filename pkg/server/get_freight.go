@@ -41,11 +41,11 @@ func (s *server) getFreight(c *gin.Context) {
 		))
 		return
 	case nameOnly:
-		freight, err = s.freightClient.GetFreight(ctx, project, nameOrAlias)
+		freight, err = s.freightClientFn().GetFreight(ctx, project, nameOrAlias)
 	case aliasOnly:
-		freight, err = s.freightClient.GetFreightByAlias(ctx, project, nameOrAlias)
+		freight, err = s.freightClientFn().GetFreightByAlias(ctx, project, nameOrAlias)
 	default:
-		freight, err = s.freightClient.GetFreightByNameOrAlias(ctx, project, nameOrAlias)
+		freight, err = s.freightClientFn().GetFreightByNameOrAlias(ctx, project, nameOrAlias)
 	}
 	if err != nil {
 		_ = c.Error(err)
