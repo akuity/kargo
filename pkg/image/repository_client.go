@@ -21,6 +21,7 @@ import (
 	"golang.org/x/sync/semaphore"
 
 	"github.com/akuity/kargo/pkg/cache"
+	xhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -48,6 +49,10 @@ const (
 	// dead. This bounds only time-to-first-header per request and imposes no
 	// limit on the total duration of a response transfer.
 	responseHeaderTimeout = 30 * time.Second
+
+	// responseBodyIdleTimeout bounds how long a response body may go without
+	// yielding data. It imposes no limit on a transfer that is progressing.
+	responseBodyIdleTimeout = 30 * time.Second
 )
 
 var metaSem = semaphore.NewWeighted(maxMetadataConcurrency)
@@ -109,14 +114,6 @@ func newRepositoryClient(
 	}
 	reg := getRegistry(repoRef.Context().RegistryStr())
 
-	httpTransport := cleanhttp.DefaultTransport()
-	httpTransport.ResponseHeaderTimeout = responseHeaderTimeout
-	if insecureSkipTLSVerify {
-		httpTransport.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: insecureSkipTLSVerify, // nolint: gosec
-		}
-	}
-
 	if creds == nil {
 		creds = &Credentials{}
 	}
@@ -134,7 +131,7 @@ func newRepositoryClient(
 		remoteOptions: []remote.Option{
 			remote.WithTransport(&rateLimitedRoundTripper{
 				limiter:              reg.rateLimiter,
-				internalRoundTripper: httpTransport,
+				internalRoundTripper: newRepositoryTransport(insecureSkipTLSVerify),
 			}),
 			remote.WithAuth(auth),
 		},
@@ -149,6 +146,19 @@ func newRepositoryClient(
 	r.remoteGetFn = remote.Get
 
 	return r, nil
+}
+
+// newRepositoryTransport returns the transport for requests to an image
+// registry.
+func newRepositoryTransport(insecureSkipTLSVerify bool) http.RoundTripper {
+	httpTransport := cleanhttp.DefaultTransport()
+	httpTransport.ResponseHeaderTimeout = responseHeaderTimeout
+	if insecureSkipTLSVerify {
+		httpTransport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: insecureSkipTLSVerify, // nolint: gosec
+		}
+	}
+	return xhttp.NewIdleTimeoutTransport(httpTransport, responseBodyIdleTimeout)
 }
 
 func (r *repositoryClient) getTags(ctx context.Context) ([]string, error) {

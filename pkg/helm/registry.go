@@ -15,6 +15,7 @@ import (
 	"oras.land/oras-go/v2/registry/remote/credentials"
 	"oras.land/oras-go/v2/registry/remote/retry"
 
+	xhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/x/version"
 )
 
@@ -24,6 +25,10 @@ import (
 // dead. This bounds only time-to-first-header per request and imposes no
 // limit on the total duration of a response transfer.
 const responseHeaderTimeout = 30 * time.Second
+
+// responseBodyIdleTimeout bounds how long a response body may go without
+// yielding data. It imposes no limit on a transfer that is progressing.
+const responseBodyIdleTimeout = 30 * time.Second
 
 // NewRegistryClient creates a new registry client using the provided authorizer.
 // This can be combined with an EphemeralAuthorizer to create a client that
@@ -69,7 +74,12 @@ type EphemeralAuthorizer struct {
 // errors are ignored. This should be enabled only with great caution.
 func NewEphemeralAuthorizer(insecure bool) *EphemeralAuthorizer {
 	httpClient := &http.Client{
-		Transport: retry.NewTransport(newRegistryTransport(insecure)),
+		Transport: retry.NewTransport(
+			xhttp.NewIdleTimeoutTransport(
+				newRegistryTransport(insecure),
+				responseBodyIdleTimeout,
+			),
+		),
 	}
 
 	store := credentials.NewMemoryStore()

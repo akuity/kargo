@@ -72,12 +72,19 @@ func TestNewEphemeralAuthorizer(t *testing.T) {
 		assert.NotNil(t, authorizer)
 		assert.NotNil(t, authorizer.Client.Client)
 
-		// Unwrap the transport chain: retry.Transport -> *http.Transport to
-		// verify InsecureSkipVerify is set.
+		// Unwrap the transport chain: retry.Transport -> idle timeout transport
+		// -> *http.Transport to verify InsecureSkipVerify is set.
 		retryT, retryOK := authorizer.Client.Client.Transport.(*retry.Transport)
 		assert.True(t, retryOK, "expected outermost transport to be *retry.Transport")
 		if retryOK {
-			httpT, httpOK := retryT.Base.(*http.Transport)
+			idleT, idleOK := retryT.Base.(interface {
+				WrappedRoundTripper() http.RoundTripper
+			})
+			assert.True(t, idleOK, "expected idle timeout transport beneath retry")
+			if !idleOK {
+				return
+			}
+			httpT, httpOK := idleT.WrappedRoundTripper().(*http.Transport)
 			assert.True(t, httpOK, "expected base transport to be *http.Transport")
 			if httpOK {
 				assert.NotNil(t, httpT.TLSClientConfig)

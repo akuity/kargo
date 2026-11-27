@@ -629,8 +629,8 @@ func (r *reconciler) discoverArtifacts(
 			gitIdx++
 		}
 		// TODO(krancour): Discovery relies on stall detection in the underlying
-		// implementations (git's low-speed abort; ResponseHeaderTimeout on
-		// registry/repository HTTP transports) to keep a dead connection from
+		// implementations (git's low-speed abort; header and body idle timeouts
+		// on registry/repository HTTP transports) to keep a dead connection from
 		// hanging a reconcile indefinitely. Those measures bound "no progress," not
 		// total duration, so a healthy-but-slow transfer is never cut off. If they
 		// should ever prove insufficient, setting a per-subscription deadline from
