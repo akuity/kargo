@@ -161,9 +161,10 @@ func Test_loginOptions_complete(t *testing.T) {
 func TestPresentAuthURL(t *testing.T) {
 	const testURL = "https://idp.example.com/authorize?state=fake-state"
 	testCases := []struct {
-		name    string
-		openErr error
-		assert  func(t *testing.T, output string, opened []string)
+		name      string
+		noBrowser bool
+		openErr   error
+		assert    func(t *testing.T, output string, opened []string)
 	}{
 		{
 			name: "browser opens",
@@ -187,6 +188,15 @@ func TestPresentAuthURL(t *testing.T) {
 				)
 			},
 		},
+		{
+			name:      "no browser",
+			noBrowser: true,
+			assert: func(t *testing.T, output string, opened []string) {
+				require.Empty(t, opened)
+				require.Contains(t, output, testURL)
+				require.Contains(t, output, "Open the following URL")
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -199,7 +209,7 @@ func TestPresentAuthURL(t *testing.T) {
 				return testCase.openErr
 			}
 			var out bytes.Buffer
-			presentAuthURL(&out, testURL)
+			presentAuthURL(&out, testURL, testCase.noBrowser)
 			testCase.assert(t, out.String(), opened)
 		})
 	}
