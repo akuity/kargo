@@ -137,7 +137,6 @@ export const Events = () => {
     <Flex vertical className='min-h-full'>
       <BaseHeader>
         <Breadcrumb
-          separator='>'
           items={[
             ...projectBreadcrumbs,
             {

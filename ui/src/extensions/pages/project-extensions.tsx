@@ -21,7 +21,6 @@ export const ProjectExtensions = () => {
               <>
                 <BaseHeader>
                   <Breadcrumb
-                    separator='>'
                     items={[
                       ...projectBreadcrumbs,
                       {

@@ -196,7 +196,6 @@ export const ProjectSettings = () => {
     <>
       <BaseHeader>
         <Breadcrumb
-          separator='>'
           items={[
             ...projectBreadcrumbs,
             {

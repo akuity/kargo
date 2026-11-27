@@ -19,7 +19,7 @@ export const TargetsPage = () => {
   return (
     <Flex vertical className='min-h-full'>
       <BaseHeader>
-        <Breadcrumb separator='>' items={[...projectBreadcrumbs, { title: 'Targets' }]} />
+        <Breadcrumb items={[...projectBreadcrumbs, { title: 'Targets' }]} />
       </BaseHeader>
       <Targets key={name} />
     </Flex>

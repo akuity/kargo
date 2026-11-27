@@ -19,7 +19,6 @@ export const AppExtensions = () => {
               <>
                 <BaseHeader>
                   <Breadcrumb
-                    separator='>'
                     items={[
                       {
                         title: page.label

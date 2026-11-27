@@ -196,7 +196,7 @@ export const MainLayout = () => {
                   title='Home'
                 >
                   {/* `!` outranks KargoLogo's default 64px width. */}
-                  <KargoLogo className='[&_img]:!w-[52px]' />
+                  <KargoLogo className='[&_img]:!w-[56px]' />
                 </Link>
               </div>
 

@@ -40,7 +40,7 @@ export const Project = ({
   return (
     <div className='h-full flex flex-col'>
       <BaseHeader>
-        <Breadcrumb separator='>' items={[projectBreadcrumbs[0], { title: name }]} />
+        <Breadcrumb items={[projectBreadcrumbs[0], { title: name }]} />
         <Space>
           {projectSubpages.map((page) => (
             <Button
