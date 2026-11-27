@@ -378,28 +378,24 @@ func (s *store) ListTargetStatuses(
 }
 
 // Start moves the Pending PromotionRollout named by the argument to Running
-// and records its FreightCollection, in one statement: a rollout that starts
-// has a collection, and nothing else gives it one or changes it afterwards.
-// The row is returned as stored. The argument's reason, message and
-// timestamps are written as UpdateStatus writes them, and a non-zero ID or
-// UpdatedAt on it is a precondition in the same way; its phase is not read.
+// and records its FreightCollection, in one statement. It returns the row as
+// stored.
 //
-// freight is the Freight the rollout promotes, contents included: the
-// collection is a record that outlives the Freight, so it holds a copy. For
-// each other origin among requested, the origins the Stage requests Freight
-// from now, the collection takes a copy of what the Stage's previous rollout
-// recorded for it. No Freight is read to do so, and an origin the Stage no
-// longer requests, or one the previous rollout recorded nothing for, is
-// absent. The previous rollout is the Stage's newest one, numbered below
-// this one, that recorded a collection, however it finished. It is chosen
-// in the same statement, by the previous CTE of UpdatePromotionRolloutStatus,
-// so the choice and the rows written from it cannot disagree.
+// The collection holds freight, the Freight the rollout promotes, and, for
+// each other origin in requested, a copy of what the Stage's previous
+// rollout recorded. requested is the origins the Stage requests Freight
+// from now. See the StartPromotionRollout query for how the previous
+// rollout is chosen.
 //
-// database.ErrConflict says the rollout is not Pending, or no longer matches
-// a precondition, or that another rollout of its Stage is Running;
-// database.ErrInvalid that the Freight is not the one the rollout promotes,
-// or that its name or origin is missing. Nothing is written in any of those
-// cases.
+// The argument's reason, message and timestamps are written. Its phase is
+// ignored. A non-zero ID or UpdatedAt on it is a precondition, as in
+// UpdateStatus.
+//
+// Errors, none of which write anything:
+//   - database.ErrInvalid: freight has no name or origin, or is not the
+//     Freight the rollout promotes.
+//   - database.ErrConflict: the rollout is not Pending, fails a
+//     precondition, or another rollout of its Stage is Running.
 func (s *store) Start(
 	ctx context.Context,
 	project string,
@@ -407,21 +403,20 @@ func (s *store) Start(
 	freight kargoapi.FreightReference,
 	requested []kargoapi.FreightOrigin,
 ) (database.PromotionRolloutRow, error) {
-	reference, err := json.Marshal(freight)
+	args, err := startArgs(project, rollout, freight, requested)
 	if err != nil {
-		return database.PromotionRolloutRow{}, rolloutError(
-			fmt.Errorf("error encoding Freight %q: %w", freight.Name, err), project, rollout.Name,
-		)
+		return database.PromotionRolloutRow{}, rolloutError(err, project, rollout.Name)
 	}
-	args := statusArgs(project, rollout)
-	args.StatusPhase = string(kargoapi.PromotionRolloutPhaseRunning)
-	args.Start = true
-	args.FreightName = freight.Name
-	args.OriginKind = string(freight.Origin.Kind)
-	args.OriginName = freight.Origin.Name
-	args.Reference = reference
-	args.RequestedOriginKinds, args.RequestedOriginNames = zipOrigins(requested)
-	return s.updateStatus(ctx, project, rollout, args, &freight)
+	return s.writeStatus(
+		ctx,
+		project,
+		rollout,
+		func(ctx context.Context) (database.PromotionRolloutRow, error) {
+			started, startErr := s.queries.StartPromotionRollout(ctx, args)
+			return database.PromotionRolloutRow(started), startErr
+		},
+		&freight,
+	)
 }
 
 // GetFreightCollection returns the FreightCollection recorded for the
@@ -457,17 +452,26 @@ func (s *store) UpdateStatus(
 	project string,
 	rollout database.PromotionRolloutRow,
 ) (database.PromotionRolloutRow, error) {
-	return s.updateStatus(ctx, project, rollout, statusArgs(project, rollout), nil)
+	return s.writeStatus(
+		ctx,
+		project,
+		rollout,
+		func(ctx context.Context) (database.PromotionRolloutRow, error) {
+			return s.queries.UpdatePromotionRolloutStatus(ctx, statusArgs(project, rollout))
+		},
+		nil,
+	)
 }
 
-// updateStatus writes args to the PromotionRollout named by the argument,
-// explains a write that matched no row, and announces one that succeeded.
-// freight is the Freight a start is given, nil for any other write.
-func (s *store) updateStatus(
+// writeStatus runs write, which writes a status to the PromotionRollout
+// named by the argument. It explains a write that matched no row and
+// announces one that succeeded. freight is the Freight a start is given,
+// nil for any other write.
+func (s *store) writeStatus(
 	ctx context.Context,
 	project string,
 	rollout database.PromotionRolloutRow,
-	args database.UpdatePromotionRolloutStatusParams,
+	write func(context.Context) (database.PromotionRolloutRow, error),
 	freight *kargoapi.FreightReference,
 ) (database.PromotionRolloutRow, error) {
 	// The event about the update carries the row as it was, which the
@@ -491,14 +495,13 @@ func (s *store) updateStatus(
 		}
 		old = &current
 	}
-	updated, err := s.queries.UpdatePromotionRolloutStatus(ctx, args)
+	row, err := write(ctx)
 	if errors.Is(err, pgx.ErrNoRows) {
 		err = s.updateMissed(ctx, project, rollout, freight)
 	}
 	if err != nil {
 		return database.PromotionRolloutRow{}, rolloutError(err, project, rollout.Name)
 	}
-	row := database.PromotionRolloutRow(updated)
 	if old != nil {
 		s.publishUpdated(ctx, *old, row)
 	}
@@ -520,13 +523,66 @@ func statusArgs(
 		StatusStartedAt:  rollout.StatusStartedAt,
 		StatusFinishedAt: rollout.StatusFinishedAt,
 	}
-	if rollout.ID != uuid.Nil {
-		args.ID = &rollout.ID
-	}
-	if !rollout.UpdatedAt.IsZero() {
-		args.UpdatedAt = &rollout.UpdatedAt
-	}
+	args.ID, args.UpdatedAt = preconditionArgs(rollout)
 	return args
+}
+
+// startArgs are the arguments that start the PromotionRollout named by the
+// argument with the Freight, under the preconditions the argument carries.
+// Freight without a name or an origin is database.ErrInvalid. The check is
+// made here because the database only makes it when it inserts the row,
+// which it skips for a rollout that already has a collection.
+func startArgs(
+	project string,
+	rollout database.PromotionRolloutRow,
+	freight kargoapi.FreightReference,
+	requested []kargoapi.FreightOrigin,
+) (database.StartPromotionRolloutParams, error) {
+	switch {
+	case freight.Name == "":
+		return database.StartPromotionRolloutParams{}, fmt.Errorf(
+			"%w: the Freight has no name", database.ErrInvalid,
+		)
+	case freight.Origin.Kind == "" || freight.Origin.Name == "":
+		return database.StartPromotionRolloutParams{}, fmt.Errorf(
+			"%w: Freight %q has no origin", database.ErrInvalid, freight.Name,
+		)
+	}
+	reference, err := json.Marshal(freight)
+	if err != nil {
+		return database.StartPromotionRolloutParams{}, fmt.Errorf(
+			"error encoding Freight %q: %w", freight.Name, err,
+		)
+	}
+	args := database.StartPromotionRolloutParams{
+		ProjectName:      project,
+		Name:             rollout.Name,
+		StatusReason:     rollout.StatusReason,
+		StatusMessage:    rollout.StatusMessage,
+		StatusStartedAt:  rollout.StatusStartedAt,
+		StatusFinishedAt: rollout.StatusFinishedAt,
+		FreightName:      freight.Name,
+		OriginKind:       string(freight.Origin.Kind),
+		OriginName:       freight.Origin.Name,
+		Reference:        reference,
+	}
+	args.ID, args.UpdatedAt = preconditionArgs(rollout)
+	args.RequestedOriginKinds, args.RequestedOriginNames = zipOrigins(requested)
+	return args, nil
+}
+
+// preconditionArgs are the identity and version the argument asserts, each
+// nil when it asserts none.
+func preconditionArgs(rollout database.PromotionRolloutRow) (*uuid.UUID, *time.Time) {
+	var id *uuid.UUID
+	if rollout.ID != uuid.Nil {
+		id = &rollout.ID
+	}
+	var updatedAt *time.Time
+	if !rollout.UpdatedAt.IsZero() {
+		updatedAt = &rollout.UpdatedAt
+	}
+	return id, updatedAt
 }
 
 // zipOrigins splits origins into their kinds and their names, two lists of

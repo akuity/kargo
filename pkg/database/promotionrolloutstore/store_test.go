@@ -1,6 +1,7 @@
 package promotionrolloutstore
 
 import (
+	"encoding/json"
 	"errors"
 	"strconv"
 	"testing"
@@ -154,15 +155,6 @@ func TestStatusArgs(t *testing.T) {
 			assert: func(t *testing.T, args database.UpdatePromotionRolloutStatusParams) {
 				require.Equal(t, &id, args.ID)
 				require.Equal(t, &updated, args.UpdatedAt)
-			},
-		},
-		{
-			name:    "a status update starts nothing and records no Freight",
-			rollout: database.PromotionRolloutRow{StatusPhase: "Running", FreightName: "abc"},
-			assert: func(t *testing.T, args database.UpdatePromotionRolloutStatusParams) {
-				require.False(t, args.Start)
-				require.Empty(t, args.FreightName)
-				require.Nil(t, args.Reference)
 			},
 		},
 	}
@@ -501,4 +493,100 @@ func TestFromSpec(t *testing.T) {
 		MaxConcurrent: 3,
 		MaxFailures:   1,
 	}, row)
+}
+
+func TestStartArgs(t *testing.T) {
+	t.Parallel()
+	id := uuid.MustParse("11111111-2222-3333-4444-555555555555")
+	updated := time.UnixMicro(1623053350123456)
+	started := updated.Add(-time.Minute)
+	images := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "images"}
+	config := kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "config"}
+	freight := kargoapi.FreightReference{Name: "abc", Origin: images}
+	testCases := []struct {
+		name      string
+		rollout   database.PromotionRolloutRow
+		freight   kargoapi.FreightReference
+		requested []kargoapi.FreightOrigin
+		assert    func(*testing.T, database.StartPromotionRolloutParams, error)
+	}{
+		{
+			name:    "Freight with no name",
+			freight: kargoapi.FreightReference{Origin: images},
+			assert: func(t *testing.T, _ database.StartPromotionRolloutParams, err error) {
+				require.ErrorIs(t, err, database.ErrInvalid)
+				require.ErrorContains(t, err, "the Freight has no name")
+			},
+		},
+		{
+			name: "Freight with no origin kind",
+			freight: kargoapi.FreightReference{
+				Name:   "abc",
+				Origin: kargoapi.FreightOrigin{Name: "images"},
+			},
+			assert: func(t *testing.T, _ database.StartPromotionRolloutParams, err error) {
+				require.ErrorIs(t, err, database.ErrInvalid)
+				require.ErrorContains(t, err, `Freight "abc" has no origin`)
+			},
+		},
+		{
+			name: "Freight with no origin name",
+			freight: kargoapi.FreightReference{
+				Name:   "abc",
+				Origin: kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse},
+			},
+			assert: func(t *testing.T, _ database.StartPromotionRolloutParams, err error) {
+				require.ErrorIs(t, err, database.ErrInvalid)
+				require.ErrorContains(t, err, `Freight "abc" has no origin`)
+			},
+		},
+		{
+			name: "the Freight and the status are written to the named rollout",
+			rollout: database.PromotionRolloutRow{
+				Name:            "prod.01A.abc",
+				StatusPhase:     "Bogus",
+				StatusReason:    "reason",
+				StatusMessage:   "message",
+				StatusStartedAt: &started,
+			},
+			freight:   freight,
+			requested: []kargoapi.FreightOrigin{images, config},
+			assert: func(t *testing.T, args database.StartPromotionRolloutParams, err error) {
+				require.NoError(t, err)
+				var recorded kargoapi.FreightReference
+				require.NoError(t, json.Unmarshal(args.Reference, &recorded))
+				require.Equal(t, freight, recorded)
+				args.Reference = nil
+				require.Equal(t, database.StartPromotionRolloutParams{
+					ProjectName:          "demo",
+					Name:                 "prod.01A.abc",
+					StatusReason:         "reason",
+					StatusMessage:        "message",
+					StatusStartedAt:      &started,
+					FreightName:          "abc",
+					OriginKind:           "Warehouse",
+					OriginName:           "images",
+					RequestedOriginKinds: []string{"Warehouse", "Warehouse"},
+					RequestedOriginNames: []string{"images", "config"},
+				}, args)
+			},
+		},
+		{
+			name:    "an id and a version are preconditions",
+			rollout: database.PromotionRolloutRow{ID: id, UpdatedAt: updated},
+			freight: freight,
+			assert: func(t *testing.T, args database.StartPromotionRolloutParams, err error) {
+				require.NoError(t, err)
+				require.Equal(t, &id, args.ID)
+				require.Equal(t, &updated, args.UpdatedAt)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			args, err := startArgs("demo", testCase.rollout, testCase.freight, testCase.requested)
+			testCase.assert(t, args, err)
+		})
+	}
 }

@@ -1253,6 +1253,21 @@ func TestStoreFreightIntegration(t *testing.T) {
 				require.NoError(t, err)
 				requireCollection(t, rollout, ref)
 				require.Equal(t, 1, countRows(t, rollout))
+
+				// Freight that names no origin is refused even then, though
+				// no row would be inserted for the database to reject.
+				finish(t, rollout, kargoapi.PromotionRolloutPhasePending)
+				noOrigin := ref
+				noOrigin.Origin = kargoapi.FreightOrigin{}
+				_, err = store.Start(
+					ctx, project, database.PromotionRolloutRow{Name: rollout.Name}, noOrigin, nil,
+				)
+				require.ErrorIs(t, err, database.ErrInvalid)
+				require.ErrorContains(t, err, "has no origin")
+				fetched, err = store.Get(ctx, project, rollout.Name)
+				require.NoError(t, err)
+				require.Equal(t, "Pending", fetched.StatusPhase)
+				requireCollection(t, rollout, ref)
 			},
 		},
 		{
@@ -1349,12 +1364,12 @@ func TestStoreFreightIntegration(t *testing.T) {
 				require.ErrorContains(t, err, `promotes Freight "images-1", not "images-2"`)
 				requirePending(t, rollout)
 
-				// Freight that names no origin: the row is refused, and the
-				// rollout's move to Running with it.
+				// Freight that names no origin.
 				noOrigin := ref
 				noOrigin.Origin = kargoapi.FreightOrigin{}
 				_, err = store.Start(ctx, project, rollout.PromotionRolloutRow, noOrigin, nil)
 				require.ErrorIs(t, err, database.ErrInvalid)
+				require.ErrorContains(t, err, "has no origin")
 				requirePending(t, rollout)
 
 				// Preconditions the row does not meet.
