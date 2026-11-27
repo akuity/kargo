@@ -20,6 +20,10 @@ const (
 	// canonical origin key (e.g. "Warehouse/foo").
 	AnnotationKeyAutoPromotionResume = "kargo.akuity.io/auto-promotion-resume"
 
+	// AnnotationKeyDiscoveredAt holds Freight DiscoveredAt in RFC3339Nano, as
+	// DiscoveredAt serializes to whole seconds.
+	AnnotationKeyDiscoveredAt = "kargo.akuity.io/discovered-at"
+
 	// AnnotationKeyRefresh is an annotation key that can be set on a resource
 	// to trigger a refresh of the resource by the controller. The value of the
 	// annotation is interpreted as a token, and any change to the value of the
