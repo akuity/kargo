@@ -2,11 +2,16 @@ package git
 
 import (
 	"fmt"
+	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/sosedoff/gitkit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -505,4 +510,431 @@ func TestBareRepo_WithFilter(t *testing.T) {
 	content, err := os.ReadFile(filepath.Join(workTree.Dir(), "dir1", "file.txt"))
 	require.NoError(t, err)
 	require.Equal(t, "content in dir1", string(content))
+}
+
+func TestBareRepo_CloneDepthAndBranches(t *testing.T) {
+	// The remote has a main branch with 3 commits and three other branches that
+	// each add 1 commit on top of main.
+	otherBranches := []string{"other", "stage/dev", "stage/prod"}
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
+		t,
+		func(t *testing.T, repo WorkTree) {
+			for i := range 3 {
+				require.NoError(t, os.WriteFile(
+					filepath.Join(repo.Dir(), "main.txt"),
+					[]byte(fmt.Sprintf("main %d", i)),
+					0600,
+				))
+				require.NoError(t, repo.AddAllAndCommit(
+					t.Context(),
+					fmt.Sprintf("main commit %d", i),
+					nil,
+				))
+			}
+			require.NoError(t, repo.Push(t.Context(), nil))
+			for _, branch := range otherBranches {
+				require.NoError(t, repo.Checkout(t.Context(), "main"))
+				require.NoError(t, repo.CreateChildBranch(t.Context(), branch))
+				require.NoError(t, os.WriteFile(
+					filepath.Join(repo.Dir(), "branch.txt"),
+					[]byte(branch),
+					0600,
+				))
+				require.NoError(t, repo.AddAllAndCommit(
+					t.Context(),
+					fmt.Sprintf("%s commit", branch),
+					nil,
+				))
+				require.NoError(t, repo.Push(t.Context(), nil))
+			}
+		},
+	)
+	defer testServer.Close()
+
+	testCases := []struct {
+		name string
+		opts *BareCloneOptions
+		// expectedCommits maps each branch that is expected to exist in the clone
+		// to the number of commits expected in that branch's history.
+		expectedCommits map[string]int
+		expectShallow   bool
+	}{
+		{
+			name: "no depth or branches",
+			opts: &BareCloneOptions{},
+			expectedCommits: map[string]int{
+				"main":       3,
+				"other":      4,
+				"stage/dev":  4,
+				"stage/prod": 4,
+			},
+		},
+		{
+			name: "depth only",
+			opts: &BareCloneOptions{Depth: 1},
+			expectedCommits: map[string]int{
+				"main":       1,
+				"other":      1,
+				"stage/dev":  1,
+				"stage/prod": 1,
+			},
+			expectShallow: true,
+		},
+		{
+			name: "branches only",
+			opts: &BareCloneOptions{Branches: []string{"main", "stage/dev"}},
+			expectedCommits: map[string]int{
+				"main":      3,
+				"stage/dev": 4,
+			},
+		},
+		{
+			name: "duplicate branches",
+			opts: &BareCloneOptions{Branches: []string{"stage/dev", "stage/dev"}},
+			expectedCommits: map[string]int{
+				"stage/dev": 4,
+			},
+		},
+		{
+			name: "depth and branches",
+			opts: &BareCloneOptions{
+				Depth:    2,
+				Branches: []string{"stage/dev", "stage/prod"},
+			},
+			expectedCommits: map[string]int{
+				"stage/dev":  2,
+				"stage/prod": 2,
+			},
+			expectShallow: true,
+		},
+		{
+			name: "blobless, depth, and branches",
+			opts: &BareCloneOptions{
+				Blobless: true,
+				Depth:    1,
+				Branches: []string{"main", "other"},
+			},
+			expectedCommits: map[string]int{
+				"main":  1,
+				"other": 1,
+			},
+			expectShallow: true,
+		},
+		{
+			name: "branches include a branch that does not exist",
+			opts: &BareCloneOptions{Branches: []string{"main", "stage/new"}},
+			expectedCommits: map[string]int{
+				"main": 3,
+			},
+		},
+		{
+			name: "no specified branches exist",
+			opts: &BareCloneOptions{Branches: []string{"nope", "nada"}},
+		},
+		{
+			name: "blobless with no existing branches",
+			opts: &BareCloneOptions{
+				Blobless: true,
+				Branches: []string{"stage/new"},
+			},
+		},
+		{
+			name: "missing branch with depth",
+			opts: &BareCloneOptions{
+				Depth:    1,
+				Branches: []string{"main", "nada"},
+			},
+			expectedCommits: map[string]int{
+				"main": 1,
+			},
+			expectShallow: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			rep, err := CloneBare(
+				t.Context(),
+				testRepoURL,
+				&ClientOptions{Credentials: &testRepoCreds},
+				testCase.opts,
+			)
+			require.NoError(t, err)
+			defer func() {
+				require.NoError(t, rep.Close(t.Context()))
+			}()
+
+			// runGit runs a git command in the bare repository
+			runGit := func(args ...string) string {
+				cmd := exec.CommandContext(t.Context(), "git", args...)
+				cmd.Dir = rep.Dir()
+				out, cmdErr := cmd.CombinedOutput()
+				require.NoErrorf(t, cmdErr, "git %v failed: %s", args, out)
+				return strings.TrimSpace(string(out))
+			}
+
+			// Exactly the expected branches should exist.
+			expectedBranches := make([]string, 0, len(testCase.expectedCommits))
+			for branch := range testCase.expectedCommits {
+				expectedBranches = append(expectedBranches, branch)
+			}
+			slices.Sort(expectedBranches)
+			require.Equal(
+				t,
+				expectedBranches,
+				strings.Fields(runGit(
+					"for-each-ref", "--format=%(refname:short)", "refs/heads",
+				)),
+			)
+
+			require.Equal(
+				t,
+				fmt.Sprint(testCase.expectShallow),
+				runGit("rev-parse", "--is-shallow-repository"),
+			)
+
+			if testCase.opts.Blobless {
+				require.Equal(
+					t,
+					"true",
+					runGit("config", "--get", "remote.origin.promisor"),
+				)
+				require.Equal(
+					t,
+					"blob:none",
+					runGit("config", "--get", "remote.origin.partialclonefilter"),
+				)
+				for branch := range testCase.expectedCommits {
+					blobID := runGit("ls-tree", "--object-only", branch, "main.txt")
+					require.NotEmpty(t, blobID)
+					cmd := exec.CommandContext(
+						t.Context(), "git", "cat-file", "--batch-check=%(objecttype)",
+					)
+					cmd.Dir = rep.Dir()
+					cmd.Env = append(os.Environ(), "GIT_NO_LAZY_FETCH=1")
+					cmd.Stdin = strings.NewReader(blobID + "\n")
+					out, cmdErr := cmd.CombinedOutput()
+					require.NoErrorf(t, cmdErr, "git cat-file failed: %s", out)
+					require.Equal(
+						t,
+						blobID+" missing",
+						strings.TrimSpace(string(out)),
+						"expected blob %s on branch %q to be omitted before checkout",
+						blobID, branch,
+					)
+				}
+			}
+
+			for branch, expectedCount := range testCase.expectedCommits {
+				require.Equal(
+					t,
+					fmt.Sprint(expectedCount),
+					runGit("rev-list", "--count", branch),
+					"unexpected commit count for branch %q", branch,
+				)
+				// The branch should be usable.
+				var workTree WorkTree
+				workTree, err = rep.AddWorkTree(
+					t.Context(),
+					filepath.Join(rep.HomeDir(), strings.ReplaceAll(branch, "/", "-")),
+					&AddWorkTreeOptions{Ref: branch},
+				)
+				require.NoError(t, err)
+				require.FileExists(t, filepath.Join(workTree.Dir(), "main.txt"))
+				require.NoError(t, workTree.Close(t.Context()))
+			}
+		})
+	}
+}
+
+func TestBareRepo_CloneBranchesLiteralsMatchExactly(t *testing.T) {
+	// "git ls-remote" matches patterns against the tail of a ref's name, so a
+	// literal "main" would also match "foo/refs/heads/main" if the results
+	// weren't filtered.
+	lookalike := "foo/refs/heads/main"
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
+		t,
+		initialMainCommit,
+		func(t *testing.T, repo WorkTree) {
+			require.NoError(t, repo.CreateChildBranch(t.Context(), lookalike))
+			require.NoError(t, repo.Push(t.Context(), nil))
+		},
+	)
+	defer testServer.Close()
+
+	rep, err := CloneBare(
+		t.Context(),
+		testRepoURL,
+		&ClientOptions{Credentials: &testRepoCreds},
+		&BareCloneOptions{Branches: []string{"main"}},
+	)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, rep.Close(t.Context()))
+	}()
+
+	cmd := exec.CommandContext(
+		t.Context(), "git", "for-each-ref", "--format=%(refname:short)", "refs/heads",
+	)
+	cmd.Dir = rep.Dir()
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, string(out))
+	require.Equal(t, []string{"main"}, strings.Fields(string(out)))
+}
+
+func TestBareRepo_CloneBranchesSHA256(t *testing.T) {
+	reposDir := t.TempDir()
+
+	// Initialize both a populated and an empty SHA-256 bare remote.
+	initSHA256Bare := func(name string) {
+		t.Helper()
+		repoPath := filepath.Join(reposDir, name)
+		cmd := exec.CommandContext(
+			t.Context(), "git", "init", "--bare", "--object-format=sha256", repoPath,
+		)
+		out, err := cmd.CombinedOutput()
+		require.NoErrorf(t, err, "git init failed: %s", out)
+
+		cmd = exec.CommandContext(
+			t.Context(), "git", "-C", repoPath, "symbolic-ref", "HEAD", "refs/heads/main",
+		)
+		out, err = cmd.CombinedOutput()
+		require.NoErrorf(t, err, "git symbolic-ref failed: %s", out)
+	}
+	initSHA256Bare("populated.git")
+	initSHA256Bare("empty.git")
+
+	service := gitkit.New(gitkit.Config{Dir: reposDir})
+	require.NoError(t, service.Setup())
+	server := httptest.NewServer(service)
+	t.Cleanup(server.Close)
+
+	populatedURL := fmt.Sprintf("%s/populated.git", server.URL)
+	emptyURL := fmt.Sprintf("%s/empty.git", server.URL)
+
+	// Push two commits to main on populated.git.
+	author, err := Clone(t.Context(), populatedURL, nil, nil)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, author.Close(t.Context())) }()
+	for i := range 2 {
+		require.NoError(t, os.WriteFile(
+			filepath.Join(author.Dir(), "file.txt"),
+			[]byte(fmt.Sprintf("v%d", i)),
+			0o600,
+		))
+		require.NoError(
+			t,
+			author.AddAllAndCommit(t.Context(), fmt.Sprintf("commit %d", i), nil),
+		)
+	}
+	require.NoError(t, author.Push(t.Context(), nil))
+
+	runGit := func(t *testing.T, dir string, args ...string) string {
+		t.Helper()
+		cmd := exec.CommandContext(t.Context(), "git", args...)
+		cmd.Dir = dir
+		out, cmdErr := cmd.CombinedOutput()
+		require.NoErrorf(t, cmdErr, "git %v failed: %s", args, out)
+		return strings.TrimSpace(string(out))
+	}
+
+	t.Run("fetches selected branch from SHA-256 remote", func(t *testing.T) {
+		rep, cloneErr := CloneBare(
+			t.Context(),
+			populatedURL,
+			nil,
+			&BareCloneOptions{Depth: 1, Branches: []string{"main"}},
+		)
+		require.NoError(t, cloneErr)
+		defer func() { require.NoError(t, rep.Close(t.Context())) }()
+
+		require.Equal(
+			t,
+			"sha256",
+			runGit(t, rep.Dir(), "config", "--get", "extensions.objectformat"),
+		)
+		require.Equal(
+			t,
+			[]string{"main"},
+			strings.Fields(runGit(
+				t, rep.Dir(), "for-each-ref", "--format=%(refname:short)", "refs/heads",
+			)),
+		)
+		require.Equal(t, "1", runGit(t, rep.Dir(), "rev-list", "--count", "main"))
+	})
+
+	t.Run("missing branch on populated SHA-256 remote adopts SHA-256", func(t *testing.T) {
+		rep, cloneErr := CloneBare(
+			t.Context(),
+			populatedURL,
+			nil,
+			&BareCloneOptions{Branches: []string{"stage/new"}},
+		)
+		require.NoError(t, cloneErr)
+		defer func() { require.NoError(t, rep.Close(t.Context())) }()
+
+		require.Equal(
+			t,
+			"sha256",
+			runGit(t, rep.Dir(), "config", "--get", "extensions.objectformat"),
+		)
+		require.Empty(
+			t,
+			runGit(
+				t, rep.Dir(), "for-each-ref", "--format=%(refname:short)", "refs/heads",
+			),
+		)
+	})
+
+	t.Run("empty SHA-256 remote adopts SHA-256", func(t *testing.T) {
+		rep, cloneErr := CloneBare(
+			t.Context(),
+			emptyURL,
+			nil,
+			&BareCloneOptions{Branches: []string{"main"}},
+		)
+		require.NoError(t, cloneErr)
+		defer func() { require.NoError(t, rep.Close(t.Context())) }()
+
+		require.Equal(
+			t,
+			"sha256",
+			runGit(t, rep.Dir(), "config", "--get", "extensions.objectformat"),
+		)
+	})
+}
+
+func TestBareRepo_LocalBranchExists(t *testing.T) {
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
+		t,
+		initialMainCommit,
+		func(t *testing.T, repo WorkTree) {
+			require.NoError(t, repo.CreateChildBranch(t.Context(), "other"))
+			require.NoError(t, repo.Push(t.Context(), nil))
+		},
+	)
+	defer testServer.Close()
+
+	rep, err := CloneBare(
+		t.Context(),
+		testRepoURL,
+		&ClientOptions{Credentials: &testRepoCreds},
+		&BareCloneOptions{Branches: []string{"main"}},
+	)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, rep.Close(t.Context()))
+	}()
+
+	exists, err := rep.LocalBranchExists(t.Context(), "main")
+	require.NoError(t, err)
+	require.True(t, exists)
+
+	// "other" exists on the remote, but was excluded from this filtered clone.
+	exists, err = rep.LocalBranchExists(t.Context(), "other")
+	require.NoError(t, err)
+	require.False(t, exists)
+
+	exists, err = rep.LocalBranchExists(t.Context(), "does-not-exist")
+	require.NoError(t, err)
+	require.False(t, exists)
 }

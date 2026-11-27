@@ -561,3 +561,169 @@ func TestGetDiffPathsForCommitWithManyModifiedRenames(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, paths, fileCount*2)
 }
+
+func TestWorkTree_EnsureCommits(t *testing.T) {
+	repoURL, clientOpts, author := setupRemoteWithAuthor(t)
+	var olderCommitID string
+	for i := range 3 {
+		commitFile(t, author, fmt.Sprintf("commit-%d", i))
+		if i == 0 {
+			var err error
+			olderCommitID, err = author.LastCommitID(t.Context())
+			require.NoError(t, err)
+		}
+	}
+	require.NoError(t, author.Push(t.Context(), nil))
+
+	latestCommitID, err := author.LastCommitID(t.Context())
+	require.NoError(t, err)
+
+	t.Run("no-op for non-shallow repository", func(t *testing.T) {
+		wt := cloneBareWorkTree(
+			t,
+			repoURL,
+			clientOpts,
+			&BareCloneOptions{Branches: []string{"main"}},
+			"main",
+		)
+
+		// Both EnsureCommits and deepen must be no-ops and must never convert a
+		// full clone into a shallow clone.
+		require.NoError(t, wt.EnsureCommits(t.Context(), &EnsureCommitsOptions{
+			CommitIDs: []string{olderCommitID},
+			Ref:       "refs/heads/main",
+		}))
+		require.NoError(t, wt.deepen(t.Context(), 1, "refs/heads/main"))
+
+		shallow, shErr := wt.isShallow(t.Context())
+		require.NoError(t, shErr)
+		require.False(t, shallow)
+	})
+
+	t.Run("no-op when options are nil or empty", func(t *testing.T) {
+		wt := cloneBareWorkTree(
+			t,
+			repoURL,
+			clientOpts,
+			&BareCloneOptions{Depth: 1, Branches: []string{"main"}},
+			"main",
+		)
+
+		initialShallow, shErr := wt.shallowCommits(t.Context())
+		require.NoError(t, shErr)
+
+		require.NoError(t, wt.EnsureCommits(t.Context(), nil))
+		require.NoError(t, wt.EnsureCommits(t.Context(), &EnsureCommitsOptions{}))
+		require.NoError(t, wt.deepen(t.Context(), 0, "refs/heads/main"))
+
+		afterShallow, shErr := wt.shallowCommits(t.Context())
+		require.NoError(t, shErr)
+		require.Equal(t, initialShallow, afterShallow)
+	})
+
+	t.Run("no-op on shallow repository when commits are already present", func(t *testing.T) {
+		wt := cloneBareWorkTree(
+			t,
+			repoURL,
+			clientOpts,
+			&BareCloneOptions{Depth: 1, Branches: []string{"main"}},
+			"main",
+		)
+
+		initialShallow, shErr := wt.shallowCommits(t.Context())
+		require.NoError(t, shErr)
+
+		require.NoError(t, wt.EnsureCommits(t.Context(), &EnsureCommitsOptions{
+			CommitIDs: []string{latestCommitID},
+			Ref:       "refs/heads/main",
+		}))
+
+		// Shallow boundary should be unchanged (no deepening fetch).
+		afterShallow, shErr := wt.shallowCommits(t.Context())
+		require.NoError(t, shErr)
+		require.Equal(t, initialShallow, afterShallow)
+	})
+
+	t.Run("deepens shallow clone via custom staging ref", func(t *testing.T) {
+		wt := cloneBareWorkTree(
+			t,
+			repoURL,
+			clientOpts,
+			&BareCloneOptions{Depth: 1, Branches: []string{"main"}},
+			"main",
+		)
+
+		// Push to a custom staging ref just like github-push does.
+		stagingRef := "refs/kargo/staging/test"
+		require.NoError(t, wt.Push(t.Context(), &PushOptions{
+			TargetBranch: stagingRef,
+			Force:        true,
+		}))
+
+		// Older commit behind the shallow boundary is initially missing.
+		_, sigErr := wt.GetCommitSignatureInfo(t.Context(), olderCommitID)
+		require.Error(t, sigErr)
+
+		require.NoError(t, wt.EnsureCommits(t.Context(), &EnsureCommitsOptions{
+			CommitIDs: []string{olderCommitID, latestCommitID},
+			Ref:       stagingRef,
+		}))
+
+		sigInfo, sigErr := wt.GetCommitSignatureInfo(t.Context(), olderCommitID)
+		require.NoError(t, sigErr)
+		require.NotNil(t, sigInfo)
+	})
+
+	t.Run("defaults to current branch when ref is empty", func(t *testing.T) {
+		wt := cloneBareWorkTree(
+			t,
+			repoURL,
+			clientOpts,
+			&BareCloneOptions{Depth: 1, Branches: []string{"main"}},
+			"main",
+		)
+
+		require.NoError(t, wt.EnsureCommits(t.Context(), &EnsureCommitsOptions{
+			CommitIDs: []string{olderCommitID},
+		}))
+
+		sigInfo, sigErr := wt.GetCommitSignatureInfo(t.Context(), olderCommitID)
+		require.NoError(t, sigErr)
+		require.NotNil(t, sigInfo)
+	})
+
+	t.Run("blobless shallow clone checks local presence without lazy fetch", func(t *testing.T) {
+		wt := cloneBareWorkTree(
+			t,
+			repoURL,
+			clientOpts,
+			&BareCloneOptions{Blobless: true, Depth: 1, Branches: []string{"main"}},
+			"main",
+		)
+
+		require.NoError(t, wt.EnsureCommits(t.Context(), &EnsureCommitsOptions{
+			CommitIDs: []string{olderCommitID},
+			Ref:       "refs/heads/main",
+		}))
+
+		sigInfo, sigErr := wt.GetCommitSignatureInfo(t.Context(), olderCommitID)
+		require.NoError(t, sigErr)
+		require.NotNil(t, sigInfo)
+	})
+
+	t.Run("returns error when commit cannot be found after deepening", func(t *testing.T) {
+		wt := cloneBareWorkTree(
+			t,
+			repoURL,
+			clientOpts,
+			&BareCloneOptions{Depth: 1, Branches: []string{"main"}},
+			"main",
+		)
+
+		err := wt.EnsureCommits(t.Context(), &EnsureCommitsOptions{
+			CommitIDs: []string{"0000000000000000000000000000000000000000"},
+			Ref:       "refs/heads/main",
+		})
+		require.ErrorContains(t, err, "not available locally after deepening")
+	})
+}
