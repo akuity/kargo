@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/expr-lang/expr"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
 )
@@ -388,5 +389,38 @@ value13: | # This is a string
 	t.Run("asJSON function is forbidden", func(t *testing.T) {
 		_, err := EvaluateJSONTemplate([]byte(`{}`), map[string]any{"asJSON": nil})
 		require.ErrorContains(t, err, `"asJSON" is a forbidden key`)
+	})
+}
+
+func TestEvaluateTemplate_programCache(t *testing.T) {
+	t.Run("cached program runs against each env", func(t *testing.T) {
+		const template = "${{ vars.name }}-cache-env"
+		for _, name := range []string{"a", "b"} {
+			out, err := EvaluateTemplate(template, map[string]any{"vars": map[string]any{"name": name}})
+			require.NoError(t, err)
+			require.Equal(t, name+"-cache-env", out)
+		}
+	})
+	t.Run("cached program calls each env's functions", func(t *testing.T) {
+		const template = "${{ src() }}-cache-env-func"
+		for _, want := range []string{"first", "second"} {
+			env := map[string]any{"src": func() string { return want }}
+			out, err := EvaluateTemplate(template, env)
+			require.NoError(t, err)
+			require.Equal(t, want+"-cache-env-func", out)
+		}
+	})
+	t.Run("calls with options use their own functions", func(t *testing.T) {
+		const template = "${{ src() }}"
+		for _, want := range []string{"first", "second"} {
+			opt := expr.Function(
+				"src",
+				func(...any) (any, error) { return want, nil },
+				new(func() string),
+			)
+			out, err := EvaluateTemplate(template, nil, opt)
+			require.NoError(t, err)
+			require.Equal(t, want, out)
+		}
 	})
 }
