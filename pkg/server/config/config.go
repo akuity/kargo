@@ -96,6 +96,9 @@ type ServerConfig struct {
 	// RequestLogSourceIPEnabled indicates whether the IP address each request
 	// came from should be logged.
 	RequestLogSourceIPEnabled bool
+	// PostHogConfig, when set, is handed to the dashboard, which then sends
+	// product analytics to PostHog. It is nil unless an operator opts in.
+	PostHogConfig *PostHogConfig
 
 	// AdditionalHandlers is a map of path patterns to HTTP handlers that will
 	// be registered on the server's HTTP mux alongside its own handlers. This
@@ -176,6 +179,10 @@ func ServerConfigFromEnv() ServerConfig {
 		types.MustParseBool(os.GetEnv("REQUEST_LOG_ALL_ENABLED", "false"))
 	cfg.RequestLogSourceIPEnabled =
 		types.MustParseBool(os.GetEnv("REQUEST_LOG_SOURCE_IP_ENABLED", "false"))
+	if types.MustParseBool(os.GetEnv("POSTHOG_ENABLED", "false")) {
+		postHogCfg := PostHogConfigFromEnv()
+		cfg.PostHogConfig = &postHogCfg
+	}
 	cfg.DefaultControllerName = os.GetEnv("DEFAULT_CONTROLLER_NAME", "")
 	cfg.BasePath = NormalizeBasePath(os.GetEnv("API_BASE_PATH", ""))
 	cfg.TracingEnabled = telemetry.ConfigFromEnv().Enabled
@@ -230,6 +237,31 @@ type AdminConfig struct {
 // variables.
 func AdminConfigFromEnv() AdminConfig {
 	var cfg AdminConfig
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
+
+// PostHogConfig represents configuration for sending product analytics from
+// the dashboard to PostHog. The API server returns this configuration to
+// clients that request it, so it must never hold anything secret.
+type PostHogConfig struct {
+	// PublicAPIKey is the PostHog project API key that events are sent with.
+	// PostHog project API keys are write-only and are public by design.
+	PublicAPIKey string `envconfig:"POSTHOG_PUBLIC_API_KEY" required:"true"`
+	// Host is the URL of the PostHog instance events are sent to. This may be
+	// PostHog Cloud, a self-hosted instance, or a reverse proxy in front of
+	// either.
+	Host string `envconfig:"POSTHOG_HOST" default:"https://us.i.posthog.com"`
+	// SessionReplayEnabled indicates whether the dashboard should also record
+	// sessions for replay in PostHog. A recording shows what was on a user's
+	// screen, so this is a separate opt-in.
+	SessionReplayEnabled bool `envconfig:"POSTHOG_SESSION_REPLAY_ENABLED"`
+}
+
+// PostHogConfigFromEnv returns a PostHogConfig populated from environment
+// variables.
+func PostHogConfigFromEnv() PostHogConfig {
+	cfg := PostHogConfig{}
 	envconfig.MustProcess("", &cfg)
 	return cfg
 }

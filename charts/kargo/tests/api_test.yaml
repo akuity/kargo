@@ -267,6 +267,83 @@ tests:
           path: data.REQUEST_LOG_SOURCE_IP_ENABLED
           value: "true"
 
+  - it: omits PostHog settings by default
+    asserts:
+      - notExists:
+          path: data.POSTHOG_ENABLED
+      - notExists:
+          path: data.POSTHOG_PUBLIC_API_KEY
+      - notExists:
+          path: data.POSTHOG_HOST
+
+  - it: omits PostHog settings when disabled, even with an API key
+    set:
+      api.posthog.publicApiKey: phc_test
+    asserts:
+      - notExists:
+          path: data.POSTHOG_ENABLED
+      - notExists:
+          path: data.POSTHOG_PUBLIC_API_KEY
+      - notExists:
+          path: data.POSTHOG_HOST
+
+  - it: enables PostHog with the default host
+    set:
+      api.posthog.enabled: true
+      api.posthog.publicApiKey: phc_test
+    asserts:
+      - equal:
+          path: data.POSTHOG_ENABLED
+          value: "true"
+      - equal:
+          path: data.POSTHOG_PUBLIC_API_KEY
+          value: phc_test
+      - equal:
+          path: data.POSTHOG_HOST
+          value: https://us.i.posthog.com
+
+  - it: enables PostHog with a custom host
+    set:
+      api.posthog.enabled: true
+      api.posthog.publicApiKey: phc_test
+      api.posthog.host: https://posthog.example.com
+    asserts:
+      - equal:
+          path: data.POSTHOG_HOST
+          value: https://posthog.example.com
+
+  - it: omits session replay unless it is enabled
+    set:
+      api.posthog.enabled: true
+      api.posthog.publicApiKey: phc_test
+    asserts:
+      - notExists:
+          path: data.POSTHOG_SESSION_REPLAY_ENABLED
+
+  - it: enables session replay
+    set:
+      api.posthog.enabled: true
+      api.posthog.publicApiKey: phc_test
+      api.posthog.sessionReplay.enabled: true
+    asserts:
+      - equal:
+          path: data.POSTHOG_SESSION_REPLAY_ENABLED
+          value: "true"
+
+  - it: omits session replay when PostHog itself is disabled
+    set:
+      api.posthog.sessionReplay.enabled: true
+    asserts:
+      - notExists:
+          path: data.POSTHOG_SESSION_REPLAY_ENABLED
+
+  - it: fails when PostHog is enabled without an API key
+    set:
+      api.posthog.enabled: true
+    asserts:
+      - failedTemplate:
+          errorPattern: api\.posthog\.publicApiKey is required when api\.posthog\.enabled is true
+
   - it: enables OIDC config when OIDC is turned on
     set:
       api.oidc.enabled: true

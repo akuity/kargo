@@ -10,6 +10,7 @@ import { queryClient } from './config/query-client';
 import { AppExtensions } from './extensions/pages/app-extensions';
 import { ArgoCDExtension } from './extensions/pages/argocd-extension';
 import { ProjectExtensions } from './extensions/pages/project-extensions';
+import { Analytics } from './features/analytics/analytics';
 import { AuthContextProvider } from './features/auth/context/auth-context-provider';
 import { ProtectedRoute } from './features/auth/protected-route';
 import { TokenRenew } from './features/auth/token-renew';
@@ -31,6 +32,7 @@ import 'antd/dist/reset.css';
 
 export const App = () => (
   <QueryClientProvider client={queryClient}>
+    <Analytics />
     <ThemeContextProvider>
       <AuthContextProvider>
         <BrowserRouter basename={basePath()}>

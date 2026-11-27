@@ -6,8 +6,14 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { OIDCConfig } from './oIDCConfig';
+import type { PostHogConfig } from './postHogConfig';
 
 export interface PublicConfig {
   adminAccountEnabled?: boolean;
   oidcConfig?: OIDCConfig;
+  /**
+   * PostHogConfig is present only when an operator has opted in to the
+   * dashboard sending product analytics to PostHog.
+   */
+  posthogConfig?: PostHogConfig;
 }

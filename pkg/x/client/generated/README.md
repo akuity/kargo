@@ -292,6 +292,7 @@ Class | Method | HTTP request | Description
  - [PatchRepoCredentialsRequest](docs/PatchRepoCredentialsRequest.md)
  - [PkgServerFreightGroupList](docs/PkgServerFreightGroupList.md)
  - [PkgServerQueryFreightsResponse](docs/PkgServerQueryFreightsResponse.md)
+ - [PostHogConfig](docs/PostHogConfig.md)
  - [Project](docs/Project.md)
  - [ProjectConfig](docs/ProjectConfig.md)
  - [ProjectConfigSpec](docs/ProjectConfigSpec.md)

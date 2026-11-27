@@ -1,4 +1,5 @@
 allowBuilds:
+  core-js: false
   esbuild: true
 overrides:
   '@ant-design/icons': 6.1.1

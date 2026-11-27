@@ -5277,7 +5277,7 @@
     },
     "/v1beta1/system/public-server-config": {
       "get": {
-        "description": "Retrieve information a client may need to know about how the\nKargo API server is configured in order to proceed with\nauthentication.",
+        "description": "Retrieve information a client may need to know about how the\nKargo API server is configured before it has authenticated,\ne.g. in order to proceed with authentication.",
         "produces": [
           "application/json"
         ],
@@ -5901,6 +5901,20 @@
         }
       }
     },
+    "PostHogConfig": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "publicApiKey": {
+          "type": "string"
+        },
+        "sessionReplayEnabled": {
+          "type": "boolean"
+        }
+      }
+    },
     "PromoteDownstreamRequest": {
       "type": "object",
       "properties": {
@@ -5950,6 +5964,14 @@
         },
         "oidcConfig": {
           "$ref": "#/definitions/OIDCConfig"
+        },
+        "posthogConfig": {
+          "description": "PostHogConfig is present only when an operator has opted in to the\ndashboard sending product analytics to PostHog.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PostHogConfig"
+            }
+          ]
         }
       }
     },

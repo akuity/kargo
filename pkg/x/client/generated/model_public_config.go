@@ -21,6 +21,8 @@ var _ MappedNullable = &PublicConfig{}
 type PublicConfig struct {
 	AdminAccountEnabled *bool `json:"adminAccountEnabled,omitempty"`
 	OidcConfig *OIDCConfig `json:"oidcConfig,omitempty"`
+	// PostHogConfig is present only when an operator has opted in to the dashboard sending product analytics to PostHog.
+	PosthogConfig *PostHogConfig `json:"posthogConfig,omitempty"`
 }
 
 // NewPublicConfig instantiates a new PublicConfig object
@@ -104,6 +106,38 @@ func (o *PublicConfig) SetOidcConfig(v OIDCConfig) {
 	o.OidcConfig = &v
 }
 
+// GetPosthogConfig returns the PosthogConfig field value if set, zero value otherwise.
+func (o *PublicConfig) GetPosthogConfig() PostHogConfig {
+	if o == nil || IsNil(o.PosthogConfig) {
+		var ret PostHogConfig
+		return ret
+	}
+	return *o.PosthogConfig
+}
+
+// GetPosthogConfigOk returns a tuple with the PosthogConfig field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PublicConfig) GetPosthogConfigOk() (*PostHogConfig, bool) {
+	if o == nil || IsNil(o.PosthogConfig) {
+		return nil, false
+	}
+	return o.PosthogConfig, true
+}
+
+// HasPosthogConfig returns a boolean if a field has been set.
+func (o *PublicConfig) HasPosthogConfig() bool {
+	if o != nil && !IsNil(o.PosthogConfig) {
+		return true
+	}
+
+	return false
+}
+
+// SetPosthogConfig gets a reference to the given PostHogConfig and assigns it to the PosthogConfig field.
+func (o *PublicConfig) SetPosthogConfig(v PostHogConfig) {
+	o.PosthogConfig = &v
+}
+
 func (o PublicConfig) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -119,6 +153,9 @@ func (o PublicConfig) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.OidcConfig) {
 		toSerialize["oidcConfig"] = o.OidcConfig
+	}
+	if !IsNil(o.PosthogConfig) {
+		toSerialize["posthogConfig"] = o.PosthogConfig
 	}
 	return toSerialize, nil
 }

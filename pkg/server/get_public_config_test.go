@@ -52,6 +52,36 @@ func Test_server_getPublicConfig(t *testing.T) {
 					require.Equal(t, testConfig.OIDCConfig.ClientID, config.OIDCConfig.ClientID)
 					require.Equal(t, testConfig.OIDCConfig.CLIClientID, config.OIDCConfig.CLIClientID)
 					require.Equal(t, []string{"openid", "profile", "email"}, config.OIDCConfig.Scopes)
+					require.Nil(t, config.PostHogConfig)
+					require.NotContains(t, w.Body.String(), "posthogConfig")
+				},
+			},
+			{
+				name: "get public config with PostHog",
+				serverConfig: &config.ServerConfig{
+					PostHogConfig: &config.PostHogConfig{
+						PublicAPIKey:         "phc_test",
+						Host:                 "https://posthog.example.com",
+						SessionReplayEnabled: true,
+					},
+				},
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+
+					var config publicConfig
+					err := json.Unmarshal(w.Body.Bytes(), &config)
+					require.NoError(t, err)
+					require.False(t, config.AdminAccountEnabled)
+					require.Nil(t, config.OIDCConfig)
+					require.Equal(
+						t,
+						&postHogConfig{
+							PublicAPIKey:         "phc_test",
+							Host:                 "https://posthog.example.com",
+							SessionReplayEnabled: true,
+						},
+						config.PostHogConfig,
+					)
 				},
 			},
 		},

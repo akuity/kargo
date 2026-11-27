@@ -50,6 +50,14 @@ data:
   {{- if .Values.api.requestLog.sourceIPEnabled }}
   REQUEST_LOG_SOURCE_IP_ENABLED: "true"
   {{- end }}
+  {{- if .Values.api.posthog.enabled }}
+  POSTHOG_ENABLED: "true"
+  POSTHOG_PUBLIC_API_KEY: {{ required "api.posthog.publicApiKey is required when api.posthog.enabled is true" .Values.api.posthog.publicApiKey | quote }}
+  POSTHOG_HOST: {{ quote .Values.api.posthog.host }}
+  {{- if .Values.api.posthog.sessionReplay.enabled }}
+  POSTHOG_SESSION_REPLAY_ENABLED: "true"
+  {{- end }}
+  {{- end }}
   {{- if .Values.api.defaultControllerName }}
   DEFAULT_CONTROLLER_NAME: {{ .Values.api.defaultControllerName | quote }}
   {{- end }}

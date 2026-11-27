@@ -128,6 +128,7 @@ export * from './patchRepoCredentialsRequest';
 export * from './pkgServerFreightGroupList';
 export * from './pkgServerQueryFreightsResponse';
 export * from './pkgServerQueryFreightsResponseGroups';
+export * from './postHogConfig';
 export * from './project';
 export * from './projectConfig';
 export * from './projectConfigSpec';

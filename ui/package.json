@@ -81,6 +81,7 @@
     "monaco-editor": "0.55.1",
     "monaco-yaml": "5.5.1",
     "oauth4webapi": "3.8.8",
+    "posthog-js": "1.455.4",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-hook-form": "7.80.0",
