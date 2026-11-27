@@ -18,7 +18,6 @@ import { useStageControllerStatus } from '@ui/features/common/stage-status/use-s
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { useArgoCDMenuItems } from '@ui/features/project/pipelines/nodes/use-argocd-links';
 import { useCurrentPromotionRef } from '@ui/features/stage/use-promotion-rollouts';
-import { useApproveFreight } from '@ui/gen/api/v2/core/core';
 import { Stage } from '@ui/gen/api/v2/models';
 
 import { useDictionaryContext } from '../context/dictionary-context';
@@ -27,6 +26,7 @@ import { stageIndexer } from '../graph/node-indexer';
 import { AutoPromotionStatusIcon } from '../promotion/auto-promotion-status-icon';
 import { DropOverlay } from '../promotion/drag-and-drop/drop-overlay';
 import { isPromotionWindowClosed } from '../promotion/promotion-window';
+import { useApproveFreight } from '../promotion/use-approve-freight';
 
 import { AnalysisRunLogsLink } from './analysis-run-logs-link';
 import style from './node-size-source-of-truth.module.less';
@@ -73,16 +73,12 @@ export const StageNode = (props: { stage: Stage }) => {
 
   const totalSubscribersToThisStage = dictionaryContext?.subscribersByStage?.[stageName]?.size || 0;
 
-  const manualApproveActionMutation = useApproveFreight({
-    mutation: {
-      onSuccess: (_, vars) => {
-        message.success(
-          `Freight ${actionContext?.action?.freight?.alias} has been manually approved for stage ${vars.params.stage}`
-        );
+  const manualApproveActionMutation = useApproveFreight((vars) => {
+    message.success(
+      `Freight ${actionContext?.action?.freight?.alias} has been manually approved for stage ${vars.params.stage}`
+    );
 
-        actionContext?.cancel();
-      }
-    }
+    actionContext?.cancel();
   });
 
   const { dropdownItems, resumeAutoPromotionDrawer } = useGetPromotionDropdownItems(props.stage);

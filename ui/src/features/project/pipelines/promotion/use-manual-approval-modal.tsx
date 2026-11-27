@@ -1,7 +1,8 @@
 import { Alert, Typography } from 'antd';
 
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
-import { useApproveFreight } from '@ui/gen/api/v2/core/core';
+
+import { useApproveFreight } from './use-approve-freight';
 
 type CallbackProps = {
   projectName: string;
