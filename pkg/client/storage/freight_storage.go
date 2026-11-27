@@ -22,13 +22,12 @@ import (
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
-var _ freightclient.FreightClient = (*StorageClient)(nil)
+var _ freightclient.FreightClient = (*Client)(nil)
 
 var freightGR = kargoapi.GroupVersion.WithResource("freights").GroupResource()
 
-func (storage *StorageClient) CreateFreight(
+func (storage *Client) CreateFreight(
 	ctx context.Context,
-	project string,
 	freight *kargoapi.Freight,
 	metadata map[string]apiextensionsv1.JSON,
 ) (*kargoapi.Freight, bool, error) {
@@ -43,7 +42,7 @@ func (storage *StorageClient) CreateFreight(
 	// Read back the created (or pre-existing) Freight so metadata is applied to its
 	// current status and the response reflects the stored resource.
 	current := &kargoapi.Freight{}
-	key := client.ObjectKey{Namespace: project, Name: freight.Name}
+	key := client.ObjectKey{Namespace: freight.Namespace, Name: freight.Name}
 	if err := storage.client.Get(ctx, key, current); err != nil {
 		return nil, false, fmt.Errorf("get freight: %w", err)
 	}
@@ -73,7 +72,7 @@ func (storage *StorageClient) CreateFreight(
 	return current, created, nil
 }
 
-func (storage *StorageClient) DeleteFreight(ctx context.Context, project string, nameOrAlias string) error {
+func (storage *Client) DeleteFreight(ctx context.Context, project string, nameOrAlias string) error {
 	freight, err := storage.GetFreightByNameOrAlias(ctx, project, nameOrAlias)
 	if err != nil {
 		return err
@@ -82,17 +81,20 @@ func (storage *StorageClient) DeleteFreight(ctx context.Context, project string,
 	return storage.client.Delete(ctx, freight)
 }
 
-func (storage *StorageClient) GetFreight(ctx context.Context, project string, name string) (*kargoapi.Freight, error) {
+func (storage *Client) GetFreight(ctx context.Context, project string, name string) (*kargoapi.Freight, error) {
 	freight := &kargoapi.Freight{}
 	err := storage.client.Get(
 		ctx,
 		client.ObjectKey{Name: name, Namespace: project},
 		freight,
 	)
+	if err != nil && apierrors.IsNotFound(err) {
+		return nil, nil
+	}
 	return freight, err
 }
 
-func (storage *StorageClient) GetFreightByAlias(
+func (storage *Client) GetFreightByAlias(
 	ctx context.Context,
 	project string, alias string,
 ) (*kargoapi.Freight, error) {
@@ -107,7 +109,7 @@ func (storage *StorageClient) GetFreightByAlias(
 	}
 	switch len(list.Items) {
 	case 0:
-		return nil, apierrors.NewNotFound(freightGR, alias)
+		return nil, nil
 	case 1:
 		return &list.Items[0], nil
 	default:
@@ -123,21 +125,21 @@ func (storage *StorageClient) GetFreightByAlias(
 	}
 }
 
-func (storage *StorageClient) GetFreightByNameOrAlias(
+func (storage *Client) GetFreightByNameOrAlias(
 	ctx context.Context,
 	project, nameOrAlias string,
 ) (*kargoapi.Freight, error) {
 	freight, err := storage.GetFreight(ctx, project, nameOrAlias)
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return storage.GetFreightByAlias(ctx, project, nameOrAlias)
-		}
 		return nil, err
+	}
+	if freight == nil {
+		return storage.GetFreightByAlias(ctx, project, nameOrAlias)
 	}
 	return freight, nil
 }
 
-func (storage *StorageClient) PatchFreightAlias(
+func (storage *Client) PatchFreightAlias(
 	ctx context.Context,
 	project string,
 	nameOrAlias string, newAlias string,
@@ -179,7 +181,7 @@ func (storage *StorageClient) PatchFreightAlias(
 	return storage.client.Patch(ctx, freight, patch)
 }
 
-func (storage *StorageClient) PatchFreightMetadata(
+func (storage *Client) PatchFreightMetadata(
 	ctx context.Context,
 	project string, freightName string,
 	metadata map[string]apiextensionsv1.JSON,
@@ -203,7 +205,7 @@ func (storage *StorageClient) PatchFreightMetadata(
 	return nil
 }
 
-func (storage *StorageClient) ApproveFreight(ctx context.Context,
+func (storage *Client) ApproveFreight(ctx context.Context,
 	project, stageName, nameOrAlias string) error {
 	freight, err := storage.GetFreightByNameOrAlias(ctx, project, nameOrAlias)
 	if err != nil {
@@ -239,9 +241,6 @@ func (storage *StorageClient) ApproveFreight(ctx context.Context,
 	}
 	newStatus.AddApprovedStage(stageName, time.Now())
 
-	// The promote check above is the authorization decision for this write,
-	// so it's written with the internal client: the caller need not also hold
-	// Kubernetes RBAC permission to patch freights/status themselves.
 	if err := storage.patchFreightStatus(
 		ctx, storage.client, freight, newStatus,
 	); err != nil {
@@ -268,7 +267,7 @@ func (storage *StorageClient) ApproveFreight(ctx context.Context,
 	return nil
 }
 
-func (storage *StorageClient) ListFreightFromOrigin(
+func (storage *Client) ListFreightFromOrigin(
 	ctx context.Context,
 	project string, origin kargoapi.FreightOrigin,
 	opts *freightclient.ListFreightFromOriginOptions,
@@ -281,7 +280,7 @@ func (storage *StorageClient) ListFreightFromOrigin(
 
 	var originSelector fields.Selector
 	if origin.Kind != kargoapi.FreightOriginKindWarehouse {
-		// TODO: handle other origins when implemened
+		// TODO: handle other origins when implemented
 		return nil, fmt.Errorf("unsupported origin kind %q", origin.Kind)
 	}
 	originSelector = fields.OneTermEqualSelector("warehouse", origin.Name)
@@ -424,7 +423,7 @@ func (storage *StorageClient) ListFreightFromOrigin(
 	return filtered, nil
 }
 
-func (storage *StorageClient) ClearStageFreights(ctx context.Context, project string, stageName string) error {
+func (storage *Client) ClearStageFreights(ctx context.Context, project string, stageName string) error {
 	freights, err := storage.listFreightsReferencingStage(ctx, project, stageName)
 	if err != nil {
 		return err
@@ -436,8 +435,6 @@ func (storage *StorageClient) ClearStageFreights(ctx context.Context, project st
 		delete(newStatus.VerifiedIn, stageName)
 		delete(newStatus.ApprovedFor, stageName)
 
-		// The authorizing client runs a SubjectAccessReview for patch on
-		// freights/status, which is the authorization decision for this write.
 		if err = storage.patchFreightStatus(ctx, storage.client, &freight, newStatus); err != nil {
 			return fmt.Errorf("patch freight status: %w", err)
 		}
@@ -446,7 +443,7 @@ func (storage *StorageClient) ClearStageFreights(ctx context.Context, project st
 	return nil
 }
 
-func (storage *StorageClient) MarkFreightsCurrentlyInStage(
+func (storage *Client) MarkFreightsCurrentlyInStage(
 	ctx context.Context,
 	project string, stageName string,
 	freightNames []string,
@@ -460,7 +457,7 @@ func (storage *StorageClient) MarkFreightsCurrentlyInStage(
 		freight, err := storage.GetFreight(ctx, project, freightName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				logger.Error(err, "freight is current but not found")
+				logger.Error(err, "freight is current but not found", "freightName", freightName)
 				continue
 			}
 			return err
@@ -483,8 +480,7 @@ func (storage *StorageClient) MarkFreightsCurrentlyInStage(
 		}
 		newStatus := *other.Status.DeepCopy()
 		newStatus.RemoveCurrentStage(stageName)
-		// The authorizing client runs a SubjectAccessReview for patch on
-		// freights/status, which is the authorization decision for this write.
+
 		if err = storage.patchFreightStatus(ctx, storage.client, other, newStatus); err != nil {
 			return fmt.Errorf("patch status of freight %q: %w", other.Name, err)
 		}
@@ -540,7 +536,7 @@ func emitFreightCurrentlyInStage(
 	}
 }
 
-func (storage *StorageClient) MarkFreightsVerifiedInStage(
+func (storage *Client) MarkFreightsVerifiedInStage(
 	ctx context.Context,
 	project string, stageName string,
 	freightNames []string,
@@ -553,7 +549,7 @@ func (storage *StorageClient) MarkFreightsVerifiedInStage(
 		freight, err := storage.GetFreight(ctx, project, freightName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				logger.Error(err, "freight is verified but not found")
+				logger.Error(err, "freight is verified but not found", "freightName", freightName)
 				continue
 			}
 			return err
@@ -566,8 +562,6 @@ func (storage *StorageClient) MarkFreightsVerifiedInStage(
 		newStatus := *freight.Status.DeepCopy()
 		newStatus.AddVerifiedStage(stageName, verifiedAtTime)
 
-		// The authorizing client runs a SubjectAccessReview for patch on
-		// freights/status, which is the authorization decision for this write.
 		if err = storage.patchFreightStatus(ctx, storage.client, freight, newStatus); err != nil {
 			return fmt.Errorf("patch freight status: %w", err)
 		}
@@ -593,7 +587,7 @@ func emitFreightVerifiedInStage(
 	}
 
 	var actor string
-	msg := fmt.Sprintf("Freight currently in Stage %q", stageName)
+	msg := fmt.Sprintf("Freight verified in Stage %q", stageName)
 	if u, ok := user.IdentityFromContext(ctx); ok {
 		actor = u.Actor()
 		msg += fmt.Sprintf(" by %q", actor)
@@ -609,7 +603,7 @@ func emitFreightVerifiedInStage(
 	}
 }
 
-func (storage *StorageClient) patchFreightStatus(
+func (storage *Client) patchFreightStatus(
 	ctx context.Context,
 	cl client.Client,
 	freight *kargoapi.Freight,
@@ -633,7 +627,7 @@ func (storage *StorageClient) patchFreightStatus(
 	return nil
 }
 
-func (storage *StorageClient) listFreightsReferencingStage(
+func (storage *Client) listFreightsReferencingStage(
 	ctx context.Context,
 	project string, stageName string,
 ) ([]kargoapi.Freight, error) {
@@ -670,7 +664,7 @@ func (storage *StorageClient) listFreightsReferencingStage(
 	return freights, nil
 }
 
-func (storage *StorageClient) listFreightsByCurrentStage(
+func (storage *Client) listFreightsByCurrentStage(
 	ctx context.Context,
 	project string, stageName string) ([]kargoapi.Freight, error) {
 	freightList := kargoapi.FreightList{}

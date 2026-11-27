@@ -41,7 +41,10 @@ func (s *server) approveFreight(c *gin.Context) {
 		return
 	}
 
-	if err := s.storageClient.ApproveFreight(ctx, project, stageName, freightNameOrAlias); err != nil {
+	// The promote check above is the authorization decision for this write,
+	// so it's written with the internal client: the caller need not also hold
+	// Kubernetes RBAC permission to patch freights/status themselves.
+	if err := s.storageClientInternal.ApproveFreight(ctx, project, stageName, freightNameOrAlias); err != nil {
 		_ = c.Error(err)
 		return
 	}

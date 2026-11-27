@@ -290,9 +290,9 @@ func (s *server) watchFreightEvents(
 }
 
 // TODO: review that when switching types to DB
-func (s *server) watchK8sResources[T any, L client.ObjectList](
+func (s *server) watchK8sResources[T any](
 	ctx context.Context,
-	list L,
+	list client.ObjectList,
 	listOpts ...client.ListOption,
 ) (storageEventsWatcher[T, watch.Event], error) {
 	w, err := s.client.Watch(

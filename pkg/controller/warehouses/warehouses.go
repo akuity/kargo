@@ -789,7 +789,7 @@ func (r *reconciler) createFreightIfAbsent(
 	freight *kargoapi.Freight,
 ) (*kargoapi.Freight, error) {
 
-	newFreight, isCreated, err := r.freightClient.CreateFreight(ctx, freight.Namespace, freight, nil)
+	newFreight, isCreated, err := r.freightClient.CreateFreight(ctx, freight, nil)
 	if err != nil {
 		return nil, err
 	}

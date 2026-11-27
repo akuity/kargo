@@ -948,12 +948,11 @@ func Test_syncWarehouse_existingFreight(t *testing.T) {
 			r.freightClient = &testutil.MockFreightClient{
 				CreateFreightFun: func(
 					_ context.Context,
-					project string,
 					freight *kargoapi.Freight,
 					_ map[string]v1.JSON,
 				) (*kargoapi.Freight, bool, error) {
 					creates++
-					require.Equal(t, warehouse.Namespace, project)
+					require.Equal(t, warehouse.Namespace, freight.Namespace)
 					require.Equal(t, expected.Name, freight.Name)
 					if testCase.createErr != nil {
 						return nil, false, testCase.createErr

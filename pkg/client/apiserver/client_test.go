@@ -1337,7 +1337,7 @@ func TestClientCreateFreight(t *testing.T) {
 
 	t.Run("creates Freight with metadata", func(t *testing.T) {
 		freight := &kargoapi.Freight{
-			ObjectMeta: metav1.ObjectMeta{Name: "with-meta-1"},
+			ObjectMeta: metav1.ObjectMeta{Name: "with-meta-1", Namespace: "demo"},
 			Origin: kargoapi.FreightOrigin{
 				Kind: kargoapi.FreightOriginKindWarehouse,
 				Name: "test-warehouse",
@@ -1346,7 +1346,7 @@ func TestClientCreateFreight(t *testing.T) {
 		metadata := map[string]apiextensionsv1.JSON{
 			"something": {Raw: []byte(`["a","b"]`)},
 		}
-		created, isNew, err := c.CreateFreight(t.Context(), "demo", freight, metadata)
+		created, isNew, err := c.CreateFreight(t.Context(), freight, metadata)
 		require.NoError(t, err)
 		require.True(t, isNew)
 		require.NotNil(t, created)

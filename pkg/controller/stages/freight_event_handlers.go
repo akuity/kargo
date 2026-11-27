@@ -159,8 +159,7 @@ func subscribeFreightVerifiedInStage(
 // GenericEvent carries a Freight whose Namespace and Status.CurrentlyIn identify
 // the upstream Stage it is now current in; the event's VerifiedInStage flag is
 // encoded into Status.VerifiedIn so the enqueuer can apply the verification
-// filter. It is the event-driven analog of the Stage reconciler's
-// getNewlyInStages trigger (which required the Freight to be verified).
+// filter.
 func subscribeFreightCurrentlyInStage(
 	ctx context.Context,
 	conn *nats.Conn,
@@ -230,8 +229,7 @@ func subscribeFreightApproved(
 // NewFreightCreatedStageEnqueuer returns an event handler that, for each
 // FreightCreated event delivered over the Freight-created channel, enqueues the
 // Stages subscribed to the originating Warehouse. It handles Generic events --
-// the kind source.Channel delivers -- while Create/Update/Delete are no-ops. It
-// is the event-driven counterpart of NewWarehouseStageEnqueuer.
+// the kind source.Channel delivers -- while Create/Update/Delete are no-ops.
 func NewFreightCreatedStageEnqueuer(
 	kargoClient client.Client,
 	forControlFlowStages bool,
@@ -292,8 +290,7 @@ func genericFreightCreated(
 // NewFreightVerifiedStageEnqueuer returns an event handler that, for each
 // FreightVerifiedInStage event, enqueues the Stages downstream of the Stage in
 // which the Freight was verified. It handles Generic events -- the kind
-// source.Channel delivers -- while Create/Update/Delete are no-ops. It is the
-// event-driven counterpart of NewDownstreamStageEnqueuer.
+// source.Channel delivers -- while Create/Update/Delete are no-ops.
 func NewFreightVerifiedStageEnqueuer(
 	kargoClient client.Client,
 	forControlFlowStages bool,
@@ -337,8 +334,7 @@ func genericFreightVerified(
 // Freight is now current in, so a downstream Stage using the MatchUpstream
 // auto-promotion selection policy re-evaluates its upstream's current Freight. It
 // handles Generic events -- the kind source.Channel delivers -- while
-// Create/Update/Delete are no-ops. It is the event-driven counterpart of the
-// Stage reconciler's getNewlyInStages trigger.
+// Create/Update/Delete are no-ops.
 func NewFreightCurrentlyInStageEnqueuer(
 	kargoClient client.Client,
 	forControlFlowStages bool,
@@ -391,8 +387,7 @@ func genericFreightCurrentlyInStage(
 // NewFreightApprovedStageEnqueuer returns an event handler that, for each
 // FreightApproved event, enqueues the Stage the Freight was approved for. It
 // handles Generic events -- the kind source.Channel delivers -- while
-// Create/Update/Delete are no-ops. It is the event-driven counterpart of
-// NewStageEnqueuerForApprovedFreight.
+// Create/Update/Delete are no-ops.
 func NewFreightApprovedStageEnqueuer() handler.TypedEventHandler[*kargoapi.Freight, reconcile.Request] {
 	return handler.TypedFuncs[*kargoapi.Freight, reconcile.Request]{
 		GenericFunc: genericFreightApproved,

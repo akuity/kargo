@@ -79,10 +79,10 @@ func (c *Client) getFreightReq(
 // was genuinely created (true) rather than already present (false).
 func (c *Client) CreateFreight(
 	ctx context.Context,
-	project string,
 	freight *kargoapi.Freight,
 	metadata map[string]apiextensionsv1.JSON,
 ) (*kargoapi.Freight, bool, error) {
+	project := freight.Namespace
 	genFreight := &kargogen.Freight{}
 	if err := convert(freight, genFreight); err != nil {
 		return nil, false, fmt.Errorf("error encoding Freight for Project %q: %w", project, err)
@@ -112,27 +112,6 @@ func (c *Client) CreateFreight(
 	// it already existed.
 	isNew := resp != nil && resp.StatusCode == http.StatusCreated
 	return created, isNew, nil
-}
-
-// DeleteFreight deletes a freight through the apiServer
-func (c *Client) DeleteFreight(
-	ctx context.Context,
-	project string,
-	freightNameOrAlias string,
-) error {
-	resp, err := c.api.CoreAPI.DeleteFreight(ctx, project, freightNameOrAlias).Execute()
-	if resp != nil {
-		_ = resp.Body.Close()
-	}
-	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return nil
-		}
-		return fmt.Errorf(
-			"error deleting Freight %q in Project %q: %w", freightNameOrAlias, project, ResponseError(err, resp),
-		)
-	}
-	return nil
 }
 
 // PatchFreightAlias sets, through the API server, the alias of the named

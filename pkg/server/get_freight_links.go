@@ -46,7 +46,7 @@ func (s *server) getFreightLinks(c *gin.Context) {
 			errors.New("Freight not found"), // nolint: staticcheck
 			http.StatusNotFound,
 		))
-		return 
+		return
 	}
 
 	var linkDefs []kargoapi.DeepLink

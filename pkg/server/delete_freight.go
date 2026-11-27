@@ -20,7 +20,7 @@ func (s *server) deleteFreight(c *gin.Context) {
 	project := c.Param("project")
 	nameOrAlias := c.Param("freight-name-or-alias")
 
-	// Using storageClient directly because we don't expose DeleteFreight as a freightCLient method
+	// Using storageClient directly because we don't expose DeleteFreight as a freightClient method
 	err := s.storageClient.DeleteFreight(c.Request.Context(), project, nameOrAlias)
 	if err != nil {
 		_ = c.Error(err)

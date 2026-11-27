@@ -52,13 +52,13 @@ type FreightLister interface {
 }
 
 type FreightClient interface {
+	// GetFreight functions return (nil, nil) if freight not found
 	GetFreight(ctx context.Context, project, name string) (*kargoapi.Freight, error)
 	GetFreightByAlias(ctx context.Context, project, alias string) (*kargoapi.Freight, error)
 	GetFreightByNameOrAlias(ctx context.Context, project, nameOrAlias string) (*kargoapi.Freight, error)
 
 	CreateFreight(
 		ctx context.Context,
-		project string,
 		freight *kargoapi.Freight,
 		metadata map[string]apiextensionsv1.JSON,
 	) (*kargoapi.Freight, bool, error)

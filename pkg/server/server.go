@@ -61,9 +61,9 @@ type server struct {
 	// in which case nothing is published.
 	events *nats.Publisher
 
-	storageClient         *storage.StorageClient
+	storageClient         *storage.Client
+	storageClientInternal *storage.Client
 	freightClient         freightclient.FreightClient
-	freightClientInternal freightclient.FreightClient
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -156,7 +156,7 @@ func NewServer(
 	s.storageClient = storage.NewStorageClient(kubeClient, sender, db)
 	// TODO: this is temporary measure to pass InternalClient to approve_freight
 	// Once switched to DB, all auth needs to be made explicit and this client will be deleted
-	s.freightClientInternal = storage.NewStorageClient(kubeClient.InternalClient(), sender, db)
+	s.storageClientInternal = storage.NewStorageClient(kubeClient.InternalClient(), sender, db)
 	s.freightClient = s.storageClient
 
 	s.getStageFn = api.GetStage

@@ -60,7 +60,7 @@ func (s *server) createFreight(c *gin.Context) {
 	// the Project the request is scoped to.
 	freight.Namespace = project
 
-	current, created, err := s.freightClient.CreateFreight(ctx, project, freight, req.Metadata)
+	current, created, err := s.freightClient.CreateFreight(ctx, freight, req.Metadata)
 	if err != nil {
 		_ = c.Error(fmt.Errorf("create freight: %w", err))
 		return

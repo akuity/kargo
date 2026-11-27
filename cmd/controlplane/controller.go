@@ -202,12 +202,11 @@ func (o *controllerOptions) run(ctx context.Context) error {
 
 	// Targets and Freight can only be accessed via Kargo API Server. Fail if it's not configured.
 	var apiClient *apiserver.Client
-	if o.APIServer.Address != "" {
-		if apiClient, err = apiserver.New(ctx, o.APIServer, kargoMgr.GetConfig()); err != nil {
-			return fmt.Errorf("error configuring access to Kargo API Server: %w", err)
-		}
-	} else {
-		return fmt.Errorf("error configuring access to Kargo API Server")
+	if o.APIServer.Address == "" {
+		return fmt.Errorf("error configuring access to Kargo API Server: missing APIServer address")
+	}
+	if apiClient, err = apiserver.New(ctx, o.APIServer, kargoMgr.GetConfig()); err != nil {
+		return fmt.Errorf("error configuring access to Kargo API Server: %w", err)
 	}
 
 	if err := o.setupReconcilers(

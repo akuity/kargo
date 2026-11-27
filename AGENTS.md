@@ -135,7 +135,7 @@ and Go client code.
   not to
 - **Package-level variables**: minimize; prefer passing dependencies explicitly,
   i.e. dependency injection
-- **Variable shadowing**: forbidden (enforced by govet), can be ignored for `err` and `ctx` 
+- **Variable shadowing**: forbidden (enforced by govet), can be ignored for `err` and `ctx`
 - **Import order** (enforced by gci): stdlib, third-party,
   `github.com/akuity`, dot, blank
 - **var-naming**: linter rule disabled because vendored upstream stub types

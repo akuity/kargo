@@ -83,7 +83,7 @@ func (e *LocalStepExecutor) ExecuteStep(
 			capabilities.KargoClient = e.kargoClient
 			if e.apiClient == nil {
 				return StepResult{Status: kargoapi.PromotionStepStatusErrored},
-					fmt.Errorf("error getting apiClient for step kind %q: %w", req.Step.Kind, err)
+					fmt.Errorf("error getting apiClient for step kind %q", req.Step.Kind)
 			}
 			capabilities.APIClient = e.apiClient
 		case StepCapabilityAccessArgoCD:

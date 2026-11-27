@@ -42,6 +42,8 @@ func (s *server) markFreightsCurrentlyInStage(c *gin.Context) {
 		return
 	}
 
+	// The authorizing client runs a SubjectAccessReview for patch on
+	// freights/status, which is the authorization decision for this write.
 	err := s.freightClient.MarkFreightsCurrentlyInStage(ctx, project, stageName, req.FreightNames)
 	if err != nil {
 		_ = c.Error(err)
@@ -88,6 +90,8 @@ func (s *server) markFreightsVerifiedInStage(c *gin.Context) {
 		verifiedAtTime = req.VerifiedAt.Time
 	}
 
+	// The authorizing client runs a SubjectAccessReview for patch on
+	// freights/status, which is the authorization decision for this write.
 	err := s.freightClient.MarkFreightsVerifiedInStage(ctx, project, stageName, req.FreightNames, verifiedAtTime)
 	if err != nil {
 		_ = c.Error(err)
@@ -114,6 +118,8 @@ func (s *server) clearStageFreights(c *gin.Context) {
 	project := c.Param("project")
 	stageName := c.Param("stage")
 
+	// The authorizing client runs a SubjectAccessReview for patch on
+	// freights/status, which is the authorization decision for this write.
 	err := s.freightClient.ClearStageFreights(ctx, project, stageName)
 	if err != nil {
 		_ = c.Error(err)

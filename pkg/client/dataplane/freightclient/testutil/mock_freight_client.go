@@ -18,7 +18,6 @@ type MockFreightClient struct {
 	GetFreightByNameOrAliasFun func(ctx context.Context, project, nameOrAlias string) (*kargoapi.Freight, error)
 	CreateFreightFun           func(
 		ctx context.Context,
-		project string,
 		freight *kargoapi.Freight,
 		metadata map[string]apiextensionsv1.JSON,
 	) (*kargoapi.Freight, bool, error)
@@ -66,11 +65,10 @@ func (mock *MockFreightClient) GetFreightByNameOrAlias(
 
 func (mock *MockFreightClient) CreateFreight(
 	ctx context.Context,
-	project string,
 	freight *kargoapi.Freight,
 	metadata map[string]apiextensionsv1.JSON,
 ) (*kargoapi.Freight, bool, error) {
-	return mock.CreateFreightFun(ctx, project, freight, metadata)
+	return mock.CreateFreightFun(ctx, freight, metadata)
 }
 
 func (mock *MockFreightClient) PatchFreightAlias(ctx context.Context, project, nameOrAlias, newAlias string) error {

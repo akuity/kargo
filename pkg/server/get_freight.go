@@ -57,7 +57,7 @@ func (s *server) getFreight(c *gin.Context) {
 			errors.New("Freight not found"), // nolint: staticcheck
 			http.StatusNotFound,
 		))
-		return 
+		return
 	}
 
 	c.JSON(http.StatusOK, freight)

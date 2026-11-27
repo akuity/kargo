@@ -149,10 +149,10 @@ func (c *collector) listFreightFromWarehouse(
 	project string,
 	warehouse string,
 ) ([]kargoapi.Freight, error) {
-	return c.freightClient.ListFreightFromOrigin(
+	return c.storageClient.ListFreightFromOrigin(
 		ctx, project, kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: warehouse}, nil)
 }
 
 func (c *collector) deleteFreight(ctx context.Context, project, nameOrAlias string) error {
-	return c.freightClient.DeleteFreight(ctx, project, nameOrAlias)
+	return c.storageClient.DeleteFreight(ctx, project, nameOrAlias)
 }

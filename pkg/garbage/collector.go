@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
 	"github.com/akuity/kargo/pkg/client/storage"
 )
 
@@ -64,7 +63,7 @@ type Collector interface {
 type collector struct {
 	cfg CollectorConfig
 
-	freightClient freightclient.FreightClient
+	storageClient *storage.Client
 
 	// The following behaviors are overridable for testing purposes:
 	cleanProjectsFn func(
@@ -140,11 +139,11 @@ type collector struct {
 func NewCollector(
 	kubeClient client.Client,
 	cfg CollectorConfig,
-	storageClient *storage.StorageClient,
+	storageClient *storage.Client,
 ) Collector {
 	c := &collector{
 		cfg:           cfg,
-		freightClient: storageClient,
+		storageClient: storageClient,
 	}
 	c.cleanProjectsFn = c.cleanProjects
 	c.cleanProjectFn = c.cleanProject

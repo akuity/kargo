@@ -25,9 +25,9 @@ import (
 	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 )
 
-type fakseFreightGetter struct{ freights []*kargoapi.Freight }
+type fakeFreightGetter struct{ freights []*kargoapi.Freight }
 
-func (g fakseFreightGetter) GetFreight(
+func (g fakeFreightGetter) GetFreight(
 	_ context.Context,
 	_, nameOrAlias string,
 ) (*kargoapi.Freight, error) {
@@ -336,7 +336,7 @@ func TestVerifier_recordFreightVerificationEvent(t *testing.T) {
 			recorder := &fakeevent.Sender{}
 			ver := Verifier{
 				client:        c,
-				freightClient: fakseFreightGetter{tt.freights},
+				freightClient: fakeFreightGetter{tt.freights},
 				eventSender:   recorder,
 				analysisRunners: map[kargoapi.AnalysisRunKind]AnalysisRunner{
 					kargoapi.AnalysisRunKindRun: &analysisRunnerRollouts{
