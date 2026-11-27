@@ -18,6 +18,10 @@ export type GraphMeta = {
   parentNodeId?: string;
 };
 
+// Horizontal space between ranks (subscriptions, Warehouses, each tier of
+// Stages); the pipeline's loading placeholder spaces its nodes the same way.
+export const RANK_SEPARATION = 150;
+
 export const layoutGraph = (
   stage: {
     stages: Stage[];
@@ -32,7 +36,7 @@ export const layoutGraph = (
 ) => {
   const graph = new graphlib.Graph<GraphMeta>({ multigraph: true });
 
-  graph.setGraph({ rankdir: 'LR', ranksep: 150, nodesep: 60 });
+  graph.setGraph({ rankdir: 'LR', ranksep: RANK_SEPARATION, nodesep: 60 });
   graph.setDefaultEdgeLabel(() => ({}));
 
   const warehouseByName: Record<string, WarehouseExpanded> = {};

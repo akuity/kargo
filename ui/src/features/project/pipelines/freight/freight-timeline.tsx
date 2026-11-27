@@ -32,13 +32,11 @@ import {
 import { PromotionModeHeader } from './promotion-mode-header';
 import { getShowSubscriptionNames } from './subscription-label-utils';
 import { FilteredFreight, useFilteredFreights } from './use-filtered-freights';
-import { useFreightCarousel } from './use-freight-carousel';
+import { ARROW_BUTTON_WIDTH, useFreightCarousel } from './use-freight-carousel';
 import { usePromotionEligibleFreight } from './use-promotion-eligible-freight';
 import { useSoakTime } from './use-soak-time';
 
 import './freight-timeline.less';
-
-const ARROW_BUTTON_WIDTH = 28;
 
 // Sits left of the viewport, as far from the Warehouse header's icon as the
 // header's own gap (6px), over the left scroll arrow's column.

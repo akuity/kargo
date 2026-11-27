@@ -9,7 +9,6 @@ import { generatePath, Link, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { WarehouseExpanded } from '@ui/extend/types';
-import { LoadingState } from '@ui/features/common';
 import { mapToNames } from '@ui/features/common/utils';
 import FreightDetails from '@ui/features/freight/freight-details';
 import WarehouseDetails from '@ui/features/project/pipelines/warehouse/warehouse-details';
@@ -38,6 +37,7 @@ import { Images } from './image-history/images';
 import { PipelineListView } from './list/list-view';
 import { PipelineEmpty } from './pipeline-empty';
 import { PipelineError } from './pipeline-error';
+import { PipelinePageSkeleton, PipelineSkeleton } from './pipeline-skeleton';
 import { DndPromotionContext } from './promotion/drag-and-drop/dnd-promotion-context';
 import { Promote } from './promotion/promote';
 import { Promotion } from './promotion/promotion';
@@ -196,7 +196,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   );
 
   if (loading) {
-    return <LoadingState />;
+    return <PipelinePageSkeleton canvas={pipelineView === 'graph'} />;
   }
 
   if (projectQuery.error) {
@@ -371,9 +371,14 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                     </div>
                   )}
                   {pipelineContent === 'loading' && (
-                    <div className='mt-20'>
-                      <LoadingState />
-                    </div>
+                    // Covers the whole area, under the freight timeline too,
+                    // as the graph does; centered below the timeline, as a
+                    // fitted graph is.
+                    <PipelineSkeleton
+                      canvas={pipelineView === 'graph'}
+                      className='absolute inset-0 box-border'
+                      style={{ paddingTop: timelineHeight }}
+                    />
                   )}
                   {pipelineContent === 'error' && (
                     <PipelineError message={pipelineError?.message} />
