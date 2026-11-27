@@ -104,7 +104,9 @@ export const relativeTime = (date: Date, now: Date) =>
 export const claimExpired = (claim: Claim, now: Date) =>
   claim.key === 'exp' && claim.value.kind === 'time' && claim.value.date <= now;
 
-const withoutTrailingSlash = (url: string) => url.replace(/\/+$/, '');
+// One slash is all issuers differ by in practice. No regex: `/\/+$/` backtracks
+// quadratically on a long run of slashes that is not at the end.
+const withoutTrailingSlash = (url: string) => (url.endsWith('/') ? url.slice(0, -1) : url);
 
 // Whether the token is the one the API server issues its built-in admin
 // account. The server knows that token by its issuer, which the UI is not
