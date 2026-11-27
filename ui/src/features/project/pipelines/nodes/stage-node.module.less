@@ -343,22 +343,14 @@ a.statusValueLink {
 
 // The freight the Stage is carrying sits in a well cut into the card, down to
 // the color of the page behind it, so it reads as the node's payload rather
-// than as one more row of status.
+// than as one more row of status. Its pager is styled here rather than under
+// the node, since the well also stands on its own in the pipeline list's
+// Version column.
 .freight {
     padding: 8px 9px;
     border-radius: 8px;
     background: var(--kargo-color-bg-layout, #f5f5f5);
-}
 
-// On dark the page sits far below the card, so the well is lifted off it a
-// little -- still recessed, but not a hole punched through the card.
-:root[data-theme='dark'] .freight {
-    background: color-mix(in srgb, var(--kargo-color-bg-layout) 70%, var(--kargo-color-bg-container));
-}
-
-// Scoped to the well rather than the node, since the well also stands on its
-// own in the pipeline list's Version column.
-.freight {
     // The arrows stay small to look at but are a comfortable target: the box
     // is 20px square, and the negative block margin keeps that from pushing
     // the rows it sits in any further apart.
@@ -381,6 +373,12 @@ a.statusValueLink {
         background: transparent !important;
         color: var(--kargo-color-text-tertiary, #8c8c8c);
     }
+}
+
+// On dark the page sits far below the card, so the well is lifted off it a
+// little -- still recessed, but not a hole punched through the card.
+:root[data-theme='dark'] .freight {
+    background: color-mix(in srgb, var(--kargo-color-bg-layout) 70%, var(--kargo-color-bg-container));
 }
 
 .sectionLabel {
