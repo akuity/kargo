@@ -10,6 +10,8 @@ type FreightTimelineEmptyProps = {
   /** true when the active filters, rather than the project, explain the absence */
   filtered: boolean;
   hasWarehouses: boolean;
+  /** true when a live controller reconciles at least one of the Warehouses */
+  hasWarehouseController: boolean;
   promotionMode: boolean;
 };
 

@@ -1,4 +1,8 @@
 import { RepoSubscription, WarehouseExpanded } from '@ui/extend/types';
+import {
+  ControllerStatus,
+  deadControllerReason
+} from '@ui/features/common/controller-status/controller-status';
 
 export type WarehousePhase = 'ready' | 'discovering' | 'failed';
 
@@ -48,7 +52,10 @@ const isRefreshPending = (warehouse?: WarehouseExpanded) => {
   return typeof refreshToken === 'string' && refreshToken !== warehouse?.status?.lastHandledRefresh;
 };
 
-export const getWarehouseState = (warehouse?: WarehouseExpanded): WarehouseState => {
+export const getWarehouseState = (
+  warehouse?: WarehouseExpanded,
+  controller?: ControllerStatus
+): WarehouseState => {
   const conditions = warehouse?.status?.conditions || [];
 
   const reconciling = conditions.some((c) => c.type === 'Reconciling' && c.status === 'True');
@@ -58,6 +65,18 @@ export const getWarehouseState = (warehouse?: WarehouseExpanded): WarehouseState
 
   const discoveredAtValue = warehouse?.status?.discoveredArtifacts?.discoveredAt;
   const discoveredAt = discoveredAtValue ? new Date(discoveredAtValue) : undefined;
+
+  // With no controller to reconcile it, nothing the Warehouse reports will
+  // change: a refresh is never handled, a discovery never finishes, and its
+  // last discovery is only getting older. Say so ahead of all of them.
+  if (controller?.isControllerDead) {
+    return {
+      phase: 'failed',
+      errorTitle: 'No controller',
+      errorMessage: deadControllerReason(controller.controllerName),
+      discoveredAt
+    };
+  }
 
   // A refresh asked for since the last failure is a retry, and it is under way
   // whatever the failure on record says.

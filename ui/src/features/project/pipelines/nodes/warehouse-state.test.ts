@@ -191,6 +191,44 @@ describe('getWarehouseState()', () => {
 
     expect(state.phase).toBe('ready');
   });
+
+  test('a Warehouse with no controller has failed, whatever it last reported', () => {
+    const dead = { controllerName: 'eu-west', isControllerDead: true };
+
+    for (const w of [
+      warehouse({}),
+      warehouse({
+        conditions: [condition('Ready', 'True'), condition('Healthy', 'True')],
+        discoveredAt: '2026-11-05T10:00:00Z'
+      }),
+      warehouse({ conditions: [condition('Reconciling', 'True', 'ScheduledDiscovery')] }),
+      warehouse({ annotations: { 'kargo.akuity.io/refresh': 'b' }, lastHandledRefresh: 'a' }),
+      warehouse({ conditions: [condition('Healthy', 'False', 'DiscoveryFailed', discoveryError)] })
+    ]) {
+      const state = getWarehouseState(w, dead);
+
+      expect(state.phase).toBe('failed');
+      expect(state.errorTitle).toBe('No controller');
+      expect(state.errorMessage).toBe("Controller 'eu-west' is dead or nonexistent");
+      // no subscription is named in it, so none is marked as the failing one
+      expect(state.rawErrorMessage).toBeUndefined();
+    }
+  });
+
+  test('a Warehouse on the default shard with no controller names no controller', () => {
+    const state = getWarehouseState(warehouse({}), { controllerName: '', isControllerDead: true });
+
+    expect(state.errorMessage).toBe('The default controller is dead or nonexistent');
+  });
+
+  test('a live controller leaves the state to the Warehouse', () => {
+    const state = getWarehouseState(
+      warehouse({ conditions: [condition('Reconciling', 'True', 'ScheduledDiscovery')] }),
+      { controllerName: 'default', isControllerDead: false }
+    );
+
+    expect(state.phase).toBe('discovering');
+  });
 });
 
 describe('isSubscriptionFailing()', () => {

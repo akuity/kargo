@@ -42,6 +42,7 @@ export const FreightTimeline = (props: {
   project: string;
   // how many Warehouses the project has
   warehouseCount: number;
+  hasWarehouseController: boolean;
 }) => {
   const navigate = useNavigate();
 
@@ -224,6 +225,7 @@ export const FreightTimeline = (props: {
               <FreightTimelineEmpty
                 filtered={filtersActive}
                 hasWarehouses={props.warehouseCount > 0}
+                hasWarehouseController={props.hasWarehouseController}
                 promotionMode={isPromotionMode}
               />
             )}

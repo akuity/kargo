@@ -9,6 +9,7 @@ import { generatePath, Link } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { WarehouseExpanded } from '@ui/extend/types';
+import { useControllerStatus } from '@ui/features/common/controller-status/use-controller-status';
 import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { useRefreshWarehouse } from '@ui/gen/api/v2/core/core';
 
@@ -27,7 +28,12 @@ export const WarehouseNode = (props: { warehouse: WarehouseExpanded }) => {
   const warehouseName = props.warehouse?.metadata?.name || '';
   const projectName = props.warehouse?.metadata?.namespace || '';
 
-  const state = useMemo(() => getWarehouseState(props.warehouse), [props.warehouse]);
+  const { controllerName, isControllerDead } = useControllerStatus(props.warehouse?.spec?.shard);
+
+  const state = useMemo(
+    () => getWarehouseState(props.warehouse, { controllerName, isControllerDead }),
+    [props.warehouse, controllerName, isControllerDead]
+  );
 
   // No toast on success: the node itself says it is discovering.
   const refreshResourceMutation = useRefreshWarehouse();
@@ -38,9 +44,12 @@ export const WarehouseNode = (props: { warehouse: WarehouseExpanded }) => {
   // back to its old state between the request returning and the event landing.
   //
   // The graph holds a quick discovery up for a moment, for the loader and the
-  // edge animation alike, so that it does not blink.
+  // edge animation alike, so that it does not blink. A Warehouse with no
+  // controller is never discovering, whatever refresh it has been asked for.
+  const graphContext = useGraphContext();
   const discovering =
-    useGraphContext()?.discoveringWarehouses.has(warehouseName) ?? state.phase === 'discovering';
+    !isControllerDead &&
+    (graphContext?.discoveringWarehouses.has(warehouseName) ?? state.phase === 'discovering');
   const failed = !discovering && state.phase === 'failed';
 
   const refresh = () =>
@@ -108,7 +117,9 @@ export const WarehouseNode = (props: { warehouse: WarehouseExpanded }) => {
           type='text'
           className={classNames(warehouseStyles.action, 'flex-none')}
           aria-label='Refresh warehouse'
-          disabled={discovering}
+          // a refresh is only an annotation; with no controller, nothing
+          // would ever act on it
+          disabled={discovering || isControllerDead}
           icon={<FontAwesomeIcon icon={faRefresh} />}
           onClick={(e) => {
             e.stopPropagation();
