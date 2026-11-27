@@ -17,6 +17,13 @@
 -- the Freight's name are repeated as columns, as promotion_freight has
 -- them, so that rows can be found by either without reading the JSON.
 --
+-- reference is json, not jsonb. jsonb rejects the escape \u0000, which a
+-- string in the contents may hold -- an artifact's opaque metadata, say --
+-- and a rollout given such Freight could then never start. json checks only
+-- that the value is well formed and keeps it as written, which is all a
+-- value that is only ever read whole needs. It has no equality operator, so
+-- compare two references as text.
+--
 -- Rows are written once, with the write that moves the rollout from Pending
 -- to Running, and never updated. A rollout started before this table
 -- existed has none. They go with their rollout, which goes with its Stage.
@@ -25,7 +32,7 @@ CREATE TABLE promotion_rollout_freight (
     origin_kind TEXT NOT NULL CHECK (origin_kind <> ''),
     origin_name TEXT NOT NULL CHECK (origin_name <> ''),
     freight_name TEXT NOT NULL CHECK (freight_name <> ''),
-    reference JSONB NOT NULL CHECK (jsonb_typeof(reference) = 'object'),
+    reference JSON NOT NULL CHECK (json_typeof(reference) = 'object'),
     PRIMARY KEY (promotion_rollout_id, origin_kind, origin_name)
 );
 

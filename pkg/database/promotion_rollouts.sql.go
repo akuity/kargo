@@ -915,7 +915,7 @@ WITH rollout AS (
             $12::text AS origin_kind,
             $13::text AS origin_name,
             $11::text AS freight_name,
-            $14::jsonb AS reference
+            $14::json AS reference
         UNION ALL
         SELECT
             carried.origin_kind,

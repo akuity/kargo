@@ -290,7 +290,7 @@ WITH rollout AS (
             sqlc.arg(origin_kind)::text AS origin_kind,
             sqlc.arg(origin_name)::text AS origin_name,
             sqlc.arg(freight_name)::text AS freight_name,
-            sqlc.narg(reference)::jsonb AS reference
+            sqlc.narg(reference)::json AS reference
         UNION ALL
         SELECT
             carried.origin_kind,

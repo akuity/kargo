@@ -4,7 +4,6 @@ package promotionrolloutstore
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"testing"
@@ -939,9 +938,9 @@ func TestStoreFreightIntegration(t *testing.T) {
 		}
 	}
 	// requireCollection requires the rollout's collection to hold exactly the
-	// given Freight, contents included. The contents are compared as JSON,
-	// since the database keeps them as JSONB, which does not keep the
-	// spacing or key order of an artifact's opaque metadata.
+	// given Freight, contents included. The database keeps the contents as
+	// they were written, so even an artifact's opaque metadata comes back
+	// byte for byte.
 	requireCollection := func(t *testing.T, rollout Rollout, refs ...kargoapi.FreightReference) {
 		t.Helper()
 		got, err := store.GetFreightCollection(ctx, rollout.ID)
@@ -950,13 +949,7 @@ func TestStoreFreightIntegration(t *testing.T) {
 		if len(refs) > 0 {
 			want.UpdateOrPush(refs...)
 		}
-		require.Equal(t, want.ID, got.ID)
-		require.Len(t, got.Freight, len(refs))
-		wantJSON, err := json.Marshal(want)
-		require.NoError(t, err)
-		gotJSON, err := json.Marshal(got)
-		require.NoError(t, err)
-		require.JSONEq(t, string(wantJSON), string(gotJSON))
+		require.Equal(t, want, got)
 	}
 	countRows := func(t *testing.T, rollout Rollout) int {
 		t.Helper()
@@ -1064,14 +1057,26 @@ func TestStoreFreightIntegration(t *testing.T) {
 					rollout.ID,
 				).Scan(&kind, &name, &freightName))
 				require.Equal(t, []string{"Warehouse", "images", "images-1"}, []string{kind, name, freightName})
-				// Without an artifact's metadata, which JSONB reformats, what
-				// is read is what was written, field for field.
-				collection, err := store.GetFreightCollection(ctx, rollout.ID)
+			},
+		},
+		{
+			name: "Freight whose contents hold a NUL is recorded and read back as it was",
+			run: func(t *testing.T) {
+				const project = "nul"
+				seedStage(t, project, "prod")
+				// Go encodes a NUL in a string as the escape \u0000, which
+				// JSONB rejects.
+				ref := freight("images-1", images)
+				ref.Commits[0].Message = "a commit with a NUL\x00in it"
+				ref.Artifacts[0].Metadata = &apiextensionsv1.JSON{Raw: []byte(`{"blob":"a\u0000b"}`)}
+				rollout := create(t, project, "prod", "prod.01A", ref)
+				_, err := store.Start(ctx, project, rollout.PromotionRolloutRow, ref, []kargoapi.FreightOrigin{images})
 				require.NoError(t, err)
-				got := collection.Freight[images.String()]
-				want := ref
-				got.Artifacts, want.Artifacts = nil, nil
-				require.Equal(t, want, got)
+				requireCollection(t, rollout, ref)
+				// And it is carried forward as it was.
+				finish(t, rollout, succeeded)
+				next := promote(t, project, "prod.01B", freight("config-1", config), succeeded, images, config)
+				requireCollection(t, next, ref, freight("config-1", config))
 			},
 		},
 		{
@@ -1085,7 +1090,8 @@ func TestStoreFreightIntegration(t *testing.T) {
 				// The row carried forward is a copy of the one it came from.
 				var same bool
 				require.NoError(t, pool.QueryRow(ctx,
-					`SELECT copied.reference = original.reference AND copied.freight_name = original.freight_name
+					`SELECT copied.reference::text = original.reference::text
+					 	AND copied.freight_name = original.freight_name
 					 FROM promotion_rollout_freight AS copied, promotion_rollout_freight AS original
 					 WHERE copied.promotion_rollout_id = $1 AND original.promotion_rollout_id = $2
 					 	AND copied.origin_name = 'images' AND original.origin_name = 'images'`,
@@ -1394,7 +1400,7 @@ func TestStoreFreightIntegration(t *testing.T) {
 					_, err := pool.Exec(ctx,
 						`INSERT INTO promotion_rollout_freight
 						 (promotion_rollout_id, origin_kind, origin_name, freight_name, reference)
-						 VALUES ($1, $2, $3, $4, $5::jsonb)`,
+						 VALUES ($1, $2, $3, $4, $5::json)`,
 						id, kind, name, freightName, reference,
 					)
 					return err
@@ -1404,6 +1410,8 @@ func TestStoreFreightIntegration(t *testing.T) {
 				databasetest.RequirePGError(t, insert(rollout.ID, "Warehouse", "images", "", "{}"), "23514")
 				databasetest.RequirePGError(t, insert(rollout.ID, "Warehouse", "images", "f", "[]"), "23514")
 				databasetest.RequirePGError(t, insert(rollout.ID, "Warehouse", "images", "f", "null"), "23514")
+				// The value is well formed JSON.
+				databasetest.RequirePGError(t, insert(rollout.ID, "Warehouse", "images", "f", "{"), "22P02")
 				// A row belongs to a rollout that exists, and an origin has
 				// one row per rollout.
 				databasetest.RequirePGError(t, insert(uuid.New(), "Warehouse", "images", "f", "{}"), "23503")
