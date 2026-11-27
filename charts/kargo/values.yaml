@@ -309,14 +309,14 @@ api:
     sourceIPEnabled: false
 
   posthog:
-    ## @param api.posthog.enabled Whether the Kargo dashboard sends product analytics to PostHog. Disabled by default, in which case the dashboard loads no analytics code and sends nothing. When enabled, the dashboard reports page views only, with resource names (Projects, Stages, etc.) removed from URLs, and does not identify users.
+    ## @param api.posthog.enabled Whether the Kargo dashboard sends product analytics to PostHog. Disabled by default, in which case the dashboard loads no analytics code and sends nothing. When enabled, the dashboard reports page views and what users click, along with whatever else is switched on in the PostHog project (heatmaps, web vitals, error tracking, surveys, etc.). What a user clicks is reported with its text, which can include the names of Projects, Stages, and other resources. Users are not identified, and page URLs are reported as route patterns (e.g. `/project/:name`). Every event carries the URL of the Kargo instance it came from.
     enabled: false
     ## @param api.posthog.publicApiKey The PostHog project API key to send events with. PostHog project API keys are write-only and safe to expose, and the API server shares this one with unauthenticated clients. Required when `api.posthog.enabled` is `true`.
     publicApiKey: ""
     ## @param api.posthog.host The URL of the PostHog instance to send events to, e.g. `https://eu.i.posthog.com`, a self-hosted instance, or a reverse proxy in front of either.
     host: https://us.i.posthog.com
     sessionReplay:
-      ## @param api.posthog.sessionReplay.enabled Whether the Kargo dashboard also records sessions for replay in PostHog. Requires `api.posthog.enabled`, and session replay must be enabled in the PostHog project as well. Recordings are masked before they leave the browser: all text, all form input, and the attributes that carry names (link targets, tooltips, labels, IDs) are replaced, URLs are reduced to route patterns, and network requests and console output are not recorded, whatever the PostHog project's own settings say. A recording still shows the layout of what a user looked at and how they moved through it.
+      ## @param api.posthog.sessionReplay.enabled Whether the Kargo dashboard also records sessions for replay in PostHog. Requires `api.posthog.enabled`, and session replay must be enabled in the PostHog project as well. A recording shows what was on a user's screen, including the names and contents of resources and any secret the dashboard displays, such as a newly created API token. What users type into forms is always masked; anything further (masking of text, console logs, network payloads) follows the PostHog project's replay settings.
       enabled: false
 
   secret:

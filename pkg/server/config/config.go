@@ -253,9 +253,8 @@ type PostHogConfig struct {
 	// either.
 	Host string `envconfig:"POSTHOG_HOST" default:"https://us.i.posthog.com"`
 	// SessionReplayEnabled indicates whether the dashboard should also record
-	// sessions for replay in PostHog. The dashboard masks what it records, but
-	// a recording still shows far more than a page view does, so this is a
-	// separate opt-in.
+	// sessions for replay in PostHog. A recording shows what was on a user's
+	// screen, so this is a separate opt-in.
 	SessionReplayEnabled bool `envconfig:"POSTHOG_SESSION_REPLAY_ENABLED"`
 }
 

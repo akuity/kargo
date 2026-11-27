@@ -49,9 +49,9 @@ const recordingMeta = 4;
 const recordingCustom = 5;
 
 // sanitizeRecordingEntry sanitizes the page URL in an entry of a session
-// recording. What a recording shows of the page itself is masked as it is
-// recorded, by sessionRecordingOptions; the URL is the page's, not the
-// page's contents, so it is dealt with here.
+// recording, so that recordings are listed and filtered by the same route
+// patterns as other events. It does not touch what the recording shows of
+// the page itself.
 const sanitizeRecordingEntry = (entry: unknown): unknown => {
   if (!isRecord(entry) || !isRecord(entry.data)) {
     return entry;
@@ -96,9 +96,14 @@ const sanitizeProperties = (properties: Properties): Properties => {
 };
 
 /**
- * sanitizeEvent removes the names of Kargo resources from an event before it
- * is sent to PostHog. They appear in the URLs, paths, and page titles that
- * PostHog attaches to every event, session recordings included.
+ * sanitizeEvent reduces the URLs and paths PostHog attaches to every event,
+ * session recordings included, to route patterns, and drops the page title.
+ * Events are then grouped by the kind of page they happened on rather than
+ * by which Project or Stage it showed, and query strings, which on the login
+ * page can carry an OIDC authorization code, are never sent.
+ *
+ * It does not remove resource names from everything: what a user clicks and
+ * what a session recording shows are sent as PostHog captures them.
  */
 export const sanitizeEvent = (event: CaptureResult | null): CaptureResult | null =>
   event && {
