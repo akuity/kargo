@@ -85,7 +85,7 @@ func (d *digestSelector) Select(
 	}
 
 	if img == nil {
-		logger.Trace("image with tag did not match platform constraints or filter expression")
+		logger.Trace("tag was not a runnable image or did not match platform constraints or filter expression")
 		return nil, nil
 	}
 

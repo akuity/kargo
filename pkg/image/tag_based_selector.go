@@ -133,7 +133,7 @@ func (t *tagBasedSelector) getImagesByTags(
 		}
 		if image == nil {
 			logger.Trace(
-				"image was found, but did not match platform constraint or filter expression",
+				"tag was not a runnable image or did not match platform constraint or filter expression",
 				"tag", tag,
 			)
 			continue

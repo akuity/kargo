@@ -3,7 +3,6 @@ package image
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"maps"
 	"net/http"
@@ -219,6 +218,12 @@ func (r *repositoryClient) getImageByTag(
 		}
 	}
 
+	if img == nil {
+		// The tag resolved to a non-image (e.g. an OCI index containing only
+		// artifact descriptors). Skip it.
+		return nil, nil
+	}
+
 	if pc != nil && !slices.ContainsFunc(
 		img.Platforms,
 		func(p platform) bool { return pc.matches(p.OS, p.Arch, p.Variant) },
@@ -226,7 +231,7 @@ func (r *repositoryClient) getImageByTag(
 		return nil, nil
 	}
 
-	if img != nil && filter != nil {
+	if filter != nil {
 		matched, err := matchesFilterExpression(filter, *img, pc)
 		if err != nil {
 			return nil, fmt.Errorf("error evaluating filter expression for tag %q: %w", tag, err)
@@ -354,9 +359,8 @@ func (r *repositoryClient) getImageFromRemoteDesc(
 	}
 }
 
-// getImageFromV1ImageIndex gets an Image from a given v1.ImageIndex. It is
-// valid for this function to return nil if no image in the index matches the
-// specified platform, if any.
+// getImageFromV1ImageIndex gets an Image from a given v1.ImageIndex. It returns
+// nil if the index contains no runnable image descriptors.
 func (r *repositoryClient) getImageFromV1ImageIndex(
 	ctx context.Context,
 	digest string,
@@ -414,7 +418,10 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 		})
 	}
 	if len(platforms) == 0 {
-		return nil, errors.New("empty V2 manifest list or OCI index is not supported")
+		// The index contains no runnable image descriptors. It might be an
+		// attestation index or another kind of OCI artifact, so treat it as a
+		// non-image instead of failing discovery of the entire repository.
+		return nil, nil
 	}
 
 	// The index's own annotations are recorded when the index is authored, so
