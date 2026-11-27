@@ -26,7 +26,7 @@ export const FreightExpandTile = ({ count }: Props) => {
       }
       // borders as on a freight card, and the same step up on hover, so the
       // tile reads as one of the cards
-      className='shrink-0 w-7 p-0 flex items-center justify-center rounded-md border border-dashed cursor-pointer bg-transparent font-[inherit] text-[12px] border-gray-300 text-gray-500 hover:border-[#c4c9d0] hover:text-gray-700 dark:border-[#3d3d3d] dark:text-neutral-400 dark:hover:border-[#4d4d4d] dark:hover:text-neutral-200'
+      className='shrink-0 w-7 p-0 flex items-center justify-center rounded-md border border-dashed cursor-pointer bg-transparent font-[inherit] text-[12px] border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-[#3d3d3d] dark:text-neutral-400 dark:hover:border-[#4d4d4d] dark:hover:text-neutral-200'
     >
       <span className='[writing-mode:vertical-rl] rotate-180'>+{count}</span>
     </button>

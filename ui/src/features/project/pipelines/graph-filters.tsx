@@ -1,12 +1,14 @@
 import { faCircleNodes, faList, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Card, Input, Segmented, Select, Space } from 'antd';
+import classNames from 'classnames';
 
 import { WarehouseExpanded } from '@ui/extend/types';
 import { Freight, Stage } from '@ui/gen/api/v2/models';
 
 import { useFreightTimelineControllerContext } from './context/freight-timeline-controller-context';
 import { DisplaySettingsButton } from './display-settings-button';
+import { floatingSurfaceBorderColor, floatingSurfaceClassName } from './floating-surface';
 import { FreightTimelineFilterButton } from './freight/freight-timeline-filter-button';
 
 type GraphFiltersProps = {
@@ -22,7 +24,13 @@ export const GraphFilters = (props: GraphFiltersProps) => {
   const filterContext = useFreightTimelineControllerContext();
 
   return (
-    <Card size='small' className={props.className} styles={{ body: { padding: 8 } }}>
+    <Card
+      size='small'
+      // floats over the graph like the freight timeline, on the same surface
+      className={classNames(floatingSurfaceClassName, props.className)}
+      style={{ borderColor: floatingSurfaceBorderColor }}
+      styles={{ body: { padding: 8 } }}
+    >
       <Space size={8}>
         <Select
           mode='multiple'
@@ -59,6 +67,9 @@ export const GraphFilters = (props: GraphFiltersProps) => {
         />
 
         <Segmented
+          // The stock track is about the color of this translucent toolbar
+          // in both themes; darken it so the switch reads as one control.
+          className='!bg-black/[0.08] dark:!bg-black/30'
           value={props.pipelineView}
           options={[
             { value: 'graph', icon: <FontAwesomeIcon icon={faCircleNodes} /> },

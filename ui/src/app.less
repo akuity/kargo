@@ -82,11 +82,35 @@ body {
     --kargo-topbar-bg: #1f1f1f;
     --kargo-sidebar-bg: #1f1f1f;
     --kargo-sidebar-border: #303030;
+    // border of what floats over the pipeline graph (floating-surface.ts)
+    --kargo-floating-surface-border: color-mix(
+        in srgb,
+        var(--kargo-color-border-secondary) 50%,
+        transparent
+    );
 }
 
 // xyflow canvas defaults to white regardless of colorMode; use the themed bg.
+// A faint dot grid on it (1.2px dots every 20px) gives the canvas structure and
+// stays put while the graph pans and zooms over it.
 .react-flow.kargo-pipeline-graph {
+    --kargo-graph-dot-color: var(--kargo-color-border, #d9d9d9);
     background-color: var(--kargo-color-bg-layout, #f7f8fa);
+    background-image: radial-gradient(
+        circle,
+        var(--kargo-graph-dot-color) 0.6px,
+        transparent 1.2px
+    );
+    background-size: 20px 20px;
+}
+
+// Border tokens read too strong on the dark canvas; a faint white tint keeps
+// the dots just above the background (~#252525 on #141414).
+:root[data-theme='dark'] .react-flow.kargo-pipeline-graph {
+    --kargo-graph-dot-color: rgba(255, 255, 255, 0.07);
+    // xyflow's dark minimap nodes (#2b2b2b) vanish on the container background
+    // (#282828) the minimap sits on; lift them to a grey that shows on it.
+    --xy-minimap-node-background-color: #4d4d4d;
 }
 
 // CheckableTag hover text defaults to colorPrimary (too-dark blue); keep white.

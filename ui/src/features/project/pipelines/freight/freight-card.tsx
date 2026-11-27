@@ -142,13 +142,15 @@ export const FreightCard = (props: FreightCardProps) => {
           // the stage bar takes the left edge of a held card; without it, the
           // card is padded evenly
           props.inUse ? 'pl-3' : 'pl-2',
-          // Card colors from the freightline design; they sit on the page
-          // background so cards read as raised from the strip. Every card
-          // looks the same: the stage bar alone marks freight a Stage holds.
-          'bg-white border-gray-300 shadow-sm dark:shadow-none dark:bg-[#262626] dark:border-[#3d3d3d]',
+          // Card colors from the freightline design, but for the light
+          // theme's border: a step lighter, so it does not stand out on the
+          // translucent strip. The cards are opaque, so they read as raised
+          // from it. Every card looks the same: the stage bar alone marks
+          // freight a Stage holds.
+          'bg-white border-gray-200 shadow-sm dark:shadow-none dark:bg-[#262626] dark:border-[#3d3d3d]',
           // one step past the card's border, so hovering shows without
           // outshining the selected highlight
-          !highlightStyle && 'hover:border-[#c4c9d0] dark:hover:border-[#4d4d4d]',
+          !highlightStyle && 'hover:border-gray-300 dark:hover:border-[#4d4d4d]',
           props.className
         )}
         style={highlightStyle}

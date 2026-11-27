@@ -36,6 +36,8 @@ type GraphProps = {
   warehouses: WarehouseExpanded[];
   stages: Stage[];
   project: string;
+  // height of the freight timeline floating over the top of the graph
+  topInset?: number;
 };
 
 const nodeTypes = {
@@ -45,14 +47,19 @@ const nodeTypes = {
   [reactFlowNodeConstants.CUSTOM_REPO_SUBSCRIPTION_NODE]: CustomRepoSubscriptionNode
 };
 
-// Keep fitted nodes clear of the filters and buttons floating over the top of
-// the graph. Horizontal padding matches React Flow's default.
-const fitViewPadding = { top: '80px', bottom: '60px', x: 0.1 } as const;
+// Keep fitted nodes clear of the freight timeline, filters and buttons
+// floating over the top of the graph. The canvas runs as far past the bottom
+// edge as the timeline covers at the top (see below), so the bottom padding
+// takes that in too. Horizontal padding matches React Flow's default.
+const getFitViewPadding = (topInset: number) =>
+  ({ top: `${80 + topInset}px`, bottom: `${40 + topInset}px`, x: 0.1 }) as const;
 
 export const Graph = (props: GraphProps) => {
   const { isDark } = useTheme();
   const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
   const filterContext = useFreightTimelineControllerContext();
+  const topInset = props.topInset || 0;
+  const fitViewPadding = useMemo(() => getFitViewPadding(topInset), [topInset]);
 
   const stackedNodesParents = filterContext?.preferredFilter?.stackedNodesParents || [];
 
@@ -327,13 +334,13 @@ export const Graph = (props: GraphProps) => {
         reactFlowInstance.current?.fitView({
           nodes: nodesToFit,
           duration: 400,
-          padding: 0.3,
+          padding: { ...fitViewPadding, x: 0.3 },
           maxZoom: 1
         });
       }
     }, 250);
     return () => clearTimeout(timer);
-  }, [matchedStageIndices, nodes]);
+  }, [matchedStageIndices, nodes, fitViewPadding]);
 
   const loggedRef = useRef(false);
   const mountTimeRef = useRef(performance.now());
@@ -364,73 +371,94 @@ export const Graph = (props: GraphProps) => {
         matchedStageIndices
       }}
     >
-      <ReactFlow
-        className='kargo-pipeline-graph'
-        colorMode={isDark ? 'dark' : 'light'}
-        nodes={nodes}
-        // Sizes only, so that a node replaced by a watch event keeps them.
-        // Without them React Flow drops the node's handles, and its edges are
-        // drawn afresh, restarting their animation.
-        onNodesChange={(changes) => onNodesChange(changes.filter((c) => c.type === 'dimensions'))}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{
-          nodes: nodesExcludingSubscriptionNodes,
-          padding: fitViewPadding
-        }}
-        proOptions={{ hideAttribution: true }}
-        minZoom={nodes.length > 100 ? 0.4 : 0.2}
-        maxZoom={1.4}
-        onlyRenderVisibleElements
-        panOnDrag
-        onInit={(inst) => (reactFlowInstance.current = inst)}
-      >
-        {filterContext?.preferredFilter?.showMinimap && (
-          <MiniMap
-            style={{
-              width: 140,
-              height: 100,
-              background: 'var(--kargo-color-bg-container, white)',
-              border: '1px solid var(--kargo-color-border, lightblue)',
-              borderRadius: '5px'
+      {/* React Flow centers the graph on its canvas, which runs under the
+          freight timeline. Running it as far past the bottom edge, where it
+          is cut off, puts the canvas's middle in the middle of what is in
+          view, so fitting and zooming center there. The graph clips the
+          part past the edge itself, so that the page around it still
+          scrolls, e.g. to a tall images panel. Clip rather than hide: a
+          hidden overflow still scrolls to show a focused element, such as a
+          node in the part cut off. */}
+      <div className='h-full overflow-clip'>
+        {/* React Flow overrides a height set on itself, so it fills this. */}
+        <div style={{ height: `calc(100% + ${topInset}px)` }}>
+          <ReactFlow
+            className='kargo-pipeline-graph'
+            colorMode={isDark ? 'dark' : 'light'}
+            nodes={nodes}
+            // Sizes only, so that a node replaced by a watch event keeps them.
+            // Without them React Flow drops the node's handles, and its edges are
+            // drawn afresh, restarting their animation.
+            onNodesChange={(changes) =>
+              onNodesChange(changes.filter((c) => c.type === 'dimensions'))
+            }
+            edges={edges}
+            nodeTypes={nodeTypes}
+            fitView
+            fitViewOptions={{
+              nodes: nodesExcludingSubscriptionNodes,
+              padding: fitViewPadding
             }}
-            pannable
-          />
-        )}
-        <Controls
-          showInteractive={false}
-          fitViewOptions={{ padding: fitViewPadding }}
-          onFitView={() => {
-            setRedraw(!redraw);
-          }}
-        >
-          <ControlButton
-            title={filterContext?.preferredFilter?.showMinimap ? 'Hide Minimap' : 'Show Minimap'}
-            onClick={() =>
-              filterContext?.setPreferredFilter({
-                ...filterContext?.preferredFilter,
-                showMinimap: !filterContext?.preferredFilter?.showMinimap
-              })
-            }
+            proOptions={{ hideAttribution: true }}
+            minZoom={nodes.length > 100 ? 0.4 : 0.2}
+            maxZoom={1.4}
+            onlyRenderVisibleElements
+            panOnDrag
+            onInit={(inst) => (reactFlowInstance.current = inst)}
           >
-            <FontAwesomeIcon icon={faMap} />
-          </ControlButton>
-          <ControlButton
-            title={
-              filterContext?.preferredFilter?.stepEdges ? 'Use Curved Edges' : 'Use Step Edges'
-            }
-            onClick={() =>
-              filterContext?.setPreferredFilter({
-                ...filterContext?.preferredFilter,
-                stepEdges: !filterContext?.preferredFilter?.stepEdges
-              })
-            }
-          >
-            <FontAwesomeIcon icon={faShareNodes} />
-          </ControlButton>
-        </Controls>
-      </ReactFlow>
+            {filterContext?.preferredFilter?.showMinimap && (
+              <MiniMap
+                style={{
+                  width: 140,
+                  height: 100,
+                  background: 'var(--kargo-color-bg-container, white)',
+                  border: '1px solid var(--kargo-color-border, lightblue)',
+                  borderRadius: '5px',
+                  // above the part of the canvas past the bottom edge
+                  bottom: topInset
+                }}
+                pannable
+              />
+            )}
+            <Controls
+              // above the part of the canvas past the bottom edge
+              style={{ bottom: topInset }}
+              showInteractive={false}
+              fitViewOptions={{ padding: fitViewPadding }}
+              onFitView={() => {
+                setRedraw(!redraw);
+              }}
+            >
+              <ControlButton
+                title={
+                  filterContext?.preferredFilter?.showMinimap ? 'Hide Minimap' : 'Show Minimap'
+                }
+                onClick={() =>
+                  filterContext?.setPreferredFilter({
+                    ...filterContext?.preferredFilter,
+                    showMinimap: !filterContext?.preferredFilter?.showMinimap
+                  })
+                }
+              >
+                <FontAwesomeIcon icon={faMap} />
+              </ControlButton>
+              <ControlButton
+                title={
+                  filterContext?.preferredFilter?.stepEdges ? 'Use Curved Edges' : 'Use Step Edges'
+                }
+                onClick={() =>
+                  filterContext?.setPreferredFilter({
+                    ...filterContext?.preferredFilter,
+                    stepEdges: !filterContext?.preferredFilter?.stepEdges
+                  })
+                }
+              >
+                <FontAwesomeIcon icon={faShareNodes} />
+              </ControlButton>
+            </Controls>
+          </ReactFlow>
+        </div>
+      </div>
     </GraphContext.Provider>
   );
 };

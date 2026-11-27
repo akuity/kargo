@@ -12,6 +12,11 @@ import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
+import {
+  floatingSurfaceBorderColor,
+  floatingSurfaceClassName,
+  solidSurfaceClassName
+} from '@ui/features/project/pipelines/floating-surface';
 import { Freight } from '@ui/gen/api/v2/models';
 
 import { getPreviousFreight } from './freight-artifact-changes-utils';
@@ -201,9 +206,12 @@ export const FreightTimeline = (props: {
       <div
         className={classNames(
           'freightTimeline',
-          'bg-[var(--kargo-topbar-bg)] py-2 flex relative z-20'
+          // promote mode dims the page under the timeline but not the
+          // timeline itself
+          isPromotionMode ? solidSurfaceClassName : floatingSurfaceClassName,
+          'py-2 flex relative z-20'
         )}
-        style={{ borderBottom: '2px solid var(--kargo-color-border-secondary, rgba(0,0,0,.05))' }}
+        style={{ borderBottom: `1px solid ${floatingSurfaceBorderColor}` }}
       >
         {isEmpty && isFocused && (
           // room for the back arrow, where the left scroll arrow would be
