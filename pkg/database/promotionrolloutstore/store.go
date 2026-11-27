@@ -396,6 +396,12 @@ func (s *store) ListTargetStatuses(
 //     Freight the rollout promotes.
 //   - database.ErrConflict: the rollout is not Pending, fails a
 //     precondition, or another rollout of its Stage is Running.
+//
+// TODO: freight is an argument only because the database does not hold
+// Freight yet, so its contents have to come from the caller. Once it does,
+// resolve the Freight from the rollout's freight_name in the
+// StartPromotionRollout query, and remove the argument and the check that
+// its name matches the rollout's.
 func (s *store) Start(
 	ctx context.Context,
 	project string,
