@@ -19,6 +19,7 @@ import { isStageControlFlow, isStageTargetAware } from '../nodes/stage-meta-util
 import { FreightDetails } from './freight-details';
 import styles from './promote.module.less';
 import { isPromotionWindowClosed, promotionWindowClosedMessage } from './promotion-window';
+import { useNavigatePromotion } from './use-navigate-promotion';
 
 type PromoteProps = ModalComponentProps & {
   stage: Stage;
@@ -28,6 +29,7 @@ type PromoteProps = ModalComponentProps & {
 export const Promote = (props: PromoteProps) => {
   const actionContext = useActionContext();
   const navigate = useNavigate();
+  const navigatePromotion = useNavigatePromotion();
   const { promoteTabs } = useExtensionsContext();
 
   const dictionaryContext = useDictionaryContext();
@@ -64,12 +66,7 @@ export const Promote = (props: PromoteProps) => {
         }
 
         // navigate
-        navigate(
-          generatePath(paths.promotion, {
-            name: projectName,
-            promotionId: response.data?.metadata?.name
-          })
-        );
+        navigatePromotion(projectName, response.data?.metadata?.name);
 
         actionContext?.cancel();
       }
