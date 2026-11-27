@@ -22,7 +22,8 @@ func TestParseCategories(t *testing.T) {
 			name: "unset",
 			assert: func(t *testing.T, s *state.Categories, err error) {
 				require.NoError(t, err)
-				require.True(t, databaseSelected(s))
+				require.True(t, selected(s, CategoryDatabase))
+				require.False(t, selected(s, CategoryK8s))
 			},
 		},
 		{
@@ -30,7 +31,7 @@ func TestParseCategories(t *testing.T) {
 			entries: []string{"", " "},
 			assert: func(t *testing.T, s *state.Categories, err error) {
 				require.NoError(t, err)
-				require.True(t, databaseSelected(s))
+				require.True(t, selected(s, CategoryDatabase))
 			},
 		},
 		{
@@ -38,7 +39,8 @@ func TestParseCategories(t *testing.T) {
 			entries: []string{"default"},
 			assert: func(t *testing.T, s *state.Categories, err error) {
 				require.NoError(t, err)
-				require.True(t, databaseSelected(s))
+				require.True(t, selected(s, CategoryDatabase))
+				require.False(t, selected(s, CategoryK8s))
 				require.True(t, s.Has(later, true))
 				require.False(t, s.Has(later, false))
 			},
@@ -48,7 +50,8 @@ func TestParseCategories(t *testing.T) {
 			entries: []string{"all"},
 			assert: func(t *testing.T, s *state.Categories, err error) {
 				require.NoError(t, err)
-				require.True(t, databaseSelected(s))
+				require.True(t, selected(s, CategoryDatabase))
+				require.True(t, selected(s, CategoryK8s))
 				require.True(t, s.Has(later, false))
 			},
 		},
@@ -57,7 +60,7 @@ func TestParseCategories(t *testing.T) {
 			entries: []string{"all", "database"},
 			assert: func(t *testing.T, s *state.Categories, err error) {
 				require.NoError(t, err)
-				require.True(t, databaseSelected(s))
+				require.True(t, selected(s, CategoryDatabase))
 				require.True(t, s.Has(later, false))
 			},
 		},
@@ -66,7 +69,7 @@ func TestParseCategories(t *testing.T) {
 			entries: []string{"none"},
 			assert: func(t *testing.T, s *state.Categories, err error) {
 				require.NoError(t, err)
-				require.False(t, databaseSelected(s))
+				require.False(t, selected(s, CategoryDatabase))
 				require.False(t, s.Has(later, true))
 			},
 		},
@@ -84,11 +87,38 @@ func TestParseCategories(t *testing.T) {
 			},
 		},
 		{
+			name:    "default with a category",
+			entries: []string{"default", "k8s"},
+			assert: func(t *testing.T, s *state.Categories, err error) {
+				require.NoError(t, err)
+				require.True(t, selected(s, CategoryDatabase))
+				require.True(t, selected(s, CategoryK8s))
+				require.False(t, selected(s, CategoryPatch))
+			},
+		},
+		{
+			name:    "a list replaces the default categories",
+			entries: []string{"k8s"},
+			assert: func(t *testing.T, s *state.Categories, err error) {
+				require.NoError(t, err)
+				require.False(t, selected(s, CategoryDatabase))
+				require.True(t, selected(s, CategoryK8s))
+			},
+		},
+		{
+			name:    "none with another category",
+			entries: []string{"none", "k8s"},
+			assert: func(t *testing.T, s *state.Categories, err error) {
+				require.ErrorContains(t, err, "none can't be combined with other categories")
+				require.Nil(t, s)
+			},
+		},
+		{
 			name:    "category by name",
 			entries: []string{"database"},
 			assert: func(t *testing.T, s *state.Categories, err error) {
 				require.NoError(t, err)
-				require.True(t, databaseSelected(s))
+				require.True(t, selected(s, CategoryDatabase))
 				require.False(t, s.Has(later, true))
 			},
 		},
@@ -97,7 +127,7 @@ func TestParseCategories(t *testing.T) {
 			entries: []string{" DataBase ", "", "  "},
 			assert: func(t *testing.T, s *state.Categories, err error) {
 				require.NoError(t, err)
-				require.True(t, databaseSelected(s))
+				require.True(t, selected(s, CategoryDatabase))
 				require.False(t, s.Has(later, true))
 			},
 		},
@@ -106,7 +136,7 @@ func TestParseCategories(t *testing.T) {
 			entries: []string{" NONE "},
 			assert: func(t *testing.T, s *state.Categories, err error) {
 				require.NoError(t, err)
-				require.False(t, databaseSelected(s))
+				require.False(t, selected(s, CategoryDatabase))
 			},
 		},
 		{
@@ -166,7 +196,7 @@ func TestCategoryEnabled(t *testing.T) {
 	require.False(t, CategoryEnabled(CategoryDatabase))
 }
 
-// databaseSelected returns whether s selects CategoryDatabase.
-func databaseSelected(s *state.Categories) bool {
-	return s.Has(string(CategoryDatabase), categories[CategoryDatabase])
+// selected returns whether s selects c.
+func selected(s *state.Categories, c Category) bool {
+	return s.Has(string(c), categories[c])
 }

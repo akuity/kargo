@@ -1,6 +1,9 @@
 package telemetry
 
-import "go.opentelemetry.io/otel/attribute"
+import (
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+)
 
 // Attribute keys shared by Kargo's spans. Keeping them here, rather than
 // spelled out at each call site, keeps the attributes consistent so that they
@@ -29,6 +32,45 @@ const (
 	// PromotionRequestKey is the attribute under which the name of a
 	// PromotionRequest is recorded.
 	PromotionRequestKey = attribute.Key("kargo.promotion_request")
+	// FreightKey is the attribute under which the name of a Freight is
+	// recorded.
+	FreightKey = attribute.Key("kargo.freight")
+	// FreightOriginKey is the attribute under which a Freight's origin is
+	// recorded as kind/name, e.g. "Warehouse/smoke".
+	FreightOriginKey = attribute.Key("kargo.freight.origin")
+	// VCSCommitKey is the attribute under which a Git commit ID is recorded
+	// (OTel semconv).
+	VCSCommitKey = semconv.VCSRefHeadRevisionKey
+
+	// KindKey is the attribute under which the kind of a Kubernetes object a
+	// span concerns is recorded.
+	KindKey = attribute.Key("kargo.object.kind")
+	// NameKey is the attribute under which the name of the Kubernetes object
+	// a span concerns is recorded.
+	NameKey = attribute.Key("kargo.object.name")
+	// NamespaceKey is the attribute under which the namespace of a Kubernetes
+	// object that is not a Kargo object is recorded (OTel semconv).
+	NamespaceKey = semconv.K8SNamespaceNameKey
+	// ResourceKey is the attribute under which a Kubernetes API request's
+	// resource (e.g. "freights") is recorded.
+	ResourceKey = attribute.Key("kargo.k8s.resource")
+	// SubresourceKey is the attribute under which a Kubernetes API request's
+	// subresource (e.g. "status") is recorded.
+	SubresourceKey = attribute.Key("kargo.k8s.subresource")
+	// VerbKey is the attribute under which a Kubernetes API request's verb
+	// (e.g. "patch") is recorded.
+	VerbKey = attribute.Key("kargo.k8s.verb")
+
+	// PatchNoopKey is the attribute under which whether a status patch was
+	// skipped as a no-op is recorded.
+	PatchNoopKey = attribute.Key("kargo.patch.noop")
+	// PatchFieldsKey is the attribute under which the top-level status fields
+	// a status patch changes are recorded.
+	PatchFieldsKey = attribute.Key("kargo.patch.fields")
+	// PatchBytesKey is the attribute under which a status patch's size is
+	// recorded.
+	PatchBytesKey = attribute.Key("kargo.patch.bytes")
+
 	// StepAliasKey is the attribute under which a promotion step's alias is
 	// recorded.
 	StepAliasKey = attribute.Key("kargo.promotion.step.alias")

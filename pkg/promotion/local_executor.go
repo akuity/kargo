@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -49,8 +48,9 @@ func (e *LocalStepExecutor) ExecuteStep(
 	ctx context.Context,
 	req StepExecutionRequest,
 ) (result StepResult, err error) {
-	ctx, span := tracer.Start(
+	ctx, span := telemetry.StartSpan(
 		ctx,
+		tracer,
 		"Execute step",
 		trace.WithAttributes(
 			telemetry.ProjectKey.String(req.Context.Project),
@@ -60,10 +60,7 @@ func (e *LocalStepExecutor) ExecuteStep(
 	)
 	defer func() {
 		span.SetAttributes(telemetry.StepStatusKey.String(string(result.Status)))
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-		}
+		telemetry.RecordError(span, err)
 		span.End()
 	}()
 

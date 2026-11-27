@@ -386,16 +386,24 @@ func (r *RegularStageReconciler) SetupWithManager(
 // recorded.
 var tracer = otel.Tracer("github.com/akuity/kargo/pkg/controller/stages")
 
-func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	ctx, span := tracer.Start(
+// startReconcileSpan starts a Stage reconcile's span, with the Stage on ctx
+// for child spans, and the span's IDs on log lines.
+func startReconcileSpan(ctx context.Context, req ctrl.Request) (context.Context, trace.Span) {
+	ctx = telemetry.ContextWithAttributes(
 		ctx,
-		"Reconcile Stage",
-		trace.WithAttributes(
-			telemetry.ProjectKey.String(req.Namespace),
-			telemetry.StageKey.String(req.Name),
-		),
+		telemetry.ProjectKey.String(req.Namespace),
+		telemetry.StageKey.String(req.Name),
 	)
-	defer span.End()
+	ctx, span := telemetry.StartSpan(ctx, tracer, "Reconcile Stage")
+	return telemetry.ContextWithLogValues(ctx), span
+}
+
+func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, err error) {
+	ctx, span := startReconcileSpan(ctx, req)
+	defer func() {
+		telemetry.RecordError(span, err)
+		span.End()
+	}()
 
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"namespace", req.Namespace,
