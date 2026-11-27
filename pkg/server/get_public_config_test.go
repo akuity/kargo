@@ -60,8 +60,8 @@ func Test_server_getPublicConfig(t *testing.T) {
 				name: "get public config with PostHog",
 				serverConfig: &config.ServerConfig{
 					PostHogConfig: &config.PostHogConfig{
-						APIKey: "phc_test",
-						Host:   "https://posthog.example.com",
+						PublicAPIKey: "phc_test",
+						Host:         "https://posthog.example.com",
 					},
 				},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
@@ -75,8 +75,8 @@ func Test_server_getPublicConfig(t *testing.T) {
 					require.Equal(
 						t,
 						&postHogConfig{
-							APIKey: "phc_test",
-							Host:   "https://posthog.example.com",
+							PublicAPIKey: "phc_test",
+							Host:         "https://posthog.example.com",
 						},
 						config.PostHogConfig,
 					)

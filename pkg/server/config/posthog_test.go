@@ -23,8 +23,8 @@ func TestServerConfigFromEnv_PostHogConfig(t *testing.T) {
 		{
 			name: "disabled",
 			env: map[string]string{
-				"POSTHOG_ENABLED": "false",
-				"POSTHOG_API_KEY": "phc_test",
+				"POSTHOG_ENABLED":        "false",
+				"POSTHOG_PUBLIC_API_KEY": "phc_test",
 			},
 			assert: func(t *testing.T, cfg *PostHogConfig) {
 				require.Nil(t, cfg)
@@ -33,15 +33,15 @@ func TestServerConfigFromEnv_PostHogConfig(t *testing.T) {
 		{
 			name: "enabled with default host",
 			env: map[string]string{
-				"POSTHOG_ENABLED": "true",
-				"POSTHOG_API_KEY": "phc_test",
+				"POSTHOG_ENABLED":        "true",
+				"POSTHOG_PUBLIC_API_KEY": "phc_test",
 			},
 			assert: func(t *testing.T, cfg *PostHogConfig) {
 				require.Equal(
 					t,
 					&PostHogConfig{
-						APIKey: "phc_test",
-						Host:   "https://us.i.posthog.com",
+						PublicAPIKey: "phc_test",
+						Host:         "https://us.i.posthog.com",
 					},
 					cfg,
 				)
@@ -50,16 +50,16 @@ func TestServerConfigFromEnv_PostHogConfig(t *testing.T) {
 		{
 			name: "enabled with custom host",
 			env: map[string]string{
-				"POSTHOG_ENABLED": "true",
-				"POSTHOG_API_KEY": "phc_test",
-				"POSTHOG_HOST":    "https://posthog.example.com",
+				"POSTHOG_ENABLED":        "true",
+				"POSTHOG_PUBLIC_API_KEY": "phc_test",
+				"POSTHOG_HOST":           "https://posthog.example.com",
 			},
 			assert: func(t *testing.T, cfg *PostHogConfig) {
 				require.Equal(
 					t,
 					&PostHogConfig{
-						APIKey: "phc_test",
-						Host:   "https://posthog.example.com",
+						PublicAPIKey: "phc_test",
+						Host:         "https://posthog.example.com",
 					},
 					cfg,
 				)
@@ -76,11 +76,11 @@ func TestServerConfigFromEnv_PostHogConfig(t *testing.T) {
 	}
 }
 
-func TestPostHogConfigFromEnv_MissingAPIKey(t *testing.T) {
+func TestPostHogConfigFromEnv_MissingPublicAPIKey(t *testing.T) {
 	// Not parallel: manipulates the environment. Setting the variable first
 	// has the test restore it afterward; a variable that is set but empty
 	// would satisfy envconfig, so it is then unset.
-	t.Setenv("POSTHOG_API_KEY", "")
-	require.NoError(t, os.Unsetenv("POSTHOG_API_KEY"))
+	t.Setenv("POSTHOG_PUBLIC_API_KEY", "")
+	require.NoError(t, os.Unsetenv("POSTHOG_PUBLIC_API_KEY"))
 	require.Panics(t, func() { PostHogConfigFromEnv() })
 }

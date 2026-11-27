@@ -41,11 +41,11 @@ let started = false;
  * demand so that a UI without analytics enabled never downloads it. Calls
  * after the first do nothing.
  */
-export const startPostHog = async (apiKey: string, host: string): Promise<void> => {
+export const startPostHog = async (publicApiKey: string, host: string): Promise<void> => {
   if (started) {
     return;
   }
   started = true;
   const { default: posthog } = await import('posthog-js');
-  posthog.init(apiKey, postHogOptions(host));
+  posthog.init(publicApiKey, postHogOptions(host));
 };

@@ -7,6 +7,6 @@
  */
 
 export interface PostHogConfig {
-  apiKey?: string;
   host?: string;
+  publicApiKey?: string;
 }

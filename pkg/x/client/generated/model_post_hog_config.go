@@ -19,8 +19,8 @@ var _ MappedNullable = &PostHogConfig{}
 
 // PostHogConfig struct for PostHogConfig
 type PostHogConfig struct {
-	ApiKey *string `json:"apiKey,omitempty"`
 	Host *string `json:"host,omitempty"`
+	PublicApiKey *string `json:"publicApiKey,omitempty"`
 }
 
 // NewPostHogConfig instantiates a new PostHogConfig object
@@ -38,38 +38,6 @@ func NewPostHogConfig() *PostHogConfig {
 func NewPostHogConfigWithDefaults() *PostHogConfig {
 	this := PostHogConfig{}
 	return &this
-}
-
-// GetApiKey returns the ApiKey field value if set, zero value otherwise.
-func (o *PostHogConfig) GetApiKey() string {
-	if o == nil || IsNil(o.ApiKey) {
-		var ret string
-		return ret
-	}
-	return *o.ApiKey
-}
-
-// GetApiKeyOk returns a tuple with the ApiKey field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *PostHogConfig) GetApiKeyOk() (*string, bool) {
-	if o == nil || IsNil(o.ApiKey) {
-		return nil, false
-	}
-	return o.ApiKey, true
-}
-
-// HasApiKey returns a boolean if a field has been set.
-func (o *PostHogConfig) HasApiKey() bool {
-	if o != nil && !IsNil(o.ApiKey) {
-		return true
-	}
-
-	return false
-}
-
-// SetApiKey gets a reference to the given string and assigns it to the ApiKey field.
-func (o *PostHogConfig) SetApiKey(v string) {
-	o.ApiKey = &v
 }
 
 // GetHost returns the Host field value if set, zero value otherwise.
@@ -104,6 +72,38 @@ func (o *PostHogConfig) SetHost(v string) {
 	o.Host = &v
 }
 
+// GetPublicApiKey returns the PublicApiKey field value if set, zero value otherwise.
+func (o *PostHogConfig) GetPublicApiKey() string {
+	if o == nil || IsNil(o.PublicApiKey) {
+		var ret string
+		return ret
+	}
+	return *o.PublicApiKey
+}
+
+// GetPublicApiKeyOk returns a tuple with the PublicApiKey field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PostHogConfig) GetPublicApiKeyOk() (*string, bool) {
+	if o == nil || IsNil(o.PublicApiKey) {
+		return nil, false
+	}
+	return o.PublicApiKey, true
+}
+
+// HasPublicApiKey returns a boolean if a field has been set.
+func (o *PostHogConfig) HasPublicApiKey() bool {
+	if o != nil && !IsNil(o.PublicApiKey) {
+		return true
+	}
+
+	return false
+}
+
+// SetPublicApiKey gets a reference to the given string and assigns it to the PublicApiKey field.
+func (o *PostHogConfig) SetPublicApiKey(v string) {
+	o.PublicApiKey = &v
+}
+
 func (o PostHogConfig) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -114,11 +114,11 @@ func (o PostHogConfig) MarshalJSON() ([]byte, error) {
 
 func (o PostHogConfig) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
-	if !IsNil(o.ApiKey) {
-		toSerialize["apiKey"] = o.ApiKey
-	}
 	if !IsNil(o.Host) {
 		toSerialize["host"] = o.Host
+	}
+	if !IsNil(o.PublicApiKey) {
+		toSerialize["publicApiKey"] = o.PublicApiKey
 	}
 	return toSerialize, nil
 }

@@ -4564,9 +4564,9 @@ components:
       type: object
     PostHogConfig:
       properties:
-        apiKey:
-          type: string
         host:
+          type: string
+        publicApiKey:
           type: string
       type: object
     PromoteDownstreamRequest:

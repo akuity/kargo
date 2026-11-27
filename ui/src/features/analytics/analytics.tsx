@@ -10,15 +10,15 @@ import { startPostHog } from './posthog';
  */
 export const Analytics = () => {
   const { data: response } = useGetPublicConfig();
-  const { apiKey, host } = response?.data?.posthogConfig ?? {};
+  const { publicApiKey, host } = response?.data?.posthogConfig ?? {};
 
   useEffect(() => {
-    if (!apiKey || !host) {
+    if (!publicApiKey || !host) {
       return;
     }
     // Analytics are best effort: failing to load them must not disturb the UI.
-    startPostHog(apiKey, host).catch(() => undefined);
-  }, [apiKey, host]);
+    startPostHog(publicApiKey, host).catch(() => undefined);
+  }, [publicApiKey, host]);
 
   return null;
 };

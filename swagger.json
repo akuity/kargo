@@ -5904,10 +5904,10 @@
     "PostHogConfig": {
       "type": "object",
       "properties": {
-        "apiKey": {
+        "host": {
           "type": "string"
         },
-        "host": {
+        "publicApiKey": {
           "type": "string"
         }
       }

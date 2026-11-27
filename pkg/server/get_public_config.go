@@ -22,8 +22,8 @@ type oidcConfig struct {
 } // @name OIDCConfig
 
 type postHogConfig struct {
-	APIKey string `json:"apiKey"`
-	Host   string `json:"host"`
+	PublicAPIKey string `json:"publicApiKey"`
+	Host         string `json:"host"`
 } // @name PostHogConfig
 
 // @id GetPublicConfig
@@ -48,8 +48,8 @@ func (s *server) getPublicConfig(c *gin.Context) {
 	var postHogCfg *postHogConfig
 	if s.cfg.PostHogConfig != nil {
 		postHogCfg = &postHogConfig{
-			APIKey: s.cfg.PostHogConfig.APIKey,
-			Host:   s.cfg.PostHogConfig.Host,
+			PublicAPIKey: s.cfg.PostHogConfig.PublicAPIKey,
+			Host:         s.cfg.PostHogConfig.Host,
 		}
 	}
 	resp := publicConfig{

@@ -245,9 +245,9 @@ func AdminConfigFromEnv() AdminConfig {
 // the dashboard to PostHog. The API server returns this configuration to
 // clients that request it, so it must never hold anything secret.
 type PostHogConfig struct {
-	// APIKey is the PostHog project API key that events are sent with. PostHog
-	// project API keys are write-only and are public by design.
-	APIKey string `envconfig:"POSTHOG_API_KEY" required:"true"`
+	// PublicAPIKey is the PostHog project API key that events are sent with.
+	// PostHog project API keys are write-only and are public by design.
+	PublicAPIKey string `envconfig:"POSTHOG_PUBLIC_API_KEY" required:"true"`
 	// Host is the URL of the PostHog instance events are sent to. This may be
 	// PostHog Cloud, a self-hosted instance, or a reverse proxy in front of
 	// either.
