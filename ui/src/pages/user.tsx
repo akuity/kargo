@@ -1,24 +1,22 @@
-import { faQuestionCircle, IconDefinition } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Descriptions, Popover, Tag } from 'antd';
-import { DescriptionsItemType } from 'antd/es/descriptions';
+import { Flex, Typography } from 'antd';
 import { Navigate } from 'react-router-dom';
 
 import { redirectToQueryParam } from '@ui/config/auth';
 import { withoutBasePath } from '@ui/config/base-path';
 import { paths } from '@ui/config/paths';
+import { AccountCard } from '@ui/features/account/account-card';
+import { TokenClaimsCard } from '@ui/features/account/token-claims-card';
 import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
-import { claimsMapping, isJWTDirty } from '@ui/features/auth/jwt-utils';
-import { PageTitle } from '@ui/features/common';
+import { isJWTDirty } from '@ui/features/auth/jwt-utils';
 import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
 
 export const User = () => {
-  useDocumentTitle(['User']);
+  useDocumentTitle(['Your account']);
   const { JWTInfo } = useAuthContext();
 
   if (isJWTDirty(JWTInfo)) {
     // other pages depend on API failure code to redirect to login
-    // since this page doesn't make any API call, this is the only reason to redirect
+    // since this page makes no authenticated API call, this is the only reason to redirect
     return (
       <Navigate
         to={`${paths.login}?${redirectToQueryParam}=${withoutBasePath(window.location.pathname)}`}
@@ -26,56 +24,20 @@ export const User = () => {
     );
   }
 
-  const items: DescriptionsItemType[] = [];
-
-  for (const [key, value] of Object.entries(JWTInfo || {})) {
-    items.push({
-      label: <User.Label label={key} />,
-      children: Array.isArray(value)
-        ? value.map((v) => (
-            <Tag key={String(v)} className='m-2'>
-              {String(v)}
-            </Tag>
-          ))
-        : `${value}`
-    });
-  }
-
   return (
     <div className='p-6'>
-      <PageTitle title='User' />
-
-      <Descriptions
-        title={
-          <>
-            Claims{' '}
-            <Popover content='Decoded from identity token issued by the identity provider'>
-              <FontAwesomeIcon icon={faQuestionCircle} className='text-xs' />
-            </Popover>
-          </>
-        }
-        layout='horizontal'
-        column={2}
-        bordered
-        items={items}
-      />
+      {/* As wide as Settings with its navigation: the 240px menu, the 24px gap
+          and the 920px content column (see pages/settings.tsx). */}
+      <div className='max-w-[1184px]'>
+        <Typography.Title className='!mb-1'>Your account</Typography.Title>
+        <Typography.Paragraph type='secondary' className='!mb-6'>
+          Who you&apos;re signed in as, and the token Kargo is using on your behalf.
+        </Typography.Paragraph>
+        <Flex vertical gap={16}>
+          <AccountCard />
+          {JWTInfo && <TokenClaimsCard claims={JWTInfo} />}
+        </Flex>
+      </div>
     </div>
-  );
-};
-
-User.Label = (props: { icon?: IconDefinition; label: string }) => {
-  const claimHelpers = claimsMapping[props.label];
-  return (
-    <>
-      {props.icon && <FontAwesomeIcon icon={props.icon} className='mr-2' />} {props.label}{' '}
-      {!!claimHelpers && (
-        <>
-          ({claimHelpers.label}){' '}
-          <Popover content={claimHelpers.description}>
-            <FontAwesomeIcon icon={faQuestionCircle} className='text-xs' />
-          </Popover>
-        </>
-      )}
-    </>
   );
 };

@@ -41,30 +41,13 @@ export const getUserEmail = (user?: JWTInfo | null) => {
   return meta;
 };
 
-export const claimsMapping: Record<string, { label: string; description: string }> = {
-  iss: {
-    label: 'Issuer',
-    description: 'Identifies the principal that issued the JWT.'
-  },
-  sub: {
-    label: 'Subject',
-    description: 'Identifies the principal that is the subject of the JWT.'
-  },
-  aud: {
-    label: 'Audience',
-    description: 'Identifies the recipients the JWT is intended for (can be a string or array).'
-  },
-  exp: {
-    label: 'Expiration Time',
-    description:
-      'Token expiration time (as Unix timestamp). After this time, the token must not be accepted.'
-  },
-  iat: {
-    label: 'Issued At',
-    description: 'The time the JWT was issued (as Unix timestamp).'
-  },
-  jti: {
-    label: 'JWT ID',
-    description: 'Unique identifier for the JWT, used to prevent replay attacks.'
-  }
-};
+// Claims come straight from the identity provider's token, so despite JWTInfo's
+// types they may be numbers or objects. Only non-blank strings are shown.
+export const asText = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+
+export const getDisplayName = (jwt?: JWTInfo | null) =>
+  asText(jwt?.name) ||
+  asText(jwt?.preferred_username) ||
+  asText(jwt?.email) ||
+  asText(jwt?.sub) ||
+  'Account';
