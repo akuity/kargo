@@ -62,11 +62,11 @@ func TestSyncFreight_metrics(t *testing.T) {
 		return m.GetHistogram()
 	}
 
-	require.NoError(t, SyncFreight(t.Context(), c, stage))
+	require.NoError(t, SyncFreight(t.Context(), c, nil, stage))
 	require.Equal(t, uint64(1), sample().GetSampleCount())
 	require.Equal(t, 90.0, sample().GetSampleSum())
 
 	// Freight already verified in the Stage is not observed again.
-	require.NoError(t, SyncFreight(t.Context(), c, stage))
+	require.NoError(t, SyncFreight(t.Context(), c, nil, stage))
 	require.Equal(t, uint64(1), sample().GetSampleCount())
 }

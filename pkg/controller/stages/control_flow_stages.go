@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/nats-io/nats.go"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -59,6 +60,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 	mgr ctrl.Manager,
 	sharedIndexer client.FieldIndexer,
 	eventSender event.Sender,
+	natsConn *nats.Conn,
 ) error {
 	// Configure client using manager.
 	r.client = mgr.GetClient()
@@ -159,24 +161,39 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 	// Configure the watches.
 	// Changes to these objects that match the constraints from the predicates
 	// will enqueue a reconciliation for the related Stage(s).
+	//
+	// The Freight signals this reconciler reacts to are delivered as Kargo
+	// CloudEvents over NATS and consumed via source.Channel watches, mirroring the
+	// regular Stage reconciler, rather than through Kubernetes Freight watches.
 
-	// Watch for Freight that are directly available from a Warehouse.
-	if err := c.Watch(
-		source.Kind(
-			mgr.GetCache(),
-			&kargoapi.Freight{},
-			NewWarehouseStageEnqueuer(mgr.GetClient(), true),
+	// Watch for newly produced Freight from a Warehouse (FreightCreated events)
+	// and enqueue the subscribed control flow Stages for reconciliation.
+	freightCreatedCh, err := subscribeFreightCreated(ctx, natsConn)
+	if err != nil {
+		return fmt.Errorf("unable to subscribe to FreightCreated events: %w", err)
+	}
+	if err = c.Watch(
+		source.Channel(
+			freightCreatedCh,
+			// Using apiReader because NATS is faster than the k8s cache.
+			NewFreightCreatedStageEnqueuer(mgr.GetAPIReader(), true),
 		),
 	); err != nil {
 		return fmt.Errorf("unable to watch Freight produced by Warehouse: %w", err)
 	}
 
-	// Watch for Freight that have been verified in upstream Stages.
-	if err := c.Watch(
-		source.Kind(
-			mgr.GetCache(),
-			&kargoapi.Freight{},
-			NewDownstreamStageEnqueuer(mgr.GetClient(), true),
+	// Watch for Freight newly verified in an upstream Stage
+	// (FreightVerifiedInStage events) and enqueue downstream control flow Stages
+	// for reconciliation.
+	verifiedCh, err := subscribeFreightVerifiedInStage(ctx, natsConn)
+	if err != nil {
+		return fmt.Errorf("unable to subscribe to FreightVerifiedInStage events: %w", err)
+	}
+	if err = c.Watch(
+		source.Channel(
+			verifiedCh,
+			// Using apiReader because NATS is faster than the k8s cache.
+			NewFreightVerifiedStageEnqueuer(mgr.GetAPIReader(), true),
 		),
 	); err != nil {
 		return fmt.Errorf("unable to watch Freight verified in upstream Stages: %w", err)

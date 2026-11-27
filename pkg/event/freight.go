@@ -106,6 +106,27 @@ type FreightApproved struct {
 	Freight
 }
 
+// FreightVerifiedInStage is an event fired when a piece of Freight is recorded
+// as verified in a Stage.
+type FreightVerifiedInStage struct {
+	Common
+	Freight
+}
+
+// FreightCurrentlyInStage is an event fired when a piece of Freight is recorded
+// as currently in use by a Stage. It is emitted on the transition itself,
+// regardless of verification; VerifiedInStage reports whether the Freight is
+// also verified in that Stage, which a subscriber filters on as needed (e.g. the
+// MatchUpstream auto-promotion selection policy, which promotes exactly the
+// Freight currently in an upstream Stage only once it is verified there).
+type FreightCurrentlyInStage struct {
+	Common
+	Freight
+	// VerifiedInStage reports whether the Freight is verified in the Stage it is
+	// now current in.
+	VerifiedInStage bool `json:"verifiedInStage"`
+}
+
 // NewFreightCommon creates a new `Freight` and `Common` event from the given freight data. Since
 // these fields are common to all events, this is exposed for convenience.
 func NewFreightCommon(message,
@@ -224,6 +245,41 @@ func NewFreightApproved(
 		&FreightApproved{
 			Common:  common,
 			Freight: freightEvent,
+		},
+	)
+}
+
+// NewFreightVerifiedInStage creates a new `FreightVerifiedInStage` event.
+func NewFreightVerifiedInStage(
+	message, actor, stageName string,
+	freight *kargoapi.Freight,
+) (cloudevents.Event, error) {
+	common, freightEvent := NewFreightCommon(message, actor, stageName, freight)
+	return newUserEvent(
+		string(kargoapi.EventTypeFreightVerifiedInStage),
+		kindFreight,
+		&FreightVerifiedInStage{
+			Common:  common,
+			Freight: freightEvent,
+		},
+	)
+}
+
+// NewFreightCurrentlyInStage creates a new `FreightCurrentlyInStage` event.
+// verifiedInStage reports whether the Freight is also verified in the Stage.
+func NewFreightCurrentlyInStage(
+	message, actor, stageName string,
+	verifiedInStage bool,
+	freight *kargoapi.Freight,
+) (cloudevents.Event, error) {
+	common, freightEvent := NewFreightCommon(message, actor, stageName, freight)
+	return newUserEvent(
+		string(kargoapi.EventTypeFreightCurrentlyInStage),
+		kindFreight,
+		&FreightCurrentlyInStage{
+			Common:          common,
+			Freight:         freightEvent,
+			VerifiedInStage: verifiedInStage,
 		},
 	)
 }

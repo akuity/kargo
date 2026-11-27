@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"github.com/nats-io/nats.go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -115,6 +116,7 @@ func (r *RegularStageReconciler) SetupWithManager(
 	kargoMgr, argocdMgr ctrl.Manager,
 	sharedIndexer client.FieldIndexer,
 	eventSender kargoEvent.Sender,
+	natsConn *nats.Conn,
 ) error {
 	// Configure client using manager.
 	r.client = kargoMgr.GetClient()
@@ -153,17 +155,6 @@ func (r *RegularStageReconciler) SetupWithManager(
 		return fmt.Errorf(
 			"error setting up index for Promotions by terminal phase: %w", err,
 		)
-	}
-
-	// This index is used to find Freight that are directly available from a
-	// Warehouse and can be automatically promoted to a Stage.
-	if err := sharedIndexer.IndexField(
-		ctx,
-		&kargoapi.Freight{},
-		indexer.FreightByWarehouseField,
-		indexer.FreightByWarehouse,
-	); err != nil {
-		return fmt.Errorf("error setting up index for Freight by Warehouse: %w", err)
 	}
 
 	// This index is used to find all Freight that have been verified in upstream
@@ -239,37 +230,69 @@ func (r *RegularStageReconciler) SetupWithManager(
 		return fmt.Errorf("unable to watch Promotions: %w", err)
 	}
 
-	// Watch for Freight that have been newly promoted to a Stage or newly marked
-	// as verified in a Stage and enqueue downstream Stages for reconciliation.
+	// The Freight signals this reconciler reacts to are delivered as Kargo
+	// CloudEvents over NATS and consumed via source.Channel watcher.
+
+	// Watch for Freight newly verified in an upstream Stage (FreightVerifiedInStage
+	// events) and enqueue downstream Stages for reconciliation.
+	verifiedCh, err := subscribeFreightVerifiedInStage(ctx, natsConn)
+	if err != nil {
+		return fmt.Errorf("unable to subscribe to FreightVerifiedInStage events: %w", err)
+	}
 	if err = c.Watch(
-		source.Kind(
-			kargoMgr.GetCache(),
-			&kargoapi.Freight{},
-			NewDownstreamStageEnqueuer(kargoMgr.GetClient(), false),
+		source.Channel(
+			verifiedCh,
+			// Using apiReader because NATS is faster than the k8s cache.
+			NewFreightVerifiedStageEnqueuer(r.apiReader, false),
 		),
 	); err != nil {
-		return fmt.Errorf("unable to watch Freight from upstream Stages: %w", err)
+		return fmt.Errorf("unable to watch Freight verified in upstream Stages: %w", err)
 	}
 
-	// Watch for Freight that has been approved for a Stage and enqueue the Stage
-	// for reconciliation.
+	// Watch for Freight newly current in an upstream Stage (FreightCurrentlyInStage
+	// events) and enqueue downstream Stages, so a downstream Stage using the
+	// MatchUpstream auto-promotion selection policy re-evaluates its upstream's
+	// current Freight even when that Freight was verified earlier.
+	currentlyInCh, err := subscribeFreightCurrentlyInStage(ctx, natsConn)
+	if err != nil {
+		return fmt.Errorf("unable to subscribe to FreightCurrentlyInStage events: %w", err)
+	}
 	if err = c.Watch(
-		source.Kind(
-			kargoMgr.GetCache(),
-			&kargoapi.Freight{},
-			NewStageEnqueuerForApprovedFreight(kargoMgr.GetClient()),
+		source.Channel(
+			currentlyInCh,
+			// Using apiReader because NATS is faster than the k8s cache.
+			NewFreightCurrentlyInStageEnqueuer(r.apiReader, false),
+		),
+	); err != nil {
+		return fmt.Errorf("unable to watch Freight currently in upstream Stages: %w", err)
+	}
+
+	// Watch for Freight approved for a Stage (FreightApproved events) and enqueue
+	// that Stage for reconciliation.
+	approvedCh, err := subscribeFreightApproved(ctx, natsConn)
+	if err != nil {
+		return fmt.Errorf("unable to subscribe to FreightApproved events: %w", err)
+	}
+	if err = c.Watch(
+		source.Channel(
+			approvedCh,
+			NewFreightApprovedStageEnqueuer(),
 		),
 	); err != nil {
 		return fmt.Errorf("unable to watch approved Freight: %w", err)
 	}
 
-	// Watch for newly produced Freight from a Warehouse and enqueue the related
-	// Stages for reconciliation.
+	// Watch for newly produced Freight from a Warehouse (FreightCreated events) and
+	// enqueue the subscribed Stages for reconciliation.
+	freightCreatedCh, err := subscribeFreightCreated(ctx, natsConn)
+	if err != nil {
+		return fmt.Errorf("unable to subscribe to FreightCreated events: %w", err)
+	}
 	if err = c.Watch(
-		source.Kind(
-			kargoMgr.GetCache(),
-			&kargoapi.Freight{},
-			NewWarehouseStageEnqueuer(kargoMgr.GetClient(), false),
+		source.Channel(
+			freightCreatedCh,
+			// Using apiReader because NATS is faster than the k8s cache.
+			NewFreightCreatedStageEnqueuer(r.apiReader, false),
 		),
 	); err != nil {
 		return fmt.Errorf("unable to watch Freight produced by Warehouse: %w", err)
@@ -1020,7 +1043,7 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 // syncFreight ensures that all Freight statuses accurately reflect whether they
 // are currently in use by, and verified in, the Stage.
 func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoapi.Stage) error {
-	return SyncFreight(ctx, r.client, stage)
+	return SyncFreight(ctx, r.client, r.eventSender, stage)
 }
 
 // SyncFreight ensures that all Freight statuses accurately reflect whether they
@@ -1028,7 +1051,12 @@ func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoap
 // uses gets at most one write that carries both, so callers should run it after
 // verification. Freight the Stage no longer uses is updated last, so the write
 // that downstream Stages wait on is not queued behind it.
-func SyncFreight(ctx context.Context, cl client.Client, stage *kargoapi.Stage) error {
+func SyncFreight(
+	ctx context.Context,
+	cl client.Client,
+	eventSender kargoEvent.Sender,
+	stage *kargoapi.Stage,
+) error {
 	// Get the Stage's current FreightCollection.
 	curFreight := stage.Status.FreightHistory.Current()
 	verifiedAt, verified := freightVerifiedAt(stage)
@@ -1068,6 +1096,7 @@ func SyncFreight(ctx context.Context, cl client.Client, stage *kargoapi.Stage) e
 		// nothing when neither entry is new.
 		newlyVerified := verified && !f.IsVerifiedIn(stage.Name)
 		newStatus := f.Status.DeepCopy()
+		_, alreadyIn := newStatus.CurrentlyIn[stage.Name]
 		newStatus.AddCurrentStage(stage.Name, now)
 		if verified {
 			newStatus.AddVerifiedStage(stage.Name, verifiedAt)
@@ -1080,8 +1109,12 @@ func SyncFreight(ctx context.Context, cl client.Client, stage *kargoapi.Stage) e
 				f.Name, f.Namespace, err,
 			)
 		}
+		if !alreadyIn {
+			emitFreightCurrentlyInStage(ctx, eventSender, f, stage.Name, verified)
+		}
 		if newlyVerified {
 			observeVerificationLeadTime(f, verifiedAt)
+			emitFreightVerifiedInStage(ctx, eventSender, f, stage.Name)
 		}
 	}
 	// Find all Freight that think they're currently in use by this Stage.

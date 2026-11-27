@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nats-io/nats.go"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel/attribute"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -223,6 +224,7 @@ func (o *controllerOptions) run(ctx context.Context) error {
 		stagesReconcilerCfg,
 		targetClient,
 		eventSender,
+		natsConn,
 	); err != nil {
 		return fmt.Errorf("error setting up reconcilers: %w", err)
 	}
@@ -500,6 +502,7 @@ func (o *controllerOptions) setupReconcilers(
 	stagesReconcilerCfg stages.ReconcilerConfig,
 	targetClient *apiserver.Client,
 	eventSender event.Sender,
+	natsConn *nats.Conn,
 ) error {
 	var argoCDClient client.Client
 	if argocdMgr != nil {
@@ -563,6 +566,7 @@ func (o *controllerOptions) setupReconcilers(
 		argocdMgr,
 		sharedIndexer,
 		stagesEventSender,
+		natsConn,
 	); err != nil {
 		return fmt.Errorf("error setting up regular Stages reconciler: %w", err)
 	}
@@ -572,6 +576,7 @@ func (o *controllerOptions) setupReconcilers(
 		kargoMgr,
 		sharedIndexer,
 		stagesEventSender,
+		natsConn,
 	); err != nil {
 		return fmt.Errorf("error setting up control flow Stages reconciler: %w", err)
 	}
