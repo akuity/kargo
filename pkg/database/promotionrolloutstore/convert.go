@@ -24,11 +24,21 @@ func ToAPI(rollout Rollout) *kargoapi.PromotionRollout {
 	for i, target := range rollout.Targets {
 		targets[i] = kargoapi.PromotionRolloutTarget{Name: target.TargetName}
 	}
-	// Who asked for the rollout is served the way a Promotion says who asked
-	// for it, so one reader serves both.
-	var annotations map[string]string
+	// Who asked for the rollout, and whether, and by whom, it was asked to
+	// abort, are served the way a Promotion says them, so one reader serves
+	// both.
+	annotations := map[string]string{}
 	if rollout.CreatedBy != "" {
-		annotations = map[string]string{kargoapi.AnnotationKeyCreateActor: rollout.CreatedBy}
+		annotations[kargoapi.AnnotationKeyCreateActor] = rollout.CreatedBy
+	}
+	if rollout.AbortRequestedAt != nil {
+		annotations[kargoapi.AnnotationKeyAbort] = (&kargoapi.AbortPromotionRequest{
+			Action: kargoapi.AbortActionTerminate,
+			Actor:  rollout.AbortRequestedBy,
+		}).String()
+	}
+	if len(annotations) == 0 {
+		annotations = nil
 	}
 	return &kargoapi.PromotionRollout{
 		ObjectMeta: metav1.ObjectMeta{

@@ -134,6 +134,129 @@ func (a *CoreAPIService) AbortPromotionExecute(r ApiAbortPromotionRequest) (*htt
 	return localVarHTTPResponse, nil
 }
 
+type ApiAbortPromotionRolloutRequest struct {
+	ctx context.Context
+	ApiService *CoreAPIService
+	project string
+	stage string
+	number int64
+}
+
+func (r ApiAbortPromotionRolloutRequest) Execute() (*http.Response, error) {
+	return r.ApiService.AbortPromotionRolloutExecute(r)
+}
+
+/*
+AbortPromotionRollout Abort a PromotionRollout
+
+Abort one of a Stage's PromotionRollouts, by its number among
+them. A Pending rollout has created no Promotions, so it ends
+at once, as Aborted. A Running one is asked to stop: it
+creates no more Promotions, those still running are aborted,
+and it ends as Aborted once they have stopped. Until then the
+request is served as the rollout's kargo.akuity.io/abort
+annotation, as a Promotion's is. Asking again changes
+nothing. A rollout that has already finished cannot be
+aborted, and the response is a 409. Stopping a rollout is a
+promotion action: it requires the promote verb on the Stage.
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @param project Project name
+ @param stage Stage name
+ @param number PromotionRollout number
+ @return ApiAbortPromotionRolloutRequest
+*/
+func (a *CoreAPIService) AbortPromotionRollout(ctx context.Context, project string, stage string, number int64) ApiAbortPromotionRolloutRequest {
+	return ApiAbortPromotionRolloutRequest{
+		ApiService: a,
+		ctx: ctx,
+		project: project,
+		stage: stage,
+		number: number,
+	}
+}
+
+// Execute executes the request
+func (a *CoreAPIService) AbortPromotionRolloutExecute(r ApiAbortPromotionRolloutRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodPost
+		localVarPostBody     interface{}
+		formFiles            []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CoreAPIService.AbortPromotionRollout")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/v1beta1/projects/{project}/stages/{stage}/promotion-rollouts/{number}/abort"
+	localVarPath = strings.Replace(localVarPath, "{"+"project"+"}", url.PathEscape(parameterValueToString(r.project, "project")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"stage"+"}", url.PathEscape(parameterValueToString(r.stage, "stage")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"number"+"}", url.PathEscape(parameterValueToString(r.number, "number")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["BearerAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarHeaderParams["Authorization"] = key
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
+}
+
 type ApiApproveFreightRequest struct {
 	ctx context.Context
 	ApiService *CoreAPIService

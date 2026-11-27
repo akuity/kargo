@@ -1,4 +1,9 @@
-import { faArrowLeft, faChevronDown, faUndo } from '@fortawesome/free-solid-svg-icons';
+import {
+  faArrowLeft,
+  faChevronDown,
+  faStopCircle,
+  faUndo
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Dropdown, Empty, Flex, Tag, Tooltip, Typography, message } from 'antd';
@@ -17,7 +22,9 @@ import { getPromotionActor } from '@ui/features/project/pipelines/promotion/get-
 import { useWatchPromotions } from '@ui/features/project/pipelines/promotion/use-watch-promotions';
 import { TARGETS_POLL_INTERVAL_MS } from '@ui/features/project/targets/constants';
 import {
+  getGetPromotionRolloutQueryKey,
   getListPromotionRolloutsQueryKey,
+  useAbortPromotionRollout,
   useListPromotions,
   useListTargets,
   usePromoteToStage
@@ -35,7 +42,14 @@ import {
   requestPhase,
   targetsTally
 } from '../utils/promotion-request-list';
-import { Round, isRolloutRound, promotedRoundPath, roundMessage } from '../utils/promotion-rollout';
+import {
+  Round,
+  canAbortRollout,
+  isRolloutAborting,
+  isRolloutRound,
+  promotedRoundPath,
+  roundMessage
+} from '../utils/promotion-rollout';
 import { formatStepDuration } from '../utils/step-duration';
 
 import { ChildPromotions } from './child-promotions';
@@ -188,6 +202,42 @@ export const RoundDetails = ({
         })
     });
 
+  const abortMutation = useAbortPromotionRollout({
+    mutation: {
+      onSuccess: (_, { number }) => {
+        // The rollout is read on a timer, and so are the lists of rollouts;
+        // both are told to read again now rather than on their next tick.
+        queryClient.invalidateQueries({
+          queryKey: getGetPromotionRolloutQueryKey(project, stageName, number)
+        });
+        queryClient.invalidateQueries({ queryKey: getListPromotionRolloutsQueryKey(project) });
+        message.success(`Aborting ${words.one} ${identifier}.`);
+      }
+    }
+  });
+
+  // Aborting a rollout that has not started ends it there and then. One that
+  // has stops creating Promotions and aborts those still running, and ends
+  // once they have stopped. Targets it never reached keep the Freight they
+  // had.
+  const abort = () =>
+    isRolloutRound(round) &&
+    confirm({
+      title: `Abort ${words.one} ${identifier}?`,
+      content:
+        round.status?.phase === 'Running' ? (
+          <p>
+            No more Promotions will be created, and those still running will be aborted. Targets
+            this {words.one} has not reached yet keep the Freight they have now.
+          </p>
+        ) : (
+          <p>This {words.one} has not started, so it ends without promoting to any Target.</p>
+        ),
+      okText: 'Abort',
+      okButtonProps: { danger: true },
+      onOk: () => abortMutation.mutate({ project, stage: stageName, number: round.number })
+    });
+
   // Back to the list of rounds, which is this same tab without a round named.
   const back = () => navigate(generatePath(paths.stage, { name: project, stageName }));
 
@@ -203,6 +253,8 @@ export const RoundDetails = ({
   const conditions = conditionSummary(request);
   const failed = isPromotionRequestFailed(phase);
   const retryable = isPromotionRequestRetryable(phase, retrying.length);
+  const abortable = canAbortRollout(round);
+  const aborting = isRolloutAborting(round);
 
   return (
     <Flex vertical gap={16}>
@@ -251,33 +303,52 @@ export const RoundDetails = ({
           </Flex>
           {!numbered && <RoundIdentityLabel label={identifier} hint={identifierHint} />}
         </div>
-        {retryable && (
-          <Dropdown
-            trigger={['click']}
-            menu={{
-              items: [
-                {
-                  key: 'unsuccessful',
-                  // Nothing to narrow to when every Target succeeded, or when
-                  // the round never reached one.
-                  disabled: !retrying.length,
-                  label: 'Unsuccessful Targets',
-                  onClick: () => retry(retrying)
-                },
-                {
-                  key: 'all',
-                  label: 'All Stage Targets',
-                  onClick: () => retry()
-                }
-              ]
-            }}
-          >
-            <Button icon={<FontAwesomeIcon icon={faUndo} />} loading={promoteMutation.isPending}>
-              Retry
-              <FontAwesomeIcon icon={faChevronDown} size='xs' />
+        <Flex gap={8}>
+          {aborting && (
+            <Tooltip title='Waiting for its running Promotions to stop'>
+              <Button danger disabled icon={<FontAwesomeIcon icon={faStopCircle} />}>
+                Aborting
+              </Button>
+            </Tooltip>
+          )}
+          {abortable && (
+            <Button
+              danger
+              icon={<FontAwesomeIcon icon={faStopCircle} />}
+              loading={abortMutation.isPending}
+              onClick={abort}
+            >
+              Abort
             </Button>
-          </Dropdown>
-        )}
+          )}
+          {retryable && (
+            <Dropdown
+              trigger={['click']}
+              menu={{
+                items: [
+                  {
+                    key: 'unsuccessful',
+                    // Nothing to narrow to when every Target succeeded, or when
+                    // the round never reached one.
+                    disabled: !retrying.length,
+                    label: 'Unsuccessful Targets',
+                    onClick: () => retry(retrying)
+                  },
+                  {
+                    key: 'all',
+                    label: 'All Stage Targets',
+                    onClick: () => retry()
+                  }
+                ]
+              }}
+            >
+              <Button icon={<FontAwesomeIcon icon={faUndo} />} loading={promoteMutation.isPending}>
+                Retry
+                <FontAwesomeIcon icon={faChevronDown} size='xs' />
+              </Button>
+            </Dropdown>
+          )}
+        </Flex>
       </Flex>
 
       {isLoading ? (

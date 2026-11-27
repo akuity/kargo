@@ -2816,6 +2816,51 @@
         ]
       }
     },
+    "/v1beta1/projects/{project}/stages/{stage}/promotion-rollouts/{number}/abort": {
+      "post": {
+        "description": "Abort one of a Stage's PromotionRollouts, by its number among\nthem. A Pending rollout has created no Promotions, so it ends\nat once, as Aborted. A Running one is asked to stop: it\ncreates no more Promotions, those still running are aborted,\nand it ends as Aborted once they have stopped. Until then the\nrequest is served as the rollout's kargo.akuity.io/abort\nannotation, as a Promotion's is. Asking again changes\nnothing. A rollout that has already finished cannot be\naborted, and the response is a 409. Stopping a rollout is a\npromotion action: it requires the promote verb on the Stage.",
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Abort a PromotionRollout",
+        "operationId": "AbortPromotionRollout",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Stage name",
+            "name": "stage",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "PromotionRollout number",
+            "name": "number",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/v1beta1/projects/{project}/stages/{stage}/promotions": {
       "post": {
         "description": "Create a Promotion resource to transition a specified Stage into\nthe state represented by the specified Freight.\nA Stage that selects Targets yields, in place of a single\nPromotion, something that fans the Freight out to each of\nthem: a PromotionRollout on a server that creates\nPromotionRollouts, and a PromotionRequest otherwise. Either\nway, the body's targets and updateStrategy narrow which\nTargets are promoted to and at what pace. A PromotionRollout\nis not created for a Stage that governs no Targets: the\nresponse is a 409 until its selectors match one.",

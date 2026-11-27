@@ -450,6 +450,49 @@ func (s *fakeStore) UpdateStatus(
 	return current.PromotionRolloutRow, nil
 }
 
+// Abort answers as the store does: a Pending rollout ends as Aborted, a
+// Running one records the first request only, and a finished one is a
+// conflict.
+func (s *fakeStore) Abort(
+	_ context.Context,
+	project string,
+	stage string,
+	number int64,
+	requestedBy string,
+) (database.PromotionRolloutRow, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.calls++
+	if s.err != nil {
+		return database.PromotionRolloutRow{}, s.err
+	}
+	for name, rollout := range s.project(project) {
+		if rollout.StageName != stage || rollout.Number != number {
+			continue
+		}
+		phase := kargoapi.PromotionRolloutPhase(rollout.StatusPhase)
+		if phase.IsTerminal() {
+			return database.PromotionRolloutRow{}, fmt.Errorf(
+				"PromotionRollout %q: %w: already finished", name, database.ErrConflict,
+			)
+		}
+		if rollout.AbortRequestedAt == nil {
+			now := s.tick()
+			rollout.AbortRequestedAt = &now
+			rollout.AbortRequestedBy = requestedBy
+		}
+		if phase == kargoapi.PromotionRolloutPhasePending {
+			rollout.StatusPhase = string(kargoapi.PromotionRolloutPhaseAborted)
+			rollout.StatusReason = promotionrolloutstore.ReasonAborted
+			rollout.StatusFinishedAt = rollout.AbortRequestedAt
+		}
+		rollout.UpdatedAt = s.tick()
+		s.project(project)[name] = rollout
+		return rollout.PromotionRolloutRow, nil
+	}
+	return database.PromotionRolloutRow{}, fmt.Errorf("PromotionRollout %s #%d: %w", stage, number, database.ErrNotFound)
+}
+
 // recordAuthorizations returns an authorize function that records every
 // access it is asked about and grants it.
 func recordAuthorizations(calls *[]can.Access) func(context.Context, can.Access) error {

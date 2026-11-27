@@ -125,6 +125,30 @@ export const promotedRoundPath = (
 export const isRolloutFinished = (rollout?: PromotionRollout) =>
   isPromotionPhaseTerminal(rollout?.status?.phase as PromotionStatusPhase);
 
+// isRolloutAbortRequested tells whether a round is a rollout someone has
+// asked to abort. The server serves the request as the annotation a Promotion
+// carries for the same, and keeps it once the rollout has finished.
+export const isRolloutAbortRequested = (round?: Round): boolean =>
+  isRolloutRound(round) && !!round.metadata?.annotations?.['kargo.akuity.io/abort'];
+
+// isRolloutAborting tells whether a round is a rollout asked to abort that has
+// yet to stop: its running Promotions are being aborted, and it ends once
+// they have.
+export const isRolloutAborting = (round?: Round): boolean =>
+  isRolloutAbortRequested(round) &&
+  !isPromotionPhaseTerminal(round?.status?.phase as PromotionStatusPhase);
+
+// canAbortRollout tells whether a round is a rollout that can still be
+// aborted: one that is Pending or Running and that no one has asked to abort
+// yet. A PromotionRequest is not aborted from here. Whether the user may abort
+// it is the server's to say: aborting takes the promote verb on the Stage.
+export const canAbortRollout = (round?: Round): boolean =>
+  isRolloutRound(round) &&
+  abortablePhases.includes(round.status?.phase || 'Pending') &&
+  !isRolloutAbortRequested(round);
+
+const abortablePhases = ['Pending', 'Running'];
+
 // rolloutCompareFn orders one Stage's PromotionRollouts newest first. A
 // rollout's number is its position among its Stage's rollouts.
 export const rolloutCompareFn = (lhs: PromotionRollout, rhs: PromotionRollout) =>

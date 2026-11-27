@@ -2090,6 +2090,49 @@ paths:
       summary: Retrieve a PromotionRollout
       tags:
       - Core
+  /v1beta1/projects/{project}/stages/{stage}/promotion-rollouts/{number}/abort:
+    post:
+      description: |-
+        Abort one of a Stage's PromotionRollouts, by its number among
+        them. A Pending rollout has created no Promotions, so it ends
+        at once, as Aborted. A Running one is asked to stop: it
+        creates no more Promotions, those still running are aborted,
+        and it ends as Aborted once they have stopped. Until then the
+        request is served as the rollout's kargo.akuity.io/abort
+        annotation, as a Promotion's is. Asking again changes
+        nothing. A rollout that has already finished cannot be
+        aborted, and the response is a 409. Stopping a rollout is a
+        promotion action: it requires the promote verb on the Stage.
+      operationId: AbortPromotionRollout
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Stage name
+        in: path
+        name: stage
+        required: true
+        schema:
+          type: string
+      - description: PromotionRollout number
+        in: path
+        name: number
+        required: true
+        schema:
+          format: int64
+          type: integer
+      responses:
+        "200":
+          content: {}
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Abort a PromotionRollout
+      tags:
+      - Core
   /v1beta1/projects/{project}/stages/{stage}/promotions:
     post:
       description: |-

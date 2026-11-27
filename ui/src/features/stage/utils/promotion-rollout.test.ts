@@ -3,7 +3,10 @@ import { describe, expect, test } from 'vitest';
 import { PromotionRequest, PromotionRollout, Stage } from '@ui/gen/api/v2/models';
 
 import {
+  canAbortRollout,
   currentRollout,
+  isRolloutAbortRequested,
+  isRolloutAborting,
   isRolloutFinished,
   isRolloutRound,
   isStagePromoting,
@@ -251,6 +254,50 @@ describe('promotedRoundPath()', () => {
   test('nothing to land on', () => {
     expect(promotedRoundPath('my-project', 'prod', undefined)).toBeUndefined();
     expect(promotedRoundPath('my-project', 'prod', {})).toBeUndefined();
+  });
+});
+
+describe('aborting a rollout', () => {
+  const abortRequested = {
+    metadata: {
+      name: 'prod.rollout-1',
+      annotations: { 'kargo.akuity.io/abort': '{"action":"terminate","actor":"alice"}' }
+    }
+  };
+
+  test.each([
+    ['Pending', true],
+    ['Running', true],
+    [undefined, true],
+    ['Succeeded', false],
+    ['Failed', false],
+    ['Errored', false],
+    ['Aborted', false]
+  ])('a %s rollout can be aborted: %s', (phase, abortable) => {
+    expect(canAbortRollout(rolloutToRound(rollout(1, phase)))).toBe(abortable);
+  });
+
+  test('a rollout asked to abort cannot be asked again, and is aborting until it ends', () => {
+    const running = rolloutToRound(rollout(1, 'Running', abortRequested));
+    expect(canAbortRollout(running)).toBe(false);
+    expect(isRolloutAbortRequested(running)).toBe(true);
+    expect(isRolloutAborting(running)).toBe(true);
+
+    const aborted = rolloutToRound(rollout(1, 'Aborted', abortRequested));
+    expect(isRolloutAbortRequested(aborted)).toBe(true);
+    expect(isRolloutAborting(aborted)).toBe(false);
+  });
+
+  test('a rollout no one asked to abort is not aborting', () => {
+    const running = rolloutToRound(rollout(1, 'Running'));
+    expect(isRolloutAbortRequested(running)).toBe(false);
+    expect(isRolloutAborting(running)).toBe(false);
+  });
+
+  test('a PromotionRequest is not aborted from here', () => {
+    const request = { metadata: { name: 'req' }, status: { phase: 'Running' } } as PromotionRequest;
+    expect(canAbortRollout(request)).toBe(false);
+    expect(isRolloutAborting({ ...request, ...abortRequested })).toBe(false);
   });
 });
 
