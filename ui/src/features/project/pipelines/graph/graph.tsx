@@ -334,13 +334,13 @@ export const Graph = (props: GraphProps) => {
         reactFlowInstance.current?.fitView({
           nodes: nodesToFit,
           duration: 400,
-          padding: 0.3,
+          padding: { ...fitViewPadding, x: 0.3 },
           maxZoom: 1
         });
       }
     }, 250);
     return () => clearTimeout(timer);
-  }, [matchedStageIndices, nodes]);
+  }, [matchedStageIndices, nodes, fitViewPadding]);
 
   const loggedRef = useRef(false);
   const mountTimeRef = useRef(performance.now());
