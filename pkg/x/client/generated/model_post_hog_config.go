@@ -21,6 +21,7 @@ var _ MappedNullable = &PostHogConfig{}
 type PostHogConfig struct {
 	Host *string `json:"host,omitempty"`
 	PublicApiKey *string `json:"publicApiKey,omitempty"`
+	SessionReplayEnabled *bool `json:"sessionReplayEnabled,omitempty"`
 }
 
 // NewPostHogConfig instantiates a new PostHogConfig object
@@ -104,6 +105,38 @@ func (o *PostHogConfig) SetPublicApiKey(v string) {
 	o.PublicApiKey = &v
 }
 
+// GetSessionReplayEnabled returns the SessionReplayEnabled field value if set, zero value otherwise.
+func (o *PostHogConfig) GetSessionReplayEnabled() bool {
+	if o == nil || IsNil(o.SessionReplayEnabled) {
+		var ret bool
+		return ret
+	}
+	return *o.SessionReplayEnabled
+}
+
+// GetSessionReplayEnabledOk returns a tuple with the SessionReplayEnabled field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *PostHogConfig) GetSessionReplayEnabledOk() (*bool, bool) {
+	if o == nil || IsNil(o.SessionReplayEnabled) {
+		return nil, false
+	}
+	return o.SessionReplayEnabled, true
+}
+
+// HasSessionReplayEnabled returns a boolean if a field has been set.
+func (o *PostHogConfig) HasSessionReplayEnabled() bool {
+	if o != nil && !IsNil(o.SessionReplayEnabled) {
+		return true
+	}
+
+	return false
+}
+
+// SetSessionReplayEnabled gets a reference to the given bool and assigns it to the SessionReplayEnabled field.
+func (o *PostHogConfig) SetSessionReplayEnabled(v bool) {
+	o.SessionReplayEnabled = &v
+}
+
 func (o PostHogConfig) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -119,6 +152,9 @@ func (o PostHogConfig) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.PublicApiKey) {
 		toSerialize["publicApiKey"] = o.PublicApiKey
+	}
+	if !IsNil(o.SessionReplayEnabled) {
+		toSerialize["sessionReplayEnabled"] = o.SessionReplayEnabled
 	}
 	return toSerialize, nil
 }

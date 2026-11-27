@@ -4568,6 +4568,8 @@ components:
           type: string
         publicApiKey:
           type: string
+        sessionReplayEnabled:
+          type: boolean
       type: object
     PromoteDownstreamRequest:
       example:

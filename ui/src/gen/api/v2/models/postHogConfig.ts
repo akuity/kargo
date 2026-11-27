@@ -9,4 +9,5 @@
 export interface PostHogConfig {
   host?: string;
   publicApiKey?: string;
+  sessionReplayEnabled?: boolean;
 }

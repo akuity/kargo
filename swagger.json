@@ -5909,6 +5909,9 @@
         },
         "publicApiKey": {
           "type": "string"
+        },
+        "sessionReplayEnabled": {
+          "type": "boolean"
         }
       }
     },

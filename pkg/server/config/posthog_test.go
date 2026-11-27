@@ -65,6 +65,25 @@ func TestServerConfigFromEnv_PostHogConfig(t *testing.T) {
 				)
 			},
 		},
+		{
+			name: "enabled with session replay",
+			env: map[string]string{
+				"POSTHOG_ENABLED":                "true",
+				"POSTHOG_PUBLIC_API_KEY":         "phc_test",
+				"POSTHOG_SESSION_REPLAY_ENABLED": "true",
+			},
+			assert: func(t *testing.T, cfg *PostHogConfig) {
+				require.Equal(
+					t,
+					&PostHogConfig{
+						PublicAPIKey:         "phc_test",
+						Host:                 "https://us.i.posthog.com",
+						SessionReplayEnabled: true,
+					},
+					cfg,
+				)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

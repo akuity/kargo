@@ -10,15 +10,15 @@ import { startPostHog } from './posthog';
  */
 export const Analytics = () => {
   const { data: response } = useGetPublicConfig();
-  const { publicApiKey, host } = response?.data?.posthogConfig ?? {};
+  const { publicApiKey, host, sessionReplayEnabled = false } = response?.data?.posthogConfig ?? {};
 
   useEffect(() => {
     if (!publicApiKey || !host) {
       return;
     }
     // Analytics are best effort: failing to load them must not disturb the UI.
-    startPostHog(publicApiKey, host).catch(() => undefined);
-  }, [publicApiKey, host]);
+    startPostHog({ publicApiKey, host, sessionReplayEnabled }).catch(() => undefined);
+  }, [publicApiKey, host, sessionReplayEnabled]);
 
   return null;
 };

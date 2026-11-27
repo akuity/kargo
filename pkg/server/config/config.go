@@ -252,6 +252,11 @@ type PostHogConfig struct {
 	// PostHog Cloud, a self-hosted instance, or a reverse proxy in front of
 	// either.
 	Host string `envconfig:"POSTHOG_HOST" default:"https://us.i.posthog.com"`
+	// SessionReplayEnabled indicates whether the dashboard should also record
+	// sessions for replay in PostHog. The dashboard masks what it records, but
+	// a recording still shows far more than a page view does, so this is a
+	// separate opt-in.
+	SessionReplayEnabled bool `envconfig:"POSTHOG_SESSION_REPLAY_ENABLED"`
 }
 
 // PostHogConfigFromEnv returns a PostHogConfig populated from environment

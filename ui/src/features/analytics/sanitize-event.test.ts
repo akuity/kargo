@@ -162,6 +162,75 @@ describe('sanitizeEvent', () => {
     });
   });
 
+  test('sanitizes the page URL inside a session recording', () => {
+    stubWindow();
+    const fullSnapshot = { type: 2, data: 'compressed', cv: '2024-10', timestamp: 1 };
+    const mutation = { type: 3, data: { source: 0, texts: 'compressed' }, timestamp: 2 };
+    const sanitized = sanitizeEvent(
+      event({
+        event: '$snapshot',
+        properties: {
+          $session_id: 'test-session',
+          $snapshot_data: [
+            {
+              type: 4,
+              data: { href: `${origin}/project/my-project?tab=x`, width: 1024, height: 768 },
+              timestamp: 0
+            },
+            fullSnapshot,
+            mutation,
+            {
+              type: 5,
+              data: {
+                tag: '$url_changed',
+                payload: { href: `${origin}/project/my-project/stage/prod` }
+              },
+              timestamp: 3
+            },
+            { type: 5, data: { tag: '$recording_started', payload: { reason: 'x' } }, timestamp: 4 }
+          ]
+        }
+      })
+    );
+    expect(sanitized?.properties).toEqual({
+      $session_id: 'test-session',
+      $snapshot_data: [
+        {
+          type: 4,
+          data: { href: `${origin}/project/:name`, width: 1024, height: 768 },
+          timestamp: 0
+        },
+        fullSnapshot,
+        mutation,
+        {
+          type: 5,
+          data: {
+            tag: '$url_changed',
+            payload: { href: `${origin}/project/:name/stage/:stageName` }
+          },
+          timestamp: 3
+        },
+        { type: 5, data: { tag: '$recording_started', payload: { reason: 'x' } }, timestamp: 4 }
+      ]
+    });
+  });
+
+  test('sanitizes a session recording sent as a single entry', () => {
+    stubWindow();
+    const sanitized = sanitizeEvent(
+      event({
+        event: '$snapshot',
+        properties: {
+          $snapshot_data: { type: 4, data: { href: `${origin}/project/my-project` } }
+        }
+      })
+    );
+    expect(sanitized?.properties.$snapshot_data).toEqual({
+      type: 4,
+      data: { href: `${origin}/project/:name` }
+    });
+  });
+
   test('does not add person properties an event lacks', () => {
     stubWindow();
     const sanitized = sanitizeEvent(event({}));

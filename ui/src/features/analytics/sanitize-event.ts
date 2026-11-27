@@ -39,6 +39,38 @@ const sanitizeURL = (value: string): string => {
   return url.origin + basePath() + routePattern(url.pathname);
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+// The kinds of entry in a session recording that state the page's URL: one
+// written when recording starts (4), and PostHog's own notes of each later
+// page view or URL change (5).
+const recordingMeta = 4;
+const recordingCustom = 5;
+
+// sanitizeRecordingEntry sanitizes the page URL in an entry of a session
+// recording. What a recording shows of the page itself is masked as it is
+// recorded, by sessionRecordingOptions; the URL is the page's, not the
+// page's contents, so it is dealt with here.
+const sanitizeRecordingEntry = (entry: unknown): unknown => {
+  if (!isRecord(entry) || !isRecord(entry.data)) {
+    return entry;
+  }
+  const { data } = entry;
+  if (entry.type === recordingMeta && typeof data.href === 'string') {
+    return { ...entry, data: { ...data, href: sanitizeURL(data.href) } };
+  }
+  if (
+    entry.type === recordingCustom &&
+    isRecord(data.payload) &&
+    typeof data.payload.href === 'string'
+  ) {
+    const payload = { ...data.payload, href: sanitizeURL(data.payload.href) };
+    return { ...entry, data: { ...data, payload } };
+  }
+  return entry;
+};
+
 const sanitizeProperties = (properties: Properties): Properties => {
   const sanitized: Properties = {};
   for (const [key, value] of Object.entries(properties)) {
@@ -46,7 +78,11 @@ const sanitizeProperties = (properties: Properties): Properties => {
       // The page title names the resource being viewed.
       continue;
     }
-    if (typeof value !== 'string') {
+    if (key === '$snapshot_data') {
+      sanitized[key] = Array.isArray(value)
+        ? value.map(sanitizeRecordingEntry)
+        : sanitizeRecordingEntry(value);
+    } else if (typeof value !== 'string') {
       sanitized[key] = value;
     } else if (isURL(value)) {
       sanitized[key] = sanitizeURL(value);
@@ -62,7 +98,7 @@ const sanitizeProperties = (properties: Properties): Properties => {
 /**
  * sanitizeEvent removes the names of Kargo resources from an event before it
  * is sent to PostHog. They appear in the URLs, paths, and page titles that
- * PostHog attaches to every event.
+ * PostHog attaches to every event, session recordings included.
  */
 export const sanitizeEvent = (event: CaptureResult | null): CaptureResult | null =>
   event && {
