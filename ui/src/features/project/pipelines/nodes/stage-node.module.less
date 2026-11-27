@@ -5,6 +5,9 @@
     // the states that draw a shadow of their own -- the promoting glow, the
     // search match -- still win on nothing more than coming later.
     box-shadow: var(--stage-node-shadow, none);
+    // set here rather than on the drop target state, so the glow eases out as
+    // well as in
+    transition: box-shadow 0.2s ease;
 
     // AntD sizes small buttons from a single class, so these rules are scoped
     // to the card to outrank it rather than tie with it
@@ -67,6 +70,13 @@
         box-shadow: 0 0 0 1px var(--promo-glow-ring-lit);
         animation: none;
     }
+}
+
+// Freight hovered over a Stage that can take it lights the node with a softer,
+// steady take on the promoting glow, so it answers the pointer at once.
+.dropTarget {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--kargo-color-info, #1677ff) 30%, transparent),
+        0 0 18px 2px color-mix(in srgb, var(--kargo-color-info, #1677ff) 18%, transparent);
 }
 
 // A control flow Stage runs no steps of its own: it only hands Freight on.

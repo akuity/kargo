@@ -141,13 +141,23 @@ export const StageNode = (props: { stage: Stage }) => {
 
   const stagePath = generatePath(paths.stage, { name: projectName, stageName });
 
-  const { isOver, setNodeRef } = useDroppable({
+  const requestedFreightNames =
+    props.stage.spec?.requestedFreight?.map((f) => f.origin?.name) || [];
+  const promotionWindowClosed = isPromotionWindowClosed(props.stage);
+
+  const { active, isOver, setNodeRef } = useDroppable({
     id: props.stage.metadata?.name || 'stage-node',
-    data: {
-      requestedFreightNames: props.stage.spec?.requestedFreight?.map((f) => f.origin?.name) || [],
-      promotionWindowClosed: isPromotionWindowClosed(props.stage)
-    }
+    data: { requestedFreightNames, promotionWindowClosed }
   });
+
+  // whether this Stage can take the Freight being dragged, if any
+  const dropEligible =
+    Boolean(active) && requestedFreightNames.includes(active?.data.current?.originName);
+
+  // Stages that can't take the Freight fall back for the whole drag, so the
+  // ones that can stand out. A hovered one comes back to say why not.
+  const dropDimmed = Boolean(active) && !dropEligible && !isOver;
+  const dropTarget = isOver && dropEligible && !promotionWindowClosed;
 
   const isSearchMatch = Boolean(graphContext?.matchedStageIndices?.has(stageNodeIndex));
 
@@ -155,8 +165,8 @@ export const StageNode = (props: { stage: Stage }) => {
     <div
       ref={setNodeRef}
       style={{
-        transform: isOver ? 'scale(0.98)' : undefined,
-        transition: 'transform 0.1s ease, opacity 0.2s ease'
+        opacity: dropDimmed ? 0.4 : undefined,
+        transition: 'opacity 0.2s ease'
       }}
     >
       <Card
@@ -191,13 +201,14 @@ export const StageNode = (props: { stage: Stage }) => {
           [styles.controlFlow]: controlFlow,
           // no color to band the header with, so it is ruled off instead
           [styles.uncolored]: !accentBorder,
-          [styles.promoting]: isPromoting,
-          [styles.searchMatch]: isSearchMatch
+          // the drop glow stands in for these while freight hovers the
+          // Stage -- each draws a box-shadow of its own that would hide it
+          [styles.promoting]: isPromoting && !dropTarget,
+          [styles.searchMatch]: isSearchMatch && !dropTarget,
+          [styles.dropTarget]: dropTarget
         })}
         size='small'
       >
-        <DropOverlay isOver={isOver} stage={props.stage} />
-
         <Flex align='center' gap={8} className={classNames(styles.header, 'min-w-0')}>
           {/* everything up to the action buttons opens the Stage */}
           <Link to={stagePath} className={styles.title}>
@@ -232,15 +243,6 @@ export const StageNode = (props: { stage: Stage }) => {
             />
           </Dropdown>
         </Flex>
-
-        {/* a control flow Stage has no steps of its own, so the label is all
-            the card has to say below its header */}
-        {controlFlow && (
-          <div className={styles.controlFlowLabel}>
-            <FontAwesomeIcon icon={faShareNodes} className={styles.controlFlowIcon} />
-            Control flow
-          </div>
-        )}
 
         {!controlFlow && (
           <div className={styles.statusGrid}>
@@ -279,26 +281,48 @@ export const StageNode = (props: { stage: Stage }) => {
           </div>
         )}
 
-        {actionContext?.action?.type === IAction.MANUALLY_APPROVE ? (
-          <Button
-            className={styles.success}
-            size='small'
-            loading={manualApproveActionMutation.isPending}
-            onClick={() => {
-              manualApproveActionMutation.mutate({
-                params: {
-                  stage: stageName
-                },
-                project: projectName,
-                freightNameOrAlias: actionContext?.action?.freight?.metadata?.name || ''
-              });
-            }}
-          >
-            Approve
-          </Button>
-        ) : (
-          !controlFlow && <StageFreight stage={props.stage} />
-        )}
+        {/* the drop slot covers only what's in here, so the header and
+            status stay readable through a drag. Hovering eases this box --
+            not the whole card -- back a touch, in step with the glow. */}
+        <div
+          className='relative'
+          style={{
+            transform: dropTarget ? 'scale(0.98)' : undefined,
+            transition: 'transform 0.2s ease'
+          }}
+        >
+          {/* a control flow Stage has no steps of its own, so the label is
+              all the card has to say below its header */}
+          {controlFlow && (
+            <div className={styles.controlFlowLabel}>
+              <FontAwesomeIcon icon={faShareNodes} className={styles.controlFlowIcon} />
+              Control flow
+            </div>
+          )}
+
+          {actionContext?.action?.type === IAction.MANUALLY_APPROVE ? (
+            <Button
+              className={styles.success}
+              size='small'
+              loading={manualApproveActionMutation.isPending}
+              onClick={() => {
+                manualApproveActionMutation.mutate({
+                  params: {
+                    stage: stageName
+                  },
+                  project: projectName,
+                  freightNameOrAlias: actionContext?.action?.freight?.metadata?.name || ''
+                });
+              }}
+            >
+              Approve
+            </Button>
+          ) : (
+            !controlFlow && <StageFreight stage={props.stage} />
+          )}
+
+          <DropOverlay isOver={isOver} eligible={dropEligible} stage={props.stage} />
+        </div>
 
         {!controlFlow && showFooter && (
           <div className={classNames(styles.footer, 'mt-2 min-w-0')}>
