@@ -1,59 +1,62 @@
 import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { AutoComplete, Button } from 'antd';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Input } from 'antd';
+import { ChangeEvent, useEffect, useRef, useState } from 'react';
 
-import { paths } from '@ui/config/paths';
-import { useListProjects } from '@ui/gen/api/v2/core/core';
+// How long typing has to pause before the list is searched again.
+const SEARCH_DEBOUNCE_MS = 250;
 
-export const ProjectListFilter = ({
-  onChange,
-  init
-}: {
+type ProjectListFilterProps = {
+  initialValue?: string;
+  // the search to show, once typing has paused
   onChange: (filter: string) => void;
-  init?: string;
-}) => {
-  const { data } = useListProjects();
-  const [filter, setFilter] = useState(init || '');
-  const navigate = useNavigate();
+  className?: string;
+};
 
-  const filteredProjects = data?.data?.items?.filter((p) =>
-    p.metadata?.name?.toLowerCase().includes(filter.toLowerCase())
-  );
+// ProjectListFilter searches the project list as the reader types. Clearing
+// the search, or pressing Enter, takes effect at once rather than waiting out
+// the pause.
+export const ProjectListFilter = ({
+  initialValue,
+  onChange,
+  className
+}: ProjectListFilterProps) => {
+  const [text, setText] = useState(initialValue || '');
+  const timer = useRef<number | undefined>(undefined);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key !== 'Enter') return;
+  useEffect(() => () => window.clearTimeout(timer.current), []);
 
-    if (filteredProjects?.length !== 1 || !filter) {
-      onChange(filter);
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const next = e.target.value;
+    setText(next);
+    window.clearTimeout(timer.current);
+    if (!next) {
+      onChange('');
       return;
     }
-
-    const selectedProject = filteredProjects![0].metadata?.name;
-    if (selectedProject) {
-      navigate(paths.project.replace(':name', selectedProject));
-    }
+    timer.current = window.setTimeout(() => onChange(next), SEARCH_DEBOUNCE_MS);
   };
 
-  const handleSelect = (value: string) => {
-    navigate(paths.project.replace(':name', value));
+  const handleSubmit = () => {
+    window.clearTimeout(timer.current);
+    onChange(text);
   };
 
   return (
-    <div className='flex items-center w-2/3'>
-      <AutoComplete
-        placeholder='Search...'
-        options={filteredProjects?.map((p) => ({ value: p.metadata?.name }))}
-        onChange={setFilter}
-        className='w-full mr-2 bg-white dark:bg-neutral-900'
-        value={filter}
-        onKeyDown={handleKeyDown}
-        onSelect={handleSelect}
-      />
-      <Button type='primary' onClick={() => onChange(filter)}>
-        <FontAwesomeIcon icon={faMagnifyingGlass} />
-      </Button>
-    </div>
+    <Input
+      allowClear
+      aria-label='Search projects'
+      placeholder='Search projects'
+      prefix={
+        <FontAwesomeIcon
+          icon={faMagnifyingGlass}
+          className='mr-1 text-xs text-[color:var(--kargo-color-text-tertiary)]'
+        />
+      }
+      className={className}
+      value={text}
+      onChange={handleChange}
+      onPressEnter={handleSubmit}
+    />
   );
 };

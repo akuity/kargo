@@ -37,7 +37,7 @@ import {
 import { getLastPromotionRef } from './stage-meta-utils';
 import styles from './stage-node.module.less';
 
-export const StageFreight = (props: { stage: Stage }) => {
+export const StageFreight = (props: { stage: Stage; hideLabel?: boolean }) => {
   const dictionaryContext = useDictionaryContext();
   const freightTimelineControllerContext = useFreightTimelineControllerContext();
 
@@ -150,7 +150,7 @@ export const StageFreight = (props: { stage: Stage }) => {
     // the two absences are named apart.
     return (
       <div className={classNames(styles.freight, 'min-w-0')}>
-        <div className={styles.sectionLabel}>Current Freight</div>
+        {!props.hideLabel && <div className={styles.sectionLabel}>Current Freight</div>}
         <div className={styles.freightEmpty}>
           {allFreight?.length ? 'No freight from selected warehouses' : 'No freight yet'}
         </div>
@@ -172,19 +172,25 @@ export const StageFreight = (props: { stage: Stage }) => {
   const freightLabel =
     (showFreightAlias && selectedFreightAlias) || getShortFreightLabel(selectedFreight?.name);
 
+  // The caption comes back, even where it was asked to be left out, whenever
+  // there are Warehouses to page through: it heads the row the pager sits in.
+  const showLabel = !props.hideLabel || warehouses?.length > 1;
+
   return (
     <Flex vertical gap={5} className={classNames(styles.freight, 'min-w-0')}>
-      <Flex align='center' justify='space-between' gap={8} className='min-w-0'>
-        <span className={styles.sectionLabel}>Current Freight</span>
+      {showLabel && (
+        <Flex align='center' justify='space-between' gap={8} className='min-w-0'>
+          <span className={styles.sectionLabel}>Current Freight</span>
 
-        {warehouses?.length > 1 && (
-          <Pager
-            label={selectedWarehouse}
-            onPrevious={onPreviousWarehouse}
-            onNext={onNextWarehouse}
-          />
-        )}
-      </Flex>
+          {warehouses?.length > 1 && (
+            <Pager
+              label={selectedWarehouse}
+              onPrevious={onPreviousWarehouse}
+              onNext={onNextWarehouse}
+            />
+          )}
+        </Flex>
+      )}
 
       <Flex align='center' justify='space-between' gap={8} className='min-w-0'>
         <Flex align='center' gap={4} className='min-w-0'>

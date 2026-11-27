@@ -37,7 +37,9 @@ export const GraphFilters = (props: GraphFiltersProps) => {
           onChange={(warehouses) =>
             filterContext?.setPreferredFilter({
               ...filterContext?.preferredFilter,
-              warehouses
+              warehouses,
+              // the freight timeline's own Warehouse may now be filtered out
+              freightTimelineWarehouse: ''
             })
           }
         />
@@ -65,7 +67,10 @@ export const GraphFilters = (props: GraphFiltersProps) => {
           onChange={props.setPipelineView}
         />
 
-        <FreightTimelineFilterButton freights={props.freights} />
+        <FreightTimelineFilterButton
+          freights={props.freights}
+          warehouses={props.warehouses.map((warehouse) => warehouse?.metadata?.name || '')}
+        />
 
         <DisplaySettingsButton
           stages={props.stages}

@@ -244,7 +244,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                 <FreightTimeline
                   freights={freights}
                   project={projectName || ''}
-                  hasWarehouses={warehouses.length > 0}
+                  warehouseCount={warehouses.length}
                   hasWarehouseController={hasWarehouseController}
                 />
 

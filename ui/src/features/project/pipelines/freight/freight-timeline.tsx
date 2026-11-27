@@ -1,5 +1,5 @@
 import { useDndContext } from '@dnd-kit/core';
-import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import classNames from 'classnames';
 import { CSSProperties, useContext, useState } from 'react';
@@ -16,8 +16,14 @@ import { Freight } from '@ui/gen/api/v2/models';
 import { FreightCard } from './freight-card';
 import { FreightExpandTile } from './freight-expand-tile';
 import { FreightTimelineEmpty } from './freight-timeline-empty';
+import { FreightWarehouseGroup } from './freight-warehouse-group';
+import {
+  getFocusedWarehouse,
+  groupByWarehouse,
+  takeFreight
+} from './freight-warehouse-group-utils';
 import { PromotionModeHeader } from './promotion-mode-header';
-import { useFilteredFreights } from './use-filtered-freights';
+import { FilteredFreight, useFilteredFreights } from './use-filtered-freights';
 import { useFreightCarousel } from './use-freight-carousel';
 import { usePromotionEligibleFreight } from './use-promotion-eligible-freight';
 import { useSoakTime } from './use-soak-time';
@@ -26,10 +32,16 @@ import './freight-timeline.less';
 
 const ARROW_BUTTON_WIDTH = 28;
 
+// Sits left of the viewport, as far from the Warehouse header's icon as the
+// header's own gap (6px), over the left scroll arrow's column.
+const backButtonClassName =
+  'absolute right-full top-0 mr-1.5 z-10 flex items-center justify-center w-5 h-5 p-0 border-0 bg-transparent cursor-pointer text-xs text-[color:var(--kargo-color-text-secondary)] hover:text-[color:var(--kargo-color-text)]';
+
 export const FreightTimeline = (props: {
   freights: Freight[];
   project: string;
-  hasWarehouses: boolean;
+  // how many Warehouses the project has
+  warehouseCount: number;
   hasWarehouseController: boolean;
 }) => {
   const navigate = useNavigate();
@@ -43,11 +55,21 @@ export const FreightTimeline = (props: {
     throw new Error('missing context freightTimelineControllerContext');
   }
 
-  const { preferredFilter } = freightTimelineControllerContext;
+  const { preferredFilter, setPreferredFilter } = freightTimelineControllerContext;
 
   const isPromotionMode =
     actionContext?.action?.type === IAction.PROMOTE ||
     actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM;
+
+  // the Warehouse the freight timeline is narrowed to, if any
+  const focusedWarehouse = getFocusedWarehouse(
+    preferredFilter.freightTimelineWarehouse,
+    isPromotionMode
+  );
+  const isFocused = Boolean(focusedWarehouse);
+
+  const setFocusedWarehouse = (freightTimelineWarehouse: string) =>
+    setPreferredFilter({ ...preferredFilter, freightTimelineWarehouse });
 
   const { promotionEligibleFreight, ...getPromotionEligibleFreightQuery } =
     usePromotionEligibleFreight(props.project);
@@ -68,18 +90,70 @@ export const FreightTimeline = (props: {
     slideRight,
     canSlideLeft,
     canSlideRight
-  } = useFreightCarousel(filteredFreights.length, preferredFilter);
+  } = useFreightCarousel(filteredFreights.length, preferredFilter, isPromotionMode);
 
   const dndContext = useDndContext();
   const isDragging = !!dndContext.active;
 
   const isEmpty = filteredFreights.length === 0;
+  const groups = groupByWarehouse(filteredFreights);
+  // Name each Warehouse above its freight only when there is more than one.
+  // A project with a single Warehouse can still hold freight left by a
+  // deleted one, which then needs its name too.
+  const withHeader = props.warehouseCount > 1 || groups.length > 1;
 
   const filtersActive =
     preferredFilter.sources.length > 0 ||
     preferredFilter.warehouses.length > 0 ||
     preferredFilter.timerange !== 'all-time' ||
-    preferredFilter.hideUnusedFreights;
+    preferredFilter.hideUnusedFreights ||
+    isFocused;
+
+  const renderFreight = (freight: FilteredFreight) => {
+    const freightSoakTime = soakTime?.[freight?.metadata?.name || ''];
+
+    const promotionEligible = Boolean(
+      promotionEligibleFreight?.find((f) => f?.metadata?.name === freight?.metadata?.name)
+    );
+
+    if (freight.count && freight.count > 0) {
+      return (
+        <FreightExpandTile
+          key={`expand-tile-${freight?.metadata?.uid}-${freight?.count}`}
+          count={freight.count}
+        />
+      );
+    }
+
+    return (
+      <FreightCard
+        key={`${freight?.metadata?.uid}-${freight?.count}`}
+        className='h-full'
+        stagesInFreight={dictionaryContext?.freightInStages?.[freight?.metadata?.name || ''] || []}
+        freight={freight}
+        preferredFilter={preferredFilter}
+        setViewingFreight={setViewingFreight}
+        viewingFreight={viewingFreight}
+        inUse={(dictionaryContext?.freightInStages[freight?.metadata?.name || '']?.length || 0) > 0}
+        stageColorMap={colorContext.stageColorMap}
+        promote={isPromotionMode}
+        isPromotionEligibleLoading={getPromotionEligibleFreightQuery.isFetching}
+        promotionEligible={promotionEligible}
+        onReviewAndPromote={() => {
+          const stage = actionContext?.action?.stage?.metadata?.name || '';
+
+          navigate(
+            generatePath(paths.promote, {
+              name: props.project,
+              freight: freight?.metadata?.name,
+              stage: stage
+            })
+          );
+        }}
+        soakTime={freightSoakTime}
+      />
+    );
+  };
 
   return (
     <>
@@ -105,6 +179,11 @@ export const FreightTimeline = (props: {
         )}
         style={{ borderBottom: '2px solid var(--kargo-color-border-secondary, rgba(0,0,0,.05))' }}
       >
+        {isEmpty && isFocused && (
+          // room for the back arrow, where the left scroll arrow would be
+          <div className='shrink-0 mx-1' style={{ width: ARROW_BUTTON_WIDTH }} />
+        )}
+
         {!isEmpty && (
           <div
             className='flex items-stretch shrink-0 cursor-pointer select-none text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 mx-1'
@@ -119,82 +198,71 @@ export const FreightTimeline = (props: {
           </div>
         )}
 
-        <div
-          ref={viewportRef}
-          className={classNames('flex-1 min-w-0 relative', {
-            'overflow-hidden': !isDragging
-          })}
-        >
-          {isEmpty && (
-            <FreightTimelineEmpty
-              filtered={filtersActive}
-              hasWarehouses={props.hasWarehouses}
-              hasWarehouseController={props.hasWarehouseController}
-              promotionMode={isPromotionMode}
-            />
+        <div className='flex-1 min-w-0 relative'>
+          {isFocused && (
+            // Just outside the viewport, which would clip it, level with the
+            // Warehouse header, so the header's icon stays in line with the
+            // cards as it does across all Warehouses. Shown when no freight
+            // is left too, as the way back.
+            <button
+              type='button'
+              aria-label='Show freight from all Warehouses'
+              title='Show freight from all Warehouses'
+              className={backButtonClassName}
+              onClick={() => setFocusedWarehouse('')}
+            >
+              <FontAwesomeIcon icon={faArrowLeft} />
+            </button>
           )}
 
           <div
-            ref={stripRef}
-            className='flex gap-1 transition-transform duration-300 ease-out'
-            style={
-              {
-                transform: `translateX(-${offset}px)`,
-                width: 'max-content',
-                '--freight-card-width': `${cardWidth}px`
-              } as CSSProperties
-            }
-          >
-            {filteredFreights.slice(0, visibleCount).map((freight) => {
-              const freightSoakTime = soakTime?.[freight?.metadata?.name || ''];
-
-              const promotionEligible = Boolean(
-                promotionEligibleFreight?.find((f) => f?.metadata?.name === freight?.metadata?.name)
-              );
-
-              if (freight.count && freight.count > 0) {
-                return (
-                  <FreightExpandTile
-                    key={`expand-tile-${freight?.metadata?.uid}-${freight?.count}`}
-                    count={freight.count}
-                  />
-                );
-              }
-
-              return (
-                <FreightCard
-                  key={`${freight?.metadata?.uid}-${freight?.count}`}
-                  className='h-full'
-                  stagesInFreight={
-                    dictionaryContext?.freightInStages?.[freight?.metadata?.name || ''] || []
-                  }
-                  freight={freight}
-                  preferredFilter={preferredFilter}
-                  setViewingFreight={setViewingFreight}
-                  viewingFreight={viewingFreight}
-                  inUse={
-                    (dictionaryContext?.freightInStages[freight?.metadata?.name || '']?.length ||
-                      0) > 0
-                  }
-                  stageColorMap={colorContext.stageColorMap}
-                  promote={isPromotionMode}
-                  isPromotionEligibleLoading={getPromotionEligibleFreightQuery.isFetching}
-                  promotionEligible={promotionEligible}
-                  onReviewAndPromote={() => {
-                    const stage = actionContext?.action?.stage?.metadata?.name || '';
-
-                    navigate(
-                      generatePath(paths.promote, {
-                        name: props.project,
-                        freight: freight?.metadata?.name,
-                        stage: stage
-                      })
-                    );
-                  }}
-                  soakTime={freightSoakTime}
-                />
-              );
+            ref={viewportRef}
+            className={classNames('h-full relative', {
+              'overflow-hidden': !isDragging
             })}
+          >
+            {isEmpty && (
+              <FreightTimelineEmpty
+                filtered={filtersActive}
+                hasWarehouses={props.warehouseCount > 0}
+                hasWarehouseController={props.hasWarehouseController}
+                promotionMode={isPromotionMode}
+              />
+            )}
+
+            <div
+              ref={stripRef}
+              // positioned, so each group can measure where it sits in the strip
+              className='relative flex gap-1 transition-transform duration-300 ease-out'
+              style={
+                {
+                  transform: `translateX(-${offset}px)`,
+                  width: 'max-content',
+                  '--freight-card-width': `${cardWidth}px`
+                } as CSSProperties
+              }
+            >
+              {takeFreight(groups, visibleCount).map((group) => (
+                <FreightWarehouseGroup
+                  key={group.key}
+                  warehouse={group.warehouse}
+                  withHeader={withHeader}
+                  color={colorContext.warehouseColorMap?.[group.warehouse]}
+                  offset={offset}
+                  cardWidth={cardWidth}
+                  onShowOnly={
+                    // while promoting, the timeline shows what the Stage can
+                    // take, whichever Warehouse it was narrowed to
+                    isFocused || isPromotionMode || !group.warehouse
+                      ? undefined
+                      : () => setFocusedWarehouse(group.warehouse)
+                  }
+                  focused={isFocused}
+                >
+                  {group.freights.map(renderFreight)}
+                </FreightWarehouseGroup>
+              ))}
+            </div>
           </div>
         </div>
 
