@@ -27,7 +27,7 @@ import { paths } from '@ui/config/paths';
 import { themeConfig } from '@ui/config/themeConfig';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
-import { getUserEmail, isJWTDirty, JWTInfo } from '@ui/features/auth/jwt-utils';
+import { asText, getDisplayName, getUserEmail, isJWTDirty } from '@ui/features/auth/jwt-utils';
 import { KargoLogo } from '@ui/features/common/logo/logo';
 
 import { NavItem } from './nav-item/nav-item';
@@ -64,17 +64,6 @@ const avatarClass =
 // Separators inside the rail.
 const railLine = 'border-0 border-solid border-white/[.08]';
 
-// Claims come straight from the identity provider's token, so despite JWTInfo's
-// types they may be numbers or objects. Only non-blank strings are shown.
-const asText = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
-
-const getDisplayName = (jwt?: JWTInfo | null) =>
-  asText(jwt?.name) ||
-  asText(jwt?.preferred_username) ||
-  asText(jwt?.email) ||
-  asText(jwt?.sub) ||
-  'Account';
-
 const AccountMenu = () => {
   const { logout, JWTInfo } = useAuthContext();
   const navigate = useNavigate();
@@ -104,7 +93,7 @@ const AccountMenu = () => {
     { type: 'divider' },
     isJWTDirty(JWTInfo)
       ? null
-      : { key: 'user', label: 'User info', icon: <FontAwesomeIcon icon={faUser} /> },
+      : { key: 'user', label: 'Your account', icon: <FontAwesomeIcon icon={faUser} /> },
     {
       key: 'logout',
       // Red text rather than `danger: true`, which fills the row red on hover.
