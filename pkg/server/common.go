@@ -19,6 +19,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	libhttp "github.com/akuity/kargo/pkg/http"
+	"github.com/akuity/kargo/pkg/server/rbac"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -213,4 +214,56 @@ func annotateResourceWithCreator(
 		annotations[kargoapi.AnnotationKeyCreateActor] = api.FormatEventUserActor(userInfo)
 		obj.SetAnnotations(annotations)
 	}
+}
+
+// authorizeResourceCreate enforces authorization checks that Kargo's authorizing
+// client cannot perform implicitly. That client authorizes only standard
+// Kubernetes verbs, but creating a Promotion additionally requires the custom
+// "promote" verb on the target Stage. Without this explicit check, a user
+// permitted to create Promotion resources could create one targeting any Stage
+// in a Project -- bypassing the per-Stage authorization the "promote" verb
+// exists to enforce -- because the Promotion mutating webhook's own "promote"
+// check evaluates the API server's identity, not the requesting user's, when
+// the API server creates the resource on the user's behalf.
+func (s *server) authorizeResourceCreate(
+	ctx context.Context,
+	obj *unstructured.Unstructured,
+) error {
+	if obj == nil || obj.GroupVersionKind() != promotionGVK {
+		return nil
+	}
+	stage, _, err := unstructured.NestedString(obj.Object, "spec", "stage")
+	if err != nil || stage == "" {
+		// A Promotion with no target Stage cannot promote anywhere; leave
+		// rejection of the malformed resource to normal validation.
+		return nil
+	}
+	return s.authorizeFn(
+		ctx,
+		"promote",
+		kargoapi.GroupVersion.WithResource("stages"),
+		"",
+		client.ObjectKey{Namespace: obj.GetNamespace(), Name: stage},
+	)
+}
+
+// verifyNoEscalation blocks a generic resource create or update from conferring
+// RBAC permissions the requester does not already hold. It supplies the
+// configured global ServiceAccount namespaces and delegates to
+// rbac.VerifyResourceNotEscalating.
+func (s *server) verifyNoEscalation(
+	ctx context.Context,
+	obj *unstructured.Unstructured,
+) error {
+	var globalNamespaces []string
+	if s.cfg.OIDCConfig != nil {
+		globalNamespaces = s.cfg.OIDCConfig.GlobalServiceAccountNamespaces
+	}
+	return rbac.VerifyResourceNotEscalating(
+		ctx,
+		s.client,
+		s.client.InternalClient(),
+		globalNamespaces,
+		obj,
+	)
 }
