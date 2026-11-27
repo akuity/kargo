@@ -61,7 +61,7 @@ func (e *LocalStepExecutor) ExecuteStep(
 	)
 	defer func() {
 		span.SetAttributes(telemetry.StepStatusKey.String(string(result.Status)))
-		telemetry.RecordError(span, err)
+		telemetry.RecordErrorCtx(ctx, span, err)
 		span.End()
 	}()
 

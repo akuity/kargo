@@ -341,7 +341,7 @@ func startReconcileSpan(ctx context.Context, req ctrl.Request) (context.Context,
 func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, err error) {
 	ctx, span := startReconcileSpan(ctx, req)
 	defer func() {
-		telemetry.RecordError(span, err)
+		telemetry.RecordErrorCtx(ctx, span, err)
 		span.End()
 	}()
 

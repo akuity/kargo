@@ -88,7 +88,7 @@ func (e *LocalEngine) Promote(
 		),
 	)
 	defer func() {
-		telemetry.RecordError(span, err)
+		telemetry.RecordErrorCtx(ctx, span, err)
 		span.End()
 	}()
 

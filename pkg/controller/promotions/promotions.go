@@ -300,7 +300,7 @@ func (r *reconciler) Reconcile(
 	)
 	ctx, span := telemetry.StartSpan(ctx, tracer, "Reconcile Promotion")
 	defer func() {
-		telemetry.RecordError(span, err)
+		telemetry.RecordErrorCtx(ctx, span, err)
 		span.End()
 	}()
 	ctx = telemetry.ContextWithLogValues(ctx)
