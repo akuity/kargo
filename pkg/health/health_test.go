@@ -130,7 +130,8 @@ func TestInput_ToJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.input.ToJSON()
+			got, err := tt.input.ToJSON()
+			assert.NoError(t, err)
 			if tt.want == "" {
 				assert.Nil(t, got)
 				return
