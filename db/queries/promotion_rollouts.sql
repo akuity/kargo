@@ -220,6 +220,111 @@ WHERE project_name = sqlc.arg(project_name)
     )
 RETURNING *;
 
+-- Starts a rollout: moves it from Pending to Running and records its
+-- FreightCollection in promotion_rollout_freight. Both happen in one
+-- statement, so a rollout never starts without its collection.
+--
+-- The rollout must be Pending and must promote the Freight given. id and
+-- updated_at are preconditions as in UpdatePromotionRolloutStatus. If any of
+-- these fails, nothing is written and nothing is returned.
+--
+-- The collection gets one row per origin:
+--   * the Freight being promoted, from the arguments;
+--   * for each other requested origin, a copy of the previous rollout's row.
+--
+-- The requested origins are the ones the Stage requests Freight from now.
+-- The database does not know them, so the caller passes them as two arrays
+-- of equal length, kinds and names.
+--
+-- The previous rollout is the Stage's newest lower-numbered rollout that has
+-- collection rows, whatever phase it ended in. Rollouts without rows are
+-- skipped: they were aborted before starting, or started before this table
+-- existed, and stopping at one would drop every carried origin.
+--
+-- A rollout that already has collection rows keeps them unchanged.
+-- name: StartPromotionRollout :one
+WITH rollout AS (
+    UPDATE promotion_rollouts SET
+        status_phase = 'Running',
+        status_reason = sqlc.arg(status_reason)::text,
+        status_message = sqlc.arg(status_message)::text,
+        status_started_at = sqlc.narg(status_started_at)::timestamptz,
+        status_finished_at = sqlc.narg(status_finished_at)::timestamptz,
+        updated_at = GREATEST(clock_timestamp(), updated_at + interval '1 microsecond')
+    WHERE promotion_rollouts.project_name = sqlc.arg(project_name)
+        AND promotion_rollouts.name = sqlc.arg(name)
+        AND (sqlc.narg(id)::uuid IS NULL OR promotion_rollouts.id = sqlc.narg(id))
+        AND (
+            sqlc.narg(updated_at)::timestamptz IS NULL
+            OR promotion_rollouts.updated_at = sqlc.narg(updated_at)
+        )
+        AND promotion_rollouts.status_phase = 'Pending'
+        AND promotion_rollouts.freight_name = sqlc.arg(freight_name)::text
+    RETURNING *
+), previous AS (
+    SELECT earlier.id
+    FROM rollout
+    JOIN promotion_rollouts AS earlier ON earlier.stage_id = rollout.stage_id
+    WHERE earlier.number < rollout.number
+        AND EXISTS (
+            SELECT 1 FROM promotion_rollout_freight AS recorded
+            WHERE recorded.promotion_rollout_id = earlier.id
+        )
+    ORDER BY earlier.number DESC
+    LIMIT 1
+), freight AS (
+    INSERT INTO promotion_rollout_freight (
+        promotion_rollout_id,
+        origin_kind,
+        origin_name,
+        freight_name,
+        reference
+    )
+    SELECT
+        rollout.id,
+        collected.origin_kind,
+        collected.origin_name,
+        collected.freight_name,
+        collected.reference
+    FROM rollout
+    CROSS JOIN LATERAL (
+        SELECT
+            sqlc.arg(origin_kind)::text AS origin_kind,
+            sqlc.arg(origin_name)::text AS origin_name,
+            sqlc.arg(freight_name)::text AS freight_name,
+            sqlc.arg(reference)::json AS reference
+        UNION ALL
+        SELECT
+            carried.origin_kind,
+            carried.origin_name,
+            carried.freight_name,
+            carried.reference
+        FROM promotion_rollout_freight AS carried
+        WHERE carried.promotion_rollout_id = (SELECT previous.id FROM previous)
+            -- Set-returning functions in one select list advance together,
+            -- which zips the arrays.
+            AND (carried.origin_kind, carried.origin_name) IN (
+                SELECT
+                    unnest(sqlc.arg(requested_origin_kinds)::text[]),
+                    unnest(sqlc.arg(requested_origin_names)::text[])
+            )
+            AND (carried.origin_kind, carried.origin_name)
+                <> (sqlc.arg(origin_kind)::text, sqlc.arg(origin_name)::text)
+    ) AS collected
+    WHERE NOT EXISTS (
+        SELECT 1 FROM promotion_rollout_freight AS existing
+        WHERE existing.promotion_rollout_id = rollout.id
+    )
+)
+SELECT * FROM rollout;
+
+-- A rollout's FreightCollection, one row per origin, in origin order. A
+-- rollout started before collections were recorded has no rows.
+-- name: ListPromotionRolloutFreight :many
+SELECT * FROM promotion_rollout_freight
+WHERE promotion_rollout_id = sqlc.arg(promotion_rollout_id)
+ORDER BY origin_kind, origin_name;
+
 -- Records a request to abort one of a Stage's rollouts, by its number, and
 -- returns the row as it now stands. Only a rollout that has not finished can
 -- be aborted; one that has is left alone and nothing is returned. The first

@@ -4,6 +4,7 @@ package promotionrolloutstore
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -14,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/reconciler/nats"
@@ -98,6 +100,14 @@ type Store interface {
 	ListTargetStatuses(
 		context.Context, []Rollout,
 	) (map[uuid.UUID][]database.ListPromotionRolloutTargetStatusesRow, error)
+	Start(
+		context.Context,
+		string,
+		database.PromotionRolloutRow,
+		kargoapi.FreightReference,
+		[]kargoapi.FreightOrigin,
+	) (database.PromotionRolloutRow, error)
+	GetFreightCollection(context.Context, uuid.UUID) (*kargoapi.FreightCollection, error)
 	UpdateStatus(context.Context, string, database.PromotionRolloutRow) (database.PromotionRolloutRow, error)
 	Abort(context.Context, string, string, int64, string) (database.PromotionRolloutRow, error)
 }
@@ -367,31 +377,109 @@ func (s *store) ListTargetStatuses(
 	return byID, nil
 }
 
+// Start moves the Pending PromotionRollout named by the argument to Running
+// and records its FreightCollection, in one statement. It returns the row as
+// stored.
+//
+// The collection holds freight, the Freight the rollout promotes, and, for
+// each other origin in requested, a copy of what the Stage's previous
+// rollout recorded. requested is the origins the Stage requests Freight
+// from now. See the StartPromotionRollout query for how the previous
+// rollout is chosen.
+//
+// The argument's reason, message and timestamps are written. Its phase is
+// ignored. A non-zero ID or UpdatedAt on it is a precondition, as in
+// UpdateStatus.
+//
+// Errors, none of which write anything:
+//   - database.ErrInvalid: freight has no name or origin, or is not the
+//     Freight the rollout promotes.
+//   - database.ErrConflict: the rollout is not Pending, fails a
+//     precondition, or another rollout of its Stage is Running.
+//
+// TODO: freight is an argument only because the database does not hold
+// Freight yet, so its contents have to come from the caller. Once it does,
+// resolve the Freight from the rollout's freight_name in the
+// StartPromotionRollout query, and remove the argument and the check that
+// its name matches the rollout's.
+func (s *store) Start(
+	ctx context.Context,
+	project string,
+	rollout database.PromotionRolloutRow,
+	freight kargoapi.FreightReference,
+	requested []kargoapi.FreightOrigin,
+) (database.PromotionRolloutRow, error) {
+	args, err := startArgs(project, rollout, freight, requested)
+	if err != nil {
+		return database.PromotionRolloutRow{}, rolloutError(err, project, rollout.Name)
+	}
+	return s.writeStatus(
+		ctx,
+		project,
+		rollout,
+		func(ctx context.Context) (database.PromotionRolloutRow, error) {
+			started, startErr := s.queries.StartPromotionRollout(ctx, args)
+			return database.PromotionRolloutRow(started), startErr
+		},
+		&freight,
+	)
+}
+
+// GetFreightCollection returns the FreightCollection recorded for the
+// PromotionRollout with the given id when it started: the Freight it
+// promotes and the Freight carried forward for the Stage's other origins,
+// contents included. Read twice, it is the same collection with the same ID.
+// A rollout that has none -- one that has not started, or that started
+// before collections were recorded -- has an empty collection, and so does
+// an id that is no rollout's.
+func (s *store) GetFreightCollection(
+	ctx context.Context,
+	id uuid.UUID,
+) (*kargoapi.FreightCollection, error) {
+	rows, err := s.queries.ListPromotionRolloutFreight(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("error listing Freight of PromotionRollout %q: %w", id, err)
+	}
+	collection, err := freightCollection(rows)
+	if err != nil {
+		return nil, fmt.Errorf("error reading Freight of PromotionRollout %q: %w", id, err)
+	}
+	return collection, nil
+}
+
 // UpdateStatus replaces the status of the PromotionRollout named by the
 // argument -- its phase, reason, message and timestamps -- and returns the
 // row as stored. A non-zero ID or UpdatedAt on the argument is a
 // precondition: database.ErrConflict says the row no longer matches it.
-// Without either, the update is unconditional.
+// Without either, the update is unconditional. It records no Freight: a
+// rollout is started with Start, which does.
 func (s *store) UpdateStatus(
 	ctx context.Context,
 	project string,
 	rollout database.PromotionRolloutRow,
 ) (database.PromotionRolloutRow, error) {
-	args := database.UpdatePromotionRolloutStatusParams{
-		ProjectName:      project,
-		Name:             rollout.Name,
-		StatusPhase:      rollout.StatusPhase,
-		StatusReason:     rollout.StatusReason,
-		StatusMessage:    rollout.StatusMessage,
-		StatusStartedAt:  rollout.StatusStartedAt,
-		StatusFinishedAt: rollout.StatusFinishedAt,
-	}
-	if rollout.ID != uuid.Nil {
-		args.ID = &rollout.ID
-	}
-	if !rollout.UpdatedAt.IsZero() {
-		args.UpdatedAt = &rollout.UpdatedAt
-	}
+	return s.writeStatus(
+		ctx,
+		project,
+		rollout,
+		func(ctx context.Context) (database.PromotionRolloutRow, error) {
+			return s.queries.UpdatePromotionRolloutStatus(ctx, statusArgs(project, rollout))
+		},
+		nil,
+	)
+}
+
+// writeStatus runs write, which writes a status to the PromotionRollout
+// named by the argument. It explains a write that matched no row and
+// announces one that succeeded. freight is the Freight a start is given,
+// nil for any other write.
+func (s *store) writeStatus(
+	ctx context.Context,
+	project string,
+	rollout database.PromotionRolloutRow,
+	write func(context.Context) (database.PromotionRolloutRow, error),
+	freight *kargoapi.FreightReference,
+) (database.PromotionRolloutRow, error) {
 	// The event about the update carries the row as it was, which the
 	// argument does not say: it carries the status to write, not the status
 	// written over. So the row is read first, only when there is somewhere
@@ -413,9 +501,9 @@ func (s *store) UpdateStatus(
 		}
 		old = &current
 	}
-	row, err := s.queries.UpdatePromotionRolloutStatus(ctx, args)
+	row, err := write(ctx)
 	if errors.Is(err, pgx.ErrNoRows) {
-		err = s.updateMissed(ctx, project, rollout)
+		err = s.updateMissed(ctx, project, rollout, freight)
 	}
 	if err != nil {
 		return database.PromotionRolloutRow{}, rolloutError(err, project, rollout.Name)
@@ -424,6 +512,95 @@ func (s *store) UpdateStatus(
 		s.publishUpdated(ctx, *old, row)
 	}
 	return row, nil
+}
+
+// statusArgs are the arguments that write the argument's status to the
+// PromotionRollout it names, under the preconditions it carries.
+func statusArgs(
+	project string,
+	rollout database.PromotionRolloutRow,
+) database.UpdatePromotionRolloutStatusParams {
+	args := database.UpdatePromotionRolloutStatusParams{
+		ProjectName:      project,
+		Name:             rollout.Name,
+		StatusPhase:      rollout.StatusPhase,
+		StatusReason:     rollout.StatusReason,
+		StatusMessage:    rollout.StatusMessage,
+		StatusStartedAt:  rollout.StatusStartedAt,
+		StatusFinishedAt: rollout.StatusFinishedAt,
+	}
+	args.ID, args.UpdatedAt = preconditionArgs(rollout)
+	return args
+}
+
+// startArgs are the arguments that start the PromotionRollout named by the
+// argument with the Freight, under the preconditions the argument carries.
+// Freight without a name or an origin is database.ErrInvalid. The check is
+// made here because the database only makes it when it inserts the row,
+// which it skips for a rollout that already has a collection.
+func startArgs(
+	project string,
+	rollout database.PromotionRolloutRow,
+	freight kargoapi.FreightReference,
+	requested []kargoapi.FreightOrigin,
+) (database.StartPromotionRolloutParams, error) {
+	switch {
+	case freight.Name == "":
+		return database.StartPromotionRolloutParams{}, fmt.Errorf(
+			"%w: the Freight has no name", database.ErrInvalid,
+		)
+	case freight.Origin.Kind == "" || freight.Origin.Name == "":
+		return database.StartPromotionRolloutParams{}, fmt.Errorf(
+			"%w: Freight %q has no origin", database.ErrInvalid, freight.Name,
+		)
+	}
+	reference, err := json.Marshal(freight)
+	if err != nil {
+		return database.StartPromotionRolloutParams{}, fmt.Errorf(
+			"error encoding Freight %q: %w", freight.Name, err,
+		)
+	}
+	args := database.StartPromotionRolloutParams{
+		ProjectName:      project,
+		Name:             rollout.Name,
+		StatusReason:     rollout.StatusReason,
+		StatusMessage:    rollout.StatusMessage,
+		StatusStartedAt:  rollout.StatusStartedAt,
+		StatusFinishedAt: rollout.StatusFinishedAt,
+		FreightName:      freight.Name,
+		OriginKind:       string(freight.Origin.Kind),
+		OriginName:       freight.Origin.Name,
+		Reference:        reference,
+	}
+	args.ID, args.UpdatedAt = preconditionArgs(rollout)
+	args.RequestedOriginKinds, args.RequestedOriginNames = zipOrigins(requested)
+	return args, nil
+}
+
+// preconditionArgs are the identity and version the argument asserts, each
+// nil when it asserts none.
+func preconditionArgs(rollout database.PromotionRolloutRow) (*uuid.UUID, *time.Time) {
+	var id *uuid.UUID
+	if rollout.ID != uuid.Nil {
+		id = &rollout.ID
+	}
+	var updatedAt *time.Time
+	if !rollout.UpdatedAt.IsZero() {
+		updatedAt = &rollout.UpdatedAt
+	}
+	return id, updatedAt
+}
+
+// zipOrigins splits origins into their kinds and their names, two lists of
+// equal length, which is how a query takes a list of pairs.
+func zipOrigins(origins []kargoapi.FreightOrigin) ([]string, []string) {
+	kinds := make([]string, len(origins))
+	names := make([]string, len(origins))
+	for i, origin := range origins {
+		kinds[i] = string(origin.Kind)
+		names[i] = origin.Name
+	}
+	return kinds, names
 }
 
 // publishCreated announces the rollout's creation on Events. A failure to
@@ -533,11 +710,14 @@ func (s *store) abortMissed(ctx context.Context, project, stage string, number i
 }
 
 // updateMissed explains an update that matched no row: either the rollout
-// does not exist, or it no longer satisfies the update's preconditions.
+// does not exist, or it no longer satisfies the update's preconditions,
+// which for a start, one given the Freight to start with, include those of
+// checkStartable.
 func (s *store) updateMissed(
 	ctx context.Context,
 	project string,
 	rollout database.PromotionRolloutRow,
+	freight *kargoapi.FreightReference,
 ) error {
 	current, err := s.queries.GetPromotionRollout(ctx, database.GetPromotionRolloutParams{
 		ProjectName: project,
@@ -551,6 +731,11 @@ func (s *store) updateMissed(
 	}
 	if err = checkPreconditions(rollout, current); err != nil {
 		return err
+	}
+	if freight != nil {
+		if err = checkStartable(current, *freight); err != nil {
+			return err
+		}
 	}
 	// The row changed again between the update and this read.
 	return fmt.Errorf("%w: the PromotionRollout has been modified", database.ErrConflict)
@@ -609,6 +794,27 @@ func checkPreconditions(rollout, current database.PromotionRolloutRow) error {
 	}
 	if !rollout.UpdatedAt.IsZero() && !rollout.UpdatedAt.Equal(current.UpdatedAt) {
 		return fmt.Errorf("%w: the PromotionRollout has been modified", database.ErrConflict)
+	}
+	return nil
+}
+
+// checkStartable compares what starting a rollout requires against the row
+// about to be started: that it is Pending, and that the Freight it is being
+// started with is the Freight it promotes.
+func checkStartable(
+	current database.PromotionRolloutRow,
+	freight kargoapi.FreightReference,
+) error {
+	if current.StatusPhase != string(kargoapi.PromotionRolloutPhasePending) {
+		return fmt.Errorf(
+			"%w: the PromotionRollout is %s, not Pending", database.ErrConflict, current.StatusPhase,
+		)
+	}
+	if current.FreightName != freight.Name {
+		return fmt.Errorf(
+			"%w: the PromotionRollout promotes Freight %q, not %q",
+			database.ErrInvalid, current.FreightName, freight.Name,
+		)
 	}
 	return nil
 }

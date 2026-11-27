@@ -396,35 +396,59 @@ func (s *fakeStore) ListOpen(context.Context) ([]promotionrolloutstore.Key, erro
 	return keys, nil
 }
 
-// Start admits the rollout as the store would: only the oldest of its
-// Stage's open rollouts, and only while none is Running.
+// Start admits the rollout as the store would: only if it is Pending and
+// promotes the Freight given, and only while no other rollout of its Stage
+// is Running. It records no FreightCollection.
 func (s *fakeStore) Start(
 	_ context.Context,
-	rollout promotionrolloutstore.Rollout,
-) (promotionrolloutstore.Rollout, error) {
+	project string,
+	row database.PromotionRolloutRow,
+	freight kargoapi.FreightReference,
+	_ []kargoapi.FreightOrigin,
+) (database.PromotionRolloutRow, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.calls++
 	if s.err != nil {
-		return promotionrolloutstore.Rollout{}, s.err
+		return database.PromotionRolloutRow{}, s.err
 	}
-	current, ok := s.project(rollout.ProjectName)[rollout.Name]
-	if !ok || current.StatusPhase != string(kargoapi.PromotionRolloutPhasePending) {
-		return promotionrolloutstore.Rollout{}, database.ErrConflict
+	current, ok := s.project(project)[row.Name]
+	if !ok {
+		return database.PromotionRolloutRow{}, fmt.Errorf("PromotionRollout %q: %w", row.Name, database.ErrNotFound)
 	}
-	for _, other := range s.project(rollout.ProjectName) {
-		if other.StageName != current.StageName {
-			continue
-		}
-		phase := kargoapi.PromotionRolloutPhase(other.StatusPhase)
-		if phase == kargoapi.PromotionRolloutPhaseRunning || (!phase.IsTerminal() && other.Number < current.Number) {
-			return promotionrolloutstore.Rollout{}, database.ErrConflict
+	if current.StatusPhase != string(kargoapi.PromotionRolloutPhasePending) {
+		return database.PromotionRolloutRow{}, database.ErrConflict
+	}
+	if current.FreightName != freight.Name {
+		return database.PromotionRolloutRow{}, database.ErrInvalid
+	}
+	for _, other := range s.project(project) {
+		if other.StageName == current.StageName &&
+			other.StatusPhase == string(kargoapi.PromotionRolloutPhaseRunning) {
+			return database.PromotionRolloutRow{}, database.ErrConflict
 		}
 	}
 	current.StatusPhase = string(kargoapi.PromotionRolloutPhaseRunning)
+	current.StatusReason = row.StatusReason
+	current.StatusMessage = row.StatusMessage
 	current.UpdatedAt = s.tick()
-	s.project(rollout.ProjectName)[rollout.Name] = current
-	return current, nil
+	s.project(project)[row.Name] = current
+	return current.PromotionRolloutRow, nil
+}
+
+// GetFreightCollection returns an empty collection, as the store does for a
+// rollout that recorded none: Start here records none.
+func (s *fakeStore) GetFreightCollection(
+	context.Context,
+	uuid.UUID,
+) (*kargoapi.FreightCollection, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.calls++
+	if s.err != nil {
+		return nil, s.err
+	}
+	return &kargoapi.FreightCollection{}, nil
 }
 
 func (s *fakeStore) UpdateStatus(
