@@ -603,10 +603,14 @@ func (o *controllerOptions) setupReconcilers(
 
 func (o *controllerOptions) startManagers(ctx context.Context, kargoMgr, argocdMgr manager.Manager) error {
 	var (
-		errChan = make(chan error)
+		// Buffered so that a manager failing after another already has does not
+		// block forever on a send that is no longer being read.
+		errChan = make(chan error, 2)
 		wg      = sync.WaitGroup{}
 	)
 
+	// Manager.Start blocks until ctx is done or the manager fails. Each manager
+	// waits for its own caches to sync before it starts any controller.
 	if argocdMgr != nil {
 		wg.Add(1)
 		go func() {
@@ -615,13 +619,7 @@ func (o *controllerOptions) startManagers(ctx context.Context, kargoMgr, argocdM
 				errChan <- fmt.Errorf("error starting Argo CD manager: %w", err)
 				return
 			}
-			o.Logger.Debug("Argo CD manager started successfully")
-
-			if !argocdMgr.GetCache().WaitForCacheSync(ctx) {
-				errChan <- fmt.Errorf("failed to wait for Argo CD cache to sync")
-				return
-			}
-			o.Logger.Debug("Argo CD cache synced successfully")
+			o.Logger.Debug("Argo CD manager stopped")
 		}()
 	}
 
@@ -632,26 +630,17 @@ func (o *controllerOptions) startManagers(ctx context.Context, kargoMgr, argocdM
 			errChan <- fmt.Errorf("error starting Kargo manager: %w", err)
 			return
 		}
-		o.Logger.Debug("Kargo manager started successfully")
-
-		if !kargoMgr.GetCache().WaitForCacheSync(ctx) {
-			errChan <- fmt.Errorf("failed to wait for Kargo cache to sync")
-			return
-		}
-		o.Logger.Debug("Kargo cache synced successfully")
+		o.Logger.Debug("Kargo manager stopped")
 	}()
 
-	// Adapt wg to a channel that can be used in a select
-	doneCh := make(chan struct{})
+	// Each goroutine sends its error, if any, before it is done, so errChan
+	// can be closed once all of them are. The receive below then returns the
+	// first error as soon as it is sent, or nil once every manager has stopped
+	// without one.
 	go func() {
 		wg.Wait()
-		close(doneCh)
+		close(errChan)
 	}()
 
-	select {
-	case err := <-errChan:
-		return err
-	case <-doneCh:
-		return nil
-	}
+	return <-errChan
 }
