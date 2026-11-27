@@ -7,10 +7,11 @@ import { WarehouseExpanded } from '@ui/extend/types';
 import { Stage } from '@ui/gen/api/v2/models';
 
 import { useFreightTimelineControllerContext } from './context/freight-timeline-controller-context';
+import { getShowSubscriptionNames } from './freight/subscription-label-utils';
 import { groupNodes } from './group-nodes';
 
 type DisplaySetting = {
-  key: 'showAlias' | 'showColors';
+  key: 'showAlias' | 'showColors' | 'showSubscriptionNames';
   label: string;
 };
 
@@ -18,7 +19,8 @@ const buttonLabel = 'Display settings';
 
 const settings: DisplaySetting[] = [
   { key: 'showAlias', label: 'Alias' },
-  { key: 'showColors', label: 'Colors' }
+  { key: 'showColors', label: 'Colors' },
+  { key: 'showSubscriptionNames', label: 'Subscription names' }
 ];
 
 // SettingSwitch is one row of the dropdown: the setting's name, then its
@@ -58,6 +60,15 @@ export const DisplaySettingsButton = (props: DisplaySettingsButtonProps) => {
 
   const { preferredFilter, setPreferredFilter } = ctx;
 
+  const checked: Record<DisplaySetting['key'], boolean> = {
+    showAlias: preferredFilter.showAlias,
+    showColors: preferredFilter.showColors,
+    showSubscriptionNames: getShowSubscriptionNames(
+      preferredFilter.showSubscriptionNames,
+      props.warehouses
+    )
+  };
+
   return (
     <Popover
       trigger='click'
@@ -70,7 +81,7 @@ export const DisplaySettingsButton = (props: DisplaySettingsButtonProps) => {
             <SettingSwitch
               key={key}
               label={label}
-              checked={preferredFilter[key]}
+              checked={checked[key]}
               onChange={(checked) => setPreferredFilter({ ...preferredFilter, [key]: checked })}
             />
           ))}

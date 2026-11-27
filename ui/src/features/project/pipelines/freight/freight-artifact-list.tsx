@@ -1,11 +1,17 @@
 import { theme, Tooltip, Typography } from 'antd';
 import { useMemo } from 'react';
 
+import { RepoSubscription } from '@ui/extend/types';
 import { Freight, FreightReference } from '@ui/gen/api/v2/models';
 
 import { FreightArtifact } from './freight-artifact';
 import { getChangedArtifacts } from './freight-artifact-changes-utils';
-import { DEFAULT_MAX_ARTIFACTS, getFreightArtifacts } from './freight-artifact-list-utils';
+import {
+  DEFAULT_MAX_ARTIFACTS,
+  FreightArtifactItem,
+  getFreightArtifacts
+} from './freight-artifact-list-utils';
+import { getSubscriptionLabel } from './subscription-label-utils';
 
 type FreightArtifactListProps = {
   freight?: Freight | FreightReference;
@@ -15,6 +21,11 @@ type FreightArtifactListProps = {
   // The piece of freight its Warehouse discovered before this one. When set,
   // artifacts the same as in it are muted, so the ones that differ stand out.
   previousFreight?: Freight | FreightReference;
+  // whether each tag names the Warehouse subscription its artifact came from
+  showSubscriptionNames?: boolean;
+  // the subscriptions of the freight's Warehouse, to name the ones its
+  // artifacts do not record
+  subscriptions?: RepoSubscription[];
 };
 
 // FreightArtifactList renders up to `max` artifact tags for a piece of Freight,
@@ -25,7 +36,9 @@ type FreightArtifactListProps = {
 export const FreightArtifactList = ({
   freight,
   max = DEFAULT_MAX_ARTIFACTS,
-  previousFreight
+  previousFreight,
+  showSubscriptionNames,
+  subscriptions
 }: FreightArtifactListProps) => {
   const { token } = theme.useToken();
 
@@ -37,10 +50,18 @@ export const FreightArtifactList = ({
     [freight, previousFreight]
   );
 
+  const subscriptionLabel = (artifact: FreightArtifactItem) =>
+    showSubscriptionNames ? getSubscriptionLabel(artifact, subscriptions) : undefined;
+
   return (
     <>
       {artifacts.slice(0, max).map((artifact, i) => (
-        <FreightArtifact key={i} artifact={artifact} changed={changedArtifacts?.has(artifact)} />
+        <FreightArtifact
+          key={i}
+          artifact={artifact}
+          changed={changedArtifacts?.has(artifact)}
+          subscriptionLabel={subscriptionLabel(artifact)}
+        />
       ))}
       {overflow > 0 && (
         <Tooltip
@@ -57,6 +78,7 @@ export const FreightArtifactList = ({
                   key={i}
                   artifact={artifact}
                   changed={changedArtifacts?.has(artifact)}
+                  subscriptionLabel={subscriptionLabel(artifact)}
                 />
               ))}
             </div>

@@ -108,7 +108,11 @@ see which it is. The oldest freight from a `Warehouse` has nothing to compare
 with, so all of its artifacts are blue.
 
 To show or hide aliases, click the _gear icon_ in the pipeline toolbar, then
-turn the <Hlt>Alias</Hlt> switch on or off.
+turn the <Hlt>Alias</Hlt> switch on or off. To see which `Warehouse`
+subscription discovered each artifact, turn on <Hlt>Subscription names</Hlt> in
+the same menu. The timeline then names each artifact's subscription beside its
+version, as the pipeline graph names it. Until you choose, the names are shown
+when any `Warehouse` in the project has more than four subscriptions.
 
 :::note
 

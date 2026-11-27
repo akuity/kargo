@@ -12,6 +12,10 @@ export type FreightTimelineControllerContextType = {
   preferredFilter: {
     showColors: boolean;
     showAlias: boolean;
+    // whether the freight timeline's artifact tags name the Warehouse
+    // subscription each artifact came from; unset until the user chooses, when
+    // getShowSubscriptionNames decides
+    showSubscriptionNames?: boolean;
     sources: string[]; // repoURL
     timerange: timerangeTypes;
     warehouses: string[];

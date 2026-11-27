@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 
 const PAGE_SIZE = 20;
-const MIN_CARD_WIDTH = 140;
+const MIN_CARD_WIDTH = 150;
 const CARD_GAP = 4;
 
 type PreferredFilter = FreightTimelineControllerContextType['preferredFilter'];

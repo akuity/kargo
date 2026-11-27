@@ -7,6 +7,7 @@ import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
+import { WarehouseExpanded } from '@ui/extend/types';
 import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
@@ -24,6 +25,7 @@ import {
   takeFreight
 } from './freight-warehouse-group-utils';
 import { PromotionModeHeader } from './promotion-mode-header';
+import { getShowSubscriptionNames } from './subscription-label-utils';
 import { FilteredFreight, useFilteredFreights } from './use-filtered-freights';
 import { useFreightCarousel } from './use-freight-carousel';
 import { usePromotionEligibleFreight } from './use-promotion-eligible-freight';
@@ -41,8 +43,7 @@ const backButtonClassName =
 export const FreightTimeline = (props: {
   freights: Freight[];
   project: string;
-  // how many Warehouses the project has
-  warehouseCount: number;
+  warehouses: WarehouseExpanded[];
 }) => {
   const navigate = useNavigate();
 
@@ -80,6 +81,24 @@ export const FreightTimeline = (props: {
   // the timeline does not change what a card's artifacts are compared with.
   const previousFreight = useMemo(() => getPreviousFreight(props.freights), [props.freights]);
 
+  // A Map rather than an object: freight from a deleted Warehouse named, say,
+  // "constructor" would otherwise read what objects inherit.
+  const subscriptionsByWarehouse = useMemo(
+    () =>
+      new Map(
+        props.warehouses.map((warehouse) => [
+          warehouse?.metadata?.name || '',
+          warehouse?.spec?.subscriptions || []
+        ])
+      ),
+    [props.warehouses]
+  );
+
+  const showSubscriptionNames = getShowSubscriptionNames(
+    preferredFilter.showSubscriptionNames,
+    props.warehouses
+  );
+
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
 
   const filteredFreights = useFilteredFreights(props.freights, preferredFilter);
@@ -104,7 +123,7 @@ export const FreightTimeline = (props: {
   // Name each Warehouse above its freight only when there is more than one.
   // A project with a single Warehouse can still hold freight left by a
   // deleted one, which then needs its name too.
-  const withHeader = props.warehouseCount > 1 || groups.length > 1;
+  const withHeader = props.warehouses.length > 1 || groups.length > 1;
 
   const filtersActive =
     preferredFilter.sources.length > 0 ||
@@ -156,6 +175,8 @@ export const FreightTimeline = (props: {
         }}
         soakTime={freightSoakTime}
         previousFreight={previousFreight[freight?.metadata?.name || '']}
+        showSubscriptionNames={showSubscriptionNames}
+        subscriptions={subscriptionsByWarehouse.get(freight?.origin?.name || '')}
       />
     );
   };
@@ -229,7 +250,7 @@ export const FreightTimeline = (props: {
             {isEmpty && (
               <FreightTimelineEmpty
                 filtered={filtersActive}
-                hasWarehouses={props.warehouseCount > 0}
+                hasWarehouses={props.warehouses.length > 0}
                 promotionMode={isPromotionMode}
               />
             )}
