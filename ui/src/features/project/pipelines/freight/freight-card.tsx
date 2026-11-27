@@ -6,8 +6,7 @@ import {
   faGripVertical,
   faHourglass,
   faTrash,
-  faTriangleExclamation,
-  faWarehouse
+  faTriangleExclamation
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Divider, Dropdown, Flex, Tooltip, Typography } from 'antd';
@@ -18,6 +17,7 @@ import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { useModal } from '@ui/features/common/modal/use-modal';
+import { getShortFreightLabel } from '@ui/features/common/utils';
 import { useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { ColorMap } from '@ui/features/stage/utils';
@@ -196,14 +196,17 @@ export const FreightCard = (props: FreightCardProps) => {
             'pl-4': props.inUse
           })}
         >
+          {/* The alias is what a user recognizes a piece of freight by; the
+              head of the generated name takes its place when aliases are
+              turned off. The Warehouse is named once above its run of
+              freight, not on every card. */}
           <Flex align='center' justify='space-between' gap={4} className='-mr-2 min-w-0'>
             <Typography.Text
               className='text-xs min-w-0 flex-1 truncate'
-              type='secondary'
-              title={props.freight?.origin?.name}
+              title={props.freight?.metadata?.name}
             >
-              <FontAwesomeIcon className='mr-1' icon={faWarehouse} size='xs' />
-              {props.freight?.origin?.name}
+              {(props.preferredFilter?.showAlias && freightAlias) ||
+                getShortFreightLabel(props.freight?.metadata?.name)}
             </Typography.Text>
             <Dropdown
               menu={{
@@ -277,10 +280,6 @@ export const FreightCard = (props: FreightCardProps) => {
                 />
               ))}
             </div>
-          )}
-
-          {props?.preferredFilter?.showAlias && (
-            <div className='text-[10px] text-nowrap mb-2'>{freightAlias}</div>
           )}
 
           <div className='flex flex-col gap-1 justify-center items-center min-w-0 max-w-full [&_.ant-tag]:block [&_.ant-tag]:max-w-full [&_.ant-tag]:truncate'>
