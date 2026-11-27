@@ -159,6 +159,32 @@ func TestPgxTracer_Query(t *testing.T) {
 			},
 		},
 		{
+			name: "constraint violation is recorded without failing the span",
+			sql:  testSQLCQuery,
+			end: pgx.TraceQueryEndData{
+				Err: &pgconn.PgError{Code: "23505", Message: "duplicate key"},
+			},
+			assert: func(t *testing.T, span sdktrace.ReadOnlySpan) {
+				require.Equal(t, codes.Unset, span.Status().Code)
+				attrs := attributesOf(span)
+				require.Equal(t, "23505", attrs[semconv.DBResponseStatusCodeKey].AsString())
+				require.Len(t, span.Events(), 1)
+				require.Equal(t, "exception", span.Events()[0].Name)
+			},
+		},
+		{
+			name: "data exception is recorded without failing the span",
+			sql:  testSQLCQuery,
+			end: pgx.TraceQueryEndData{
+				Err: &pgconn.PgError{Code: "22P02", Message: "invalid input syntax"},
+			},
+			assert: func(t *testing.T, span sdktrace.ReadOnlySpan) {
+				require.Equal(t, codes.Unset, span.Status().Code)
+				attrs := attributesOf(span)
+				require.Equal(t, "22P02", attrs[semconv.DBResponseStatusCodeKey].AsString())
+			},
+		},
+		{
 			name: "non-server error has no status code",
 			sql:  testSQLCQuery,
 			end:  pgx.TraceQueryEndData{Err: context.DeadlineExceeded},

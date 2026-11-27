@@ -244,11 +244,19 @@ func rowCountAttributes(tag pgconn.CommandTag) []attribute.KeyValue {
 	}
 }
 
-// recordError marks the span as failed and records what went wrong.
+// recordError records what went wrong and marks the span as failed, unless
+// the server rejected the data: a data exception (SQLSTATE class 22) or an
+// integrity constraint violation (class 23), which callers translate into
+// client errors.
 func recordError(span trace.Span, err error) {
 	span.RecordError(err)
-	span.SetStatus(codes.Error, err.Error())
 	span.SetAttributes(statusCodeAttributes(err)...)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) &&
+		(strings.HasPrefix(pgErr.Code, "22") || strings.HasPrefix(pgErr.Code, "23")) {
+		return
+	}
+	span.SetStatus(codes.Error, err.Error())
 }
 
 // statusCodeAttributes returns the server's SQLSTATE code for errors that
