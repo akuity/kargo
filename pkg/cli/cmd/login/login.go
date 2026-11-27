@@ -9,10 +9,12 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -371,9 +373,7 @@ func ssoLogin(
 		oauth2.SetAuthURLParam("code_challenge", codeChallenge),
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
 	)
-	if err = browser.OpenURL(u); err != nil {
-		return "", "", fmt.Errorf("error opening system default browser: %w", err)
-	}
+	presentAuthURL(os.Stderr, u)
 
 	var code string
 	select {
@@ -404,6 +404,24 @@ func ssoLogin(
 	<-time.After(2 * time.Second)
 
 	return idToken, token.RefreshToken, nil
+}
+
+var openBrowser = browser.OpenURL
+
+// presentAuthURL prints the authorization URL to w, then tries to open it in
+// the default web browser. It prints first because opening can block, for
+// example on a text-based browser. A failure to open is not an error, because
+// the user can open the printed URL.
+func presentAuthURL(w io.Writer, u string) {
+	_, _ = fmt.Fprintf(
+		w,
+		"Opening the following URL in your default web browser. "+
+			"If no browser opens, open the URL yourself to log in:\n\n%s\n\n",
+		u,
+	)
+	if err := openBrowser(u); err != nil {
+		_, _ = fmt.Fprintf(w, "error opening system default browser: %v\n", err)
+	}
 }
 
 // receiveAuthCode runs a web server that serves the callback endpoint for

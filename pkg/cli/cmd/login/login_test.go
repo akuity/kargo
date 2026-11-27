@@ -1,8 +1,10 @@
 package login
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -152,6 +154,53 @@ func Test_loginOptions_complete(t *testing.T) {
 			}
 			o.complete(testCase.args)
 			testCase.assert(t, o)
+		})
+	}
+}
+
+func TestPresentAuthURL(t *testing.T) {
+	const testURL = "https://idp.example.com/authorize?state=fake-state"
+	testCases := []struct {
+		name    string
+		openErr error
+		assert  func(t *testing.T, output string, opened []string)
+	}{
+		{
+			name: "browser opens",
+			assert: func(t *testing.T, output string, opened []string) {
+				require.Equal(t, []string{testURL}, opened)
+				require.Contains(t, output, testURL)
+				require.Contains(t, output, "Opening the following URL")
+				require.NotContains(t, output, "error opening system default browser")
+			},
+		},
+		{
+			name:    "browser fails to open",
+			openErr: errors.New("executable file not found in $PATH"),
+			assert: func(t *testing.T, output string, opened []string) {
+				require.Equal(t, []string{testURL}, opened)
+				require.Contains(t, output, testURL)
+				require.Contains(
+					t,
+					output,
+					"error opening system default browser: executable file not found in $PATH",
+				)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			// Not parallel: the test replaces the package-level openBrowser.
+			var opened []string
+			origOpenBrowser := openBrowser
+			t.Cleanup(func() { openBrowser = origOpenBrowser })
+			openBrowser = func(u string) error {
+				opened = append(opened, u)
+				return testCase.openErr
+			}
+			var out bytes.Buffer
+			presentAuthURL(&out, testURL)
+			testCase.assert(t, out.String(), opened)
 		})
 	}
 }
