@@ -17,29 +17,6 @@
         color: var(--kargo-color-text-tertiary, #8c8c8c);
     }
 
-    // The arrows stay small to look at but are a comfortable target: the box
-    // is 20px square, and the negative block margin keeps that from pushing
-    // the rows it sits in any further apart.
-    .pagerButton {
-        width: 20px;
-        min-width: 20px;
-        height: 20px;
-        margin-block: -4px;
-        padding: 0;
-        font-size: 9px;
-        color: var(--kargo-color-text-tertiary, #8c8c8c);
-    }
-
-    // The arrows stay exactly as they are under the pointer and through a
-    // click -- no background, no change of color. AntD's text-button states
-    // are more specific than this selector, hence !important.
-    .pagerButton:hover,
-    .pagerButton:focus,
-    .pagerButton:active {
-        background: transparent !important;
-        color: var(--kargo-color-text-tertiary, #8c8c8c);
-    }
-
     .success {
         @apply bg-green-500;
         @apply text-white;
@@ -366,11 +343,36 @@ a.statusValueLink {
 
 // The freight the Stage is carrying sits in a well cut into the card, down to
 // the color of the page behind it, so it reads as the node's payload rather
-// than as one more row of status.
+// than as one more row of status. Its pager is styled here rather than under
+// the node, since the well also stands on its own in the pipeline list's
+// Version column.
 .freight {
     padding: 8px 9px;
     border-radius: 8px;
     background: var(--kargo-color-bg-layout, #f5f5f5);
+
+    // The arrows stay small to look at but are a comfortable target: the box
+    // is 20px square, and the negative block margin keeps that from pushing
+    // the rows it sits in any further apart.
+    .pagerButton {
+        width: 20px;
+        min-width: 20px;
+        height: 20px;
+        margin-block: -4px;
+        padding: 0;
+        font-size: 9px;
+        color: var(--kargo-color-text-tertiary, #8c8c8c);
+    }
+
+    // The arrows stay exactly as they are under the pointer and through a
+    // click -- no background, no change of color. AntD's text-button states
+    // are more specific than this selector, hence !important.
+    .pagerButton:hover,
+    .pagerButton:focus,
+    .pagerButton:active {
+        background: transparent !important;
+        color: var(--kargo-color-text-tertiary, #8c8c8c);
+    }
 }
 
 // On dark the page sits far below the card, so the well is lifted off it a
