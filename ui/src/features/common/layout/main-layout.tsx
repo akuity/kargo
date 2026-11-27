@@ -82,6 +82,9 @@ const AccountMenu = () => {
 
   const displayName = getDisplayName(JWTInfo);
   const email = asText(getUserEmail(JWTInfo));
+  // The name can fall back to the email, and the local admin's "email" is
+  // 'Admin', so skip the second line when it would repeat the name.
+  const showEmail = email.toLowerCase() !== displayName.toLowerCase();
 
   const items: MenuProps['items'] = [
     {
@@ -94,7 +97,7 @@ const AccountMenu = () => {
           <div className='truncate'>
             <Typography.Text strong>{displayName}</Typography.Text>
           </div>
-          <div className='truncate text-xs'>{email || 'Signed in'}</div>
+          {showEmail && <div className='truncate text-xs'>{email || 'Signed in'}</div>}
         </div>
       )
     },
@@ -132,6 +135,11 @@ const AccountMenu = () => {
         // 'hover' alone, rc-trigger handles taps itself and then ignores the
         // mouse for the rest of the session on touchscreen laptops.
         trigger={['hover', 'click']}
+        // Hover opens the menu before a click lands, so a click must only open
+        // it, never toggle it shut. It still closes on leaving, Escape or a click
+        // outside. AntD forwards hideAction to rc-trigger but doesn't declare it,
+        // hence the spread.
+        {...{ hideAction: ['hover'] }}
         // Time to cross the gap between the avatar and the menu.
         mouseLeaveDelay={0.3}
         placement='rightBottom'
