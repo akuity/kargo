@@ -10,6 +10,7 @@ import { useGetAnalysisRun } from '@ui/gen/api/v2/verifications/verifications';
 
 import { AnalysisRunLogs } from '../analysis-run-logs/analysis-run-logs';
 import YamlEditor from '../code-editor/yaml-editor-lazy';
+import { LoadingState } from '../loading-state';
 import { ModalProps } from '../modal/use-modal';
 
 import { MetricLabel } from './metric-label/metric-label';
@@ -123,7 +124,11 @@ export const AnalysisModal = ({
         </Tabs.TabPane>
 
         <Tabs.TabPane key='logs' tab='Logs' icon={<FontAwesomeIcon icon={faHistory} />}>
-          <AnalysisRunLogs linkFullScreen analysisRun={analysisRunData?.data} />
+          {isLoading ? (
+            <LoadingState />
+          ) : (
+            <AnalysisRunLogs linkFullScreen analysisRun={analysisRunData?.data} />
+          )}
         </Tabs.TabPane>
       </Tabs>
     </Modal>
