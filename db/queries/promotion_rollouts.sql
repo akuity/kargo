@@ -12,8 +12,9 @@
 -- Stage the mirror has not recorded has no row, so nothing is inserted. The
 -- targets CTE records the rollout's Targets in the same statement (an INSERT
 -- in a data-modifying CTE always runs, even though the outer SELECT reads
--- only from rollout), so a Target that no longer exists fails the whole
--- create.
+-- only from rollout). Each is recorded under the rollout's Project, which
+-- its reference to the Target includes, so a Target that no longer exists,
+-- or that belongs to another Project, fails the whole create.
 -- name: CreatePromotionRollout :one
 WITH stage AS (
     UPDATE stages SET last_promotion_rollout_number = last_promotion_rollout_number + 1
@@ -45,8 +46,9 @@ WITH stage AS (
     FROM stage
     RETURNING *
 ), targets AS (
-    INSERT INTO promotion_rollout_targets (promotion_rollout_id, target_id)
-    SELECT rollout.id, unnest(sqlc.arg(target_ids)::uuid[]) FROM rollout
+    INSERT INTO promotion_rollout_targets (promotion_rollout_id, project_name, target_id)
+    SELECT rollout.id, rollout.project_name, unnest(sqlc.arg(target_ids)::uuid[])
+    FROM rollout
 )
 SELECT * FROM rollout;
 

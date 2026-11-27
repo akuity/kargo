@@ -28,6 +28,20 @@ const nameConstraint = "promotion_rollouts_project_name_name_key"
 // status update that would make a second one.
 const runningConstraint = "promotion_rollouts_running_key"
 
+// targetConstraint is the foreign key that holds each Target recorded with a
+// PromotionRollout to a Target of the rollout's own Project. Its violation is
+// how the database reports a Target that is not one, whether because it no
+// longer exists or because it belongs to another Project.
+const targetConstraint = "promotion_rollout_targets_target_fkey"
+
+// ErrForeignTarget is returned by Create when a Target it was given belongs
+// to a Project other than the PromotionRollout's. It is a
+// database.ErrInvalid: no retry makes such a Target one the rollout may
+// promote to.
+var ErrForeignTarget = fmt.Errorf(
+	"%w: a Target belongs to another Project", database.ErrInvalid,
+)
+
 // Key identifies a PromotionRollout: the Project it belongs to and its name.
 // It is what everything outside the database addresses a rollout by, and
 // the request type of the rollout controller.
@@ -127,9 +141,12 @@ func New(queries *database.Queries, events *nats.Publisher) Store {
 // exist. The rollout promotes to the Targets with the given ids, recorded
 // with it; no ids record that it promotes to none.
 // database.ErrAlreadyExists says a rollout of that name exists,
-// database.ErrNotMirrored that the Stage has no mirrored row yet, and
-// database.ErrConflict that a Target no longer exists. Nothing is written
-// in any of those cases.
+// database.ErrNotMirrored that the Stage has no mirrored row yet,
+// database.ErrConflict that a Target no longer exists, and ErrForeignTarget
+// that a Target belongs to another Project. The database refuses a Target
+// that is not the Project's in the statement that would record it, so
+// nothing is written in any of those cases: the rollout is not created with
+// the rest of its Targets.
 func (s *store) Create(
 	ctx context.Context,
 	project string,
@@ -159,6 +176,7 @@ func (s *store) Create(
 		err = fmt.Errorf("Stage %q: %w", rollout.StageName, database.ErrNotMirrored)
 	}
 	if err != nil {
+		err = s.explainRefusedTarget(ctx, err, project, ids)
 		return Rollout{}, rolloutError(err, project, rollout.Name)
 	}
 	rollouts, err := s.attachTargets(ctx, []database.PromotionRolloutRow{database.PromotionRolloutRow(created)})
@@ -471,6 +489,58 @@ func (s *store) updateMissed(
 	return fmt.Errorf("%w: the PromotionRollout has been modified", database.ErrConflict)
 }
 
+// explainRefusedTarget explains a create the database refused because one of
+// the Targets is not the Project's: ErrForeignTarget, naming them, if any of
+// the Targets belongs to another Project. Any other error is returned as it
+// is, as is the refusal itself when none does, since then a Target no longer
+// exists.
+//
+// The database has already refused the create by the time this reads, so
+// the read decides nothing but the error. It cannot be made in a caller's
+// transaction, which the refusal has aborted; there too the refusal is
+// returned as it is.
+func (s *store) explainRefusedTarget(
+	ctx context.Context,
+	err error,
+	project string,
+	targetIDs []uuid.UUID,
+) error {
+	if !isRefusedTarget(err) {
+		return err
+	}
+	foreign, listErr := s.queries.ListTargetsOutsideProject(
+		ctx,
+		database.ListTargetsOutsideProjectParams{
+			ProjectName: project,
+			Ids:         targetIDs,
+		},
+	)
+	if listErr != nil || len(foreign) == 0 {
+		return err
+	}
+	return foreignTargetError(foreign)
+}
+
+// isRefusedTarget reports whether the error is the database refusing a
+// Target that is not one of the rollout's Project's.
+func isRefusedTarget(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) &&
+		pgErr.Code == "23503" &&
+		pgErr.ConstraintName == targetConstraint
+}
+
+// foreignTargetError is ErrForeignTarget naming the Targets it concerns by
+// their ids. It does not say which Projects they belong to: that is not the
+// caller's to learn.
+func foreignTargetError(ids []uuid.UUID) error {
+	names := make([]string, len(ids))
+	for i, id := range ids {
+		names[i] = id.String()
+	}
+	return fmt.Errorf("%w: %s", ErrForeignTarget, strings.Join(names, ", "))
+}
+
 // attachTargets pairs each row with its Targets, read in one query for all
 // of them, keeping the rows' order. A rollout with no Targets gets an empty
 // list rather than none.
@@ -531,7 +601,7 @@ func checkPreconditions(rollout, current database.PromotionRolloutRow) error {
 // rolloutError names the PromotionRollout an error concerns and translates
 // what the database reports into the sentinel errors of pkg/database, so
 // that callers can tell a duplicate, a vanished Target or a bad value apart
-// from a failure.
+// from a failure. An error that is one of those already passes through.
 func rolloutError(err error, project, name string) error {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
@@ -542,6 +612,8 @@ func rolloutError(err error, project, name string) error {
 			err = fmt.Errorf("%w: another PromotionRollout of the Stage is Running", database.ErrConflict)
 		case pgErr.Code == "23503":
 			// A Target the rollout is being created with no longer exists.
+			// One that belongs to another Project fails the same reference,
+			// and Create has told it apart by now.
 			err = fmt.Errorf("%w: %s", database.ErrConflict, pgErr.Message)
 		case pgErr.Code == "23514" || strings.HasPrefix(pgErr.Code, "22"):
 			err = fmt.Errorf("%w: %s", database.ErrInvalid, pgErr.Message)

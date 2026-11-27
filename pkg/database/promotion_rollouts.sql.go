@@ -44,8 +44,9 @@ WITH stage AS (
     FROM stage
     RETURNING id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id
 ), targets AS (
-    INSERT INTO promotion_rollout_targets (promotion_rollout_id, target_id)
-    SELECT rollout.id, unnest($8::uuid[]) FROM rollout
+    INSERT INTO promotion_rollout_targets (promotion_rollout_id, project_name, target_id)
+    SELECT rollout.id, rollout.project_name, unnest($8::uuid[])
+    FROM rollout
 )
 SELECT id, project_name, name, stage_name, number, freight_name, max_concurrent, max_failures, created_by, created_at, updated_at, status_phase, status_reason, status_message, status_started_at, status_finished_at, stage_id FROM rollout
 `
@@ -94,8 +95,9 @@ type CreatePromotionRolloutRow struct {
 // Stage the mirror has not recorded has no row, so nothing is inserted. The
 // targets CTE records the rollout's Targets in the same statement (an INSERT
 // in a data-modifying CTE always runs, even though the outer SELECT reads
-// only from rollout), so a Target that no longer exists fails the whole
-// create.
+// only from rollout). Each is recorded under the rollout's Project, which
+// its reference to the Target includes, so a Target that no longer exists,
+// or that belongs to another Project, fails the whole create.
 func (q *Queries) CreatePromotionRollout(ctx context.Context, arg CreatePromotionRolloutParams) (CreatePromotionRolloutRow, error) {
 	row := q.db.QueryRow(ctx, createPromotionRollout,
 		arg.ProjectName,

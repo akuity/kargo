@@ -2,6 +2,7 @@ package promotionrolloutstore
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -99,6 +100,15 @@ func TestRolloutError(t *testing.T) {
 			},
 		},
 		{
+			name: "Target of another Project",
+			err:  foreignTargetError([]uuid.UUID{uuid.New()}),
+			assert: func(t *testing.T, err error) {
+				require.ErrorIs(t, err, ErrForeignTarget)
+				require.ErrorIs(t, err, database.ErrInvalid)
+				require.NotErrorIs(t, err, database.ErrConflict)
+			},
+		},
+		{
 			name: "check constraint",
 			err:  &pgconn.PgError{Code: "23514", Message: "violates check constraint"},
 			assert: func(t *testing.T, err error) {
@@ -136,6 +146,60 @@ func TestRolloutError(t *testing.T) {
 			testCase.assert(t, err)
 		})
 	}
+}
+
+func TestIsRefusedTarget(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name: "not a database error",
+			err:  errors.New("connection reset"),
+		},
+		{
+			name: "another kind of violation of the constraint's name",
+			err:  &pgconn.PgError{Code: "23505", ConstraintName: targetConstraint},
+		},
+		{
+			name: "another foreign key",
+			err: &pgconn.PgError{
+				Code:           "23503",
+				ConstraintName: "promotion_rollouts_stage_fkey",
+			},
+		},
+		{
+			name:     "the Target reference",
+			err:      &pgconn.PgError{Code: "23503", ConstraintName: targetConstraint},
+			expected: true,
+		},
+		{
+			name: "the Target reference, wrapped",
+			err: fmt.Errorf(
+				"error: %w",
+				&pgconn.PgError{Code: "23503", ConstraintName: targetConstraint},
+			),
+			expected: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, testCase.expected, isRefusedTarget(testCase.err))
+		})
+	}
+}
+
+func TestForeignTargetError(t *testing.T) {
+	t.Parallel()
+	first, second := uuid.New(), uuid.New()
+	err := foreignTargetError([]uuid.UUID{first, second})
+	require.ErrorIs(t, err, ErrForeignTarget)
+	require.ErrorIs(t, err, database.ErrInvalid)
+	require.ErrorContains(t, err, "a Target belongs to another Project")
+	require.ErrorContains(t, err, first.String()+", "+second.String())
 }
 
 func TestGroupTargets(t *testing.T) {

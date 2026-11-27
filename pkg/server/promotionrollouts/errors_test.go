@@ -9,6 +9,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/akuity/kargo/pkg/database"
+	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
 	libhttp "github.com/akuity/kargo/pkg/http"
 )
 
@@ -19,6 +20,9 @@ func TestStoreError(t *testing.T) {
 	require.True(t, apierrors.IsConflict(storeError(database.ErrConflict, "x")))
 	var httpErr *libhttp.HTTPError
 	require.ErrorAs(t, storeError(database.ErrInvalid, "x"), &httpErr)
+	require.Equal(t, 422, httpErr.Code())
+	// A Target of another Project is a value the store rejects.
+	require.ErrorAs(t, storeError(promotionrolloutstore.ErrForeignTarget, "x"), &httpErr)
 	require.Equal(t, 422, httpErr.Code())
 	require.ErrorAs(t, storeError(database.ErrNotMirrored, "x"), &httpErr)
 	require.Equal(t, 503, httpErr.Code())

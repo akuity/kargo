@@ -104,6 +104,15 @@ SELECT * FROM targets
 WHERE project_name = sqlc.arg(project_name)
 ORDER BY name;
 
+-- Those of the given Targets that belong to a Project other than the named
+-- one. It explains a write the schema refused for naming a Target that is
+-- not the Project's; it enforces nothing itself.
+-- name: ListTargetsOutsideProject :many
+SELECT id FROM targets
+WHERE id = ANY(sqlc.arg(ids)::uuid[])
+    AND project_name <> sqlc.arg(project_name)
+ORDER BY id;
+
 -- updated_at doubles as the row's version, so it must grow with every write
 -- to a row even across a clock step or two writes in one microsecond. The
 -- TargetSet name never changes, so an update asserts it rather than setting
