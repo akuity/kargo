@@ -13,7 +13,8 @@ import (
 type attributesKey struct{}
 
 // ContextWithAttributes returns ctx carrying attrs, added to any it already
-// carries, for StartSpan. A no-op when tracing is off.
+// carries, for StartSpan and Kubernetes client spans. A no-op when tracing is
+// off.
 func ContextWithAttributes(
 	ctx context.Context,
 	attrs ...attribute.KeyValue,
