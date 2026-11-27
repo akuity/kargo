@@ -1,5 +1,4 @@
 import { DndContext } from '@dnd-kit/core';
-import { notification } from 'antd';
 import React, { useEffect, useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
@@ -91,20 +90,13 @@ export const DndPromotionContext = ({ children, projectName }: Props) => {
           return;
         }
 
-        // make sure that the freight can be promoted to this stage by checking the origin
+        // make sure that the freight can be promoted to this stage by checking
+        // the origin. The overlay already told the user why it can't while
+        // they hovered, so a rejected drop does nothing
         if (requestedFreightNames.includes(originName)) {
           setStage(stageName);
           setFreight(active.id as string);
-          return;
         }
-
-        notification.error({
-          message: `Can't promote to Stage "${stageName}"`,
-          description:
-            `This Stage isn't connected to the "${originName}" Warehouse. ` +
-            'Freight can only be promoted to Stages that request Freight from its Warehouse.',
-          placement: 'bottomRight'
-        });
       }}
     >
       {children}
