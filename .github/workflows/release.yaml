@@ -111,7 +111,7 @@ jobs:
           ${{ steps.repo.outputs.repo}}@${{ steps.image.outputs.digest}}
     - name: Install Grype
       id: grype
-      uses: anchore/scan-action/download-grype@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+      uses: anchore/scan-action/download-grype@11983a512817154c80a9db660c1a184be7513ed6 # v7.4.3
       with:
         cache-db: true
     - name: Scan image for CVEs
