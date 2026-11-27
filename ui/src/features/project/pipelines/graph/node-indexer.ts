@@ -40,3 +40,9 @@ export const stackedIndexer = {
   index: (parentNode: string) => `stacked/${parentNode}`,
   is: (id: string) => id.startsWith('stacked/')
 };
+
+export const stageGroupIndexer = {
+  index: (group: string) => `stage-group/${group}`,
+  is: (id: string) => id.startsWith('stage-group/'),
+  getGroupName: (index: string) => index.slice('stage-group/'.length)
+};

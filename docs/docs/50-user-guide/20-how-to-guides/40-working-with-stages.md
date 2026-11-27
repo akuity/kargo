@@ -584,6 +584,47 @@ Users with credentials for and sufficient permissions within the Kargo control p
 
 :::
 
+### Grouping Stages
+
+A project with many similar `Stage`s, such as one `Stage` per region, cluster or
+tenant fed from the same upstream, can make the pipeline hard to read. To tidy this up,
+add the `kargo.akuity.io/stage-group` label to those `Stage`s, using the same
+value for each `Stage` that belongs together:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: dev-1
+  namespace: kargo-demo
+  labels:
+    kargo.akuity.io/stage-group: dev
+spec:
+  # ...
+```
+
+In the UI, `Stage`s that share a group are collapsed by default into a single
+node (or row, in the list view) showing the group name, the number of `Stage`s
+and how many of them are healthy, unhealthy or of unknown health. Click
+<Hlt>Expand</Hlt> to show the group's `Stage`s, and use the collapse button on
+any of them to fold the group again. A group that contains a `Stage` matching
+the search is shown expanded while the search is active.
+
+A group is collapsed only if its `Stage`s are interchangeable in the graph: they
+all request `Freight` from the same sources, the same `Stage`s request `Freight`
+from each of them, and none of them requests `Freight` from another. Otherwise
+the collapsed node could not draw its edges truthfully, so the group stays
+expanded and the collapse button on its `Stage`s is disabled, with a tooltip
+explaining why. The list view always groups such `Stage`s, since it draws no
+edges.
+
+:::note
+
+Grouping affects only how `Stage`s are displayed in the UI. It does not change
+how `Stage`s are reconciled, promoted or verified.
+
+:::
+
 ### Creating a Stage
 
 <Tabs groupId="create-stage">

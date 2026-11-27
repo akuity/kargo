@@ -18,6 +18,7 @@ import { Stage } from '@ui/gen/api/v2/models';
 import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 import { GraphContext } from '../context/graph-context';
 import { StackedNodes } from '../nodes/stacked-nodes';
+import { StageGroupNode } from '../nodes/stage-group-node';
 import warehouseStyles from '../nodes/warehouse-node.module.less';
 import {
   getWarehouseState,
@@ -25,6 +26,7 @@ import {
   keepFailureThroughRetry,
   WarehouseState
 } from '../nodes/warehouse-state';
+import { getStageGroup, groupStages } from '../stage-groups';
 
 import { CustomRepoSubscriptionNode, CustomStageNode, CustomWarehouseNode } from './custom-node';
 import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
@@ -40,6 +42,7 @@ type GraphProps = {
 
 const nodeTypes = {
   [reactFlowNodeConstants.STACKED_NODE]: StackedNodes,
+  [reactFlowNodeConstants.STAGE_GROUP_NODE]: StageGroupNode,
   [reactFlowNodeConstants.CUSTOM_WAREHOUSE_NODE]: CustomWarehouseNode,
   [reactFlowNodeConstants.CUSTOM_STAGE_NODE]: CustomStageNode,
   [reactFlowNodeConstants.CUSTOM_REPO_SUBSCRIPTION_NODE]: CustomRepoSubscriptionNode
@@ -72,6 +75,32 @@ export const Graph = (props: GraphProps) => {
     setStackedNodesParents(stackedNodesParents.filter((node) => node !== parentNode));
   };
 
+  const expandedStageGroups = filterContext?.preferredFilter?.expandedStageGroups || [];
+
+  const setExpandedStageGroups = (groups: string[]) =>
+    filterContext?.setPreferredFilter({
+      ...filterContext?.preferredFilter,
+      expandedStageGroups: groups
+    });
+
+  const onExpandGroup = (group: string) => {
+    if (!expandedStageGroups.includes(group)) {
+      setExpandedStageGroups([...expandedStageGroups, group]);
+    }
+  };
+
+  const onCollapseGroup = (group: string) => {
+    setExpandedStageGroups(expandedStageGroups.filter((g) => g !== group));
+  };
+
+  // A group holding a stage that matches the search is shown expanded, so search hits are never
+  // hidden. This does not touch the saved choice: clearing the search collapses it again.
+  const groupSearch = filterContext?.stageSearch || '';
+  const visibleStageGroups = useMemo(() => {
+    const { members, collapsed } = groupStages(props.stages, expandedStageGroups, groupSearch);
+    return Object.keys(members).filter((group) => !collapsed.has(group));
+  }, [props.stages, expandedStageGroups, groupSearch]);
+
   const [redraw, setRedraw] = useState(false);
 
   // Cheap placeholders on first paint; swap to real components on the next tick.
@@ -92,7 +121,8 @@ export const Graph = (props: GraphProps) => {
     {
       afterNodes: stackedNodesParents
     },
-    filterContext?.preferredFilter?.hideSubscriptions
+    filterContext?.preferredFilter?.hideSubscriptions,
+    visibleStageGroups
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes);
@@ -122,12 +152,43 @@ export const Graph = (props: GraphProps) => {
               };
             }
 
+            if (
+              node.type === reactFlowNodeConstants.STAGE_GROUP_NODE &&
+              (node.data.stages as Stage[]).some((s) => stageByIndex.has(stageIndexer.index(s)))
+            ) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  stages: (node.data.stages as Stage[]).map(
+                    (s) => stageByIndex.get(stageIndexer.index(s)) || s
+                  )
+                }
+              };
+            }
+
             return node;
           })
         );
 
+        // A member of a collapsed group has no node of its own: the group node stands for it,
+        // as long as the stage still carries that group's label.
+        const isInGroupNode = (stage: Stage) =>
+          nodes.some(
+            (n) =>
+              n.type === reactFlowNodeConstants.STAGE_GROUP_NODE &&
+              n.data.name === getStageGroup(stage) &&
+              (n.data.stages as Stage[]).some(
+                (s) => stageIndexer.index(s) === stageIndexer.index(stage)
+              )
+          );
+
+        const ungroupedStages = stages.filter((stage) => !isInGroupNode(stage));
+
         // A stage without an existing node is new and needs a full relayout.
-        if (stages.some((stage) => !nodes.find((n) => n.id === stageIndexer.index(stage)))) {
+        if (
+          ungroupedStages.some((stage) => !nodes.find((n) => n.id === stageIndexer.index(stage)))
+        ) {
           setTimeout(() => {
             setRedraw((prev) => !prev);
           });
@@ -358,6 +419,9 @@ export const Graph = (props: GraphProps) => {
         stackedNodesParents,
         onStack,
         onUnstack,
+        onExpandGroup,
+        onCollapseGroup,
+        uncollapsibleStageGroups: graph.uncollapsibleStageGroups,
         ready,
         hoveredWarehouseName,
         setHoveredWarehouseName,

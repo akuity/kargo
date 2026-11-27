@@ -1,5 +1,6 @@
 import { useDroppable } from '@dnd-kit/core';
 import {
+  faCompress,
   faEllipsisVertical,
   faMinus,
   faShareNodes,
@@ -27,6 +28,7 @@ import { stageIndexer } from '../graph/node-indexer';
 import { AutoPromotionStatusIcon } from '../promotion/auto-promotion-status-icon';
 import { DropOverlay } from '../promotion/drag-and-drop/drop-overlay';
 import { isPromotionWindowClosed } from '../promotion/promotion-window';
+import { getStageGroup } from '../stage-groups';
 
 import { AnalysisRunLogsLink } from './analysis-run-logs-link';
 import style from './node-size-source-of-truth.module.less';
@@ -53,6 +55,7 @@ export const StageNode = (props: { stage: Stage }) => {
   const graphContext = useGraphContext();
   const actionContext = useActionContext();
 
+  const stageGroup = getStageGroup(props.stage);
   const stageNodeIndex = useMemo(() => stageIndexer.index(props.stage), [props.stage]);
 
   const accentColor = useStageAccentColor(props.stage);
@@ -221,6 +224,22 @@ export const StageNode = (props: { stage: Stage }) => {
               </Flex>
             </div>
           </Link>
+
+          {stageGroup && graphContext && (
+            <Button
+              size='small'
+              type='text'
+              className={classNames(styles.action, 'flex-none')}
+              disabled={graphContext.uncollapsibleStageGroups.includes(stageGroup)}
+              title={
+                graphContext.uncollapsibleStageGroups.includes(stageGroup)
+                  ? `Group ${stageGroup} cannot be collapsed: its Stages have different upstream or downstream Stages`
+                  : `Collapse group ${stageGroup}`
+              }
+              icon={<FontAwesomeIcon icon={faCompress} />}
+              onClick={() => graphContext.onCollapseGroup(stageGroup)}
+            />
+          )}
 
           <Dropdown trigger={['click']} classNames={{ root: 'w-fit' }} menu={{ items: menuItems }}>
             <Button

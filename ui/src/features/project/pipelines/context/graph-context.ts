@@ -14,6 +14,12 @@ export type GraphContextType = {
   onStack(parentNode: string): void;
   onUnstack(parentNode: string): void;
 
+  // stage groups (label kargo.akuity.io/stage-group) are collapsed unless expanded
+  onExpandGroup(group: string): void;
+  onCollapseGroup(group: string): void;
+  // groups whose members have different upstream or downstream stages; never collapsed
+  uncollapsibleStageGroups: string[];
+
   // false during the first render pass so each CustomNode renders a cheap
   // fixed-size placeholder. ReactFlow always mounts every node once -- even
   // with onlyRenderVisibleElements -- so this skips heavy node bodies on init

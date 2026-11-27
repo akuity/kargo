@@ -1,12 +1,18 @@
 import { Handle, Position } from '@xyflow/react';
 import { Button, Card, Typography } from 'antd';
 import classNames from 'classnames';
+import { ReactNode } from 'react';
 
 import { useGraphContext } from '../context/graph-context';
 
 import styles from './node-size-source-of-truth.module.less';
 
-export const StackedNodeBody = (props: { id?: string; count?: number; onClick?: () => void }) => (
+export const StackedNodeBody = (props: {
+  id?: string;
+  count?: number;
+  onClick?: () => void;
+  children?: ReactNode;
+}) => (
   <div
     id={props.id}
     className={classNames(styles['stacked-node-size'], 'relative nodrag cursor-default')}
@@ -14,6 +20,7 @@ export const StackedNodeBody = (props: { id?: string; count?: number; onClick?: 
     <div className='absolute w-full h-full -top-1 -right-1 bg-white dark:bg-neutral-800 shadow-md rounded-md z-10' />
     <div className='absolute w-full h-full -top-2 -right-2 bg-white dark:bg-neutral-800 shadow-md rounded-md' />
     <Card className={classNames(styles['stacked-node-size'], 'relative z-20')}>
+      {props.children}
       <Button size='small' onClick={props.onClick}>
         <Typography.Text type='secondary'>
           Expand {props.count !== undefined ? `${props.count} stages` : 'stages'}
