@@ -23,6 +23,7 @@ import (
 
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	libargocd "github.com/akuity/kargo/pkg/argocd"
 	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/controller"
@@ -509,8 +510,12 @@ func (o *controllerOptions) setupReconcilers(
 	// A nil client must reach the reconciler as a nil interface of its own
 	// type, which is what it tests for.
 	var targetGetter promotion.TargetGetter
+	// The FreightCollection a PromotionRollout recorded is read the same way,
+	// for the Promotions the rollout created.
+	var rolloutGetter api.RolloutFreightGetter
 	if targetClient != nil {
 		targetGetter = targetClient
+		rolloutGetter = targetClient
 	}
 
 	healthCheckers.Initialize(argoCDClient)
@@ -535,6 +540,7 @@ func (o *controllerOptions) setupReconcilers(
 		),
 		promotionsReconcilerCfg,
 		targetGetter,
+		rolloutGetter,
 		event.NewDefaultingSender(eventSender, promotionsReconcilerCfg.Name()),
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)

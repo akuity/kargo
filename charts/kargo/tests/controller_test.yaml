@@ -464,6 +464,21 @@ tests:
               - get
               - list
 
+  - it: grants get on PromotionRollouts, to read their FreightCollections through the API server
+    documentSelector:
+      path: metadata.name
+      value: kargo-controller
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups:
+              - kargo.akuity.io
+            resources:
+              - promotionrollouts
+            verbs:
+              - get
+
   - it: grants PromotionRequest status patch access
     documentSelector:
       path: metadata.name

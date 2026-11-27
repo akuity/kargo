@@ -480,15 +480,26 @@ func (q *Queries) ListProjectPromotionRollouts(ctx context.Context, arg ListProj
 }
 
 const listPromotionRolloutFreight = `-- name: ListPromotionRolloutFreight :many
-SELECT promotion_rollout_id, origin_kind, origin_name, freight_name, reference FROM promotion_rollout_freight
-WHERE promotion_rollout_id = $1
-ORDER BY origin_kind, origin_name
+SELECT recorded.promotion_rollout_id, recorded.origin_kind, recorded.origin_name, recorded.freight_name, recorded.reference
+FROM promotion_rollout_freight AS recorded
+JOIN promotion_rollouts AS rollout ON rollout.id = recorded.promotion_rollout_id
+WHERE rollout.project_name = $1
+    AND recorded.promotion_rollout_id = $2
+ORDER BY recorded.origin_kind, recorded.origin_name
 `
 
-// A rollout's FreightCollection, one row per origin, in origin order. A
-// rollout started before collections were recorded has no rows.
-func (q *Queries) ListPromotionRolloutFreight(ctx context.Context, promotionRolloutID uuid.UUID) ([]PromotionRolloutFreightRow, error) {
-	rows, err := q.db.Query(ctx, listPromotionRolloutFreight, promotionRolloutID)
+type ListPromotionRolloutFreightParams struct {
+	ProjectName        string
+	PromotionRolloutID uuid.UUID
+}
+
+// A rollout's FreightCollection, one row per origin, in origin order, if
+// the rollout with that id is the named Project's: an id is not enough to
+// read another Project's rows. A rollout started before collections were
+// recorded has no rows; see PromotionRolloutIDExists to tell it apart from
+// one that does not exist.
+func (q *Queries) ListPromotionRolloutFreight(ctx context.Context, arg ListPromotionRolloutFreightParams) ([]PromotionRolloutFreightRow, error) {
+	rows, err := q.db.Query(ctx, listPromotionRolloutFreight, arg.ProjectName, arg.PromotionRolloutID)
 	if err != nil {
 		return nil, err
 	}
@@ -857,6 +868,26 @@ func (q *Queries) ListStagePromotionRolloutsOfFreight(ctx context.Context, arg L
 		return nil, err
 	}
 	return items, nil
+}
+
+const promotionRolloutIDExists = `-- name: PromotionRolloutIDExists :one
+SELECT EXISTS (
+    SELECT 1 FROM promotion_rollouts
+    WHERE project_name = $1 AND id = $2
+)
+`
+
+type PromotionRolloutIDExistsParams struct {
+	ProjectName string
+	ID          uuid.UUID
+}
+
+// Whether the named Project has a rollout with the given id.
+func (q *Queries) PromotionRolloutIDExists(ctx context.Context, arg PromotionRolloutIDExistsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, promotionRolloutIDExists, arg.ProjectName, arg.ID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 const updatePromotionRolloutStatus = `-- name: UpdatePromotionRolloutStatus :one

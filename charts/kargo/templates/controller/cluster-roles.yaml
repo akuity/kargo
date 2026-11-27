@@ -62,6 +62,15 @@ rules:
   verbs:
   - get
   - list
+# PromotionRollouts live in the database too. The controller reads the
+# FreightCollection a rollout recorded, for the Promotions it created, through
+# the API server, which authorizes it against this verb.
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotionrollouts
+  verbs:
+  - get
 - apiGroups:
   - kargo.akuity.io
   resources:

@@ -1670,6 +1670,49 @@
         ]
       }
     },
+    "/v1beta1/projects/{project}/promotion-rollouts/{id}/freight-collection": {
+      "get": {
+        "description": "Retrieve the FreightCollection a PromotionRollout recorded when\nit started: the Freight it promotes and, for each other origin\nits Stage requests Freight from, the Freight carried forward\nfrom the Stage's previous rollout. The rollout is named by its\nid, as a Promotion it created names it. A rollout that has not\nstarted, or that recorded no collection, has an empty one.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Core",
+          "Project-Level"
+        ],
+        "summary": "Retrieve the FreightCollection a PromotionRollout recorded",
+        "operationId": "GetPromotionRolloutFreightCollection",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Project name",
+            "name": "project",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "PromotionRollout id",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "FreightCollection",
+            "schema": {
+              "$ref": "#/definitions/FreightCollection"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/v1beta1/projects/{project}/promotion-tasks": {
       "get": {
         "description": "List PromotionTask resources from a project's namespace. Returns\na PromotionTaskList resource.",

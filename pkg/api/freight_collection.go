@@ -11,10 +11,20 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 )
 
+// RolloutFreightGetter reads the FreightCollection a PromotionRollout
+// recorded when it started, by the Project and the rollout's id.
+type RolloutFreightGetter interface {
+	GetPromotionRolloutFreightCollection(
+		ctx context.Context,
+		project string,
+		id string,
+	) (*kargoapi.FreightCollection, error)
+}
+
 // ResolveFreightRefs returns FreightReference and FreightCollection for a promotion
 // If Status.Freight and Status.FreightCollection already set, it just returns them
-// If the promotion is the child of a PromotionRollout - freight references are constructed from
-// targetFreight alone
+// If the promotion is the child of a PromotionRollout - the collection is the one the rollout
+// recorded when it started, read through rollouts, or targetFreight alone if it recorded none
 // If the stage is otherwise target aware - freight references are taken from PromotionRequest
 // owning the promotion
 // If it's a regular stage - freight references are constructed from targetFreight and stage status
@@ -26,6 +36,7 @@ import (
 func ResolveFreightRefs(
 	ctx context.Context,
 	cli client.Client,
+	rollouts RolloutFreightGetter,
 	promo kargoapi.Promotion,
 	stage *kargoapi.Stage,
 	targetFreight *kargoapi.Freight,
@@ -55,25 +66,15 @@ func ResolveFreightRefs(
 	targetFreightRef := newFreightReference(targetFreight)
 	switch {
 	case promo.Spec.PromotionRollout != "":
-		// A PromotionRollout's child: a collection of the one piece of
-		// Freight the rollout promotes. Such a Promotion is recognized by
-		// its spec, since a rollout is not a Kubernetes resource and owns
-		// nothing, and must be checked for before the next case: its Stage
-		// is target aware, but no PromotionRequest stands behind it.
-		//
-		// Known gap: for a Stage that requests Freight from several origins,
-		// this collection is incomplete. It should also hold the Freight
-		// last promoted for each of the other origins. The collection is the
-		// Freight of the promotion context, so a step that refers to another
-		// origin's Freight, with imageFrom or commitFrom say, does not find
-		// it. A Stage that requests Freight from one origin is unaffected.
-		// The complete collection is the one the rollout recorded when it
-		// started, in the database's promotion_rollout_freight table: this
-		// Freight plus, for each other origin, what the Stage's previous
-		// rollout recorded. Completing this one means reading that, which
-		// nothing here does yet.
-		freightCol := &kargoapi.FreightCollection{}
-		freightCol.UpdateOrPush(targetFreightRef)
+		// A PromotionRollout's child: the collection the rollout recorded
+		// when it started. Such a Promotion is recognized by its spec, since
+		// a rollout is not a Kubernetes resource and owns nothing, and must
+		// be checked for before the next case: its Stage is target aware,
+		// but no PromotionRequest stands behind it.
+		freightCol, err := rolloutFreightCollection(ctx, rollouts, promo, targetFreightRef)
+		if err != nil {
+			return nil, nil, err
+		}
 		return &targetFreightRef, freightCol, nil
 	case stage.IsTargetAware():
 		// A PromotionRequest's child: the request already resolved both.
@@ -85,6 +86,56 @@ func ResolveFreightRefs(
 		freightCol := addFreightToCollection(ctx, stage, previous, targetFreightRef)
 		return &targetFreightRef, freightCol, nil
 	}
+}
+
+// rolloutFreightCollection returns the FreightCollection of the
+// PromotionRollout that created the Promotion: the one the rollout recorded
+// when it started, which holds the Freight it promotes and, for each other
+// origin the Stage requests Freight from, the Freight carried forward from
+// the Stage's previous rollout. Those are copies, read whole, so a step that
+// refers to another origin's Freight finds it even if that Freight is gone.
+//
+// A rollout that recorded nothing -- one started before collections were
+// recorded -- has a collection of the Freight it promotes alone, and so
+// does every rollout when there is nothing to read it through. A recorded
+// collection whose Freight for the promoted origin is not the Promotion's
+// is an error: the rollout and its child disagree on what is promoted.
+func rolloutFreightCollection(
+	ctx context.Context,
+	rollouts RolloutFreightGetter,
+	promo kargoapi.Promotion,
+	ref kargoapi.FreightReference,
+) (*kargoapi.FreightCollection, error) {
+	collection := &kargoapi.FreightCollection{}
+	if rollouts == nil {
+		collection.UpdateOrPush(ref)
+		return collection, nil
+	}
+	recorded, err := rollouts.GetPromotionRolloutFreightCollection(
+		ctx,
+		promo.Namespace,
+		promo.Spec.PromotionRollout,
+	)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error getting the Freight PromotionRollout %q recorded: %w",
+			promo.Spec.PromotionRollout, err,
+		)
+	}
+	if recorded == nil || len(recorded.Freight) == 0 {
+		collection.UpdateOrPush(ref)
+		return collection, nil
+	}
+	if own, ok := recorded.Freight[ref.Origin.String()]; !ok || own.Name != ref.Name {
+		return nil, fmt.Errorf(
+			"PromotionRollout %q recorded no Freight %q from %s",
+			promo.Spec.PromotionRollout, ref.Name, ref.Origin.String(),
+		)
+	}
+	// Rebuilt rather than taken as read, so it is keyed and identified as a
+	// collection built anywhere else from the same Freight is.
+	collection.UpdateOrPush(recorded.References()...)
+	return collection, nil
 }
 
 // addFreightToCollection returns a new FreightCollection that contains all

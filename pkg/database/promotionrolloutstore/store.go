@@ -107,7 +107,7 @@ type Store interface {
 		kargoapi.FreightReference,
 		[]kargoapi.FreightOrigin,
 	) (database.PromotionRolloutRow, error)
-	GetFreightCollection(context.Context, uuid.UUID) (*kargoapi.FreightCollection, error)
+	GetFreightCollection(context.Context, string, uuid.UUID) (*kargoapi.FreightCollection, error)
 	UpdateStatus(context.Context, string, database.PromotionRolloutRow) (database.PromotionRolloutRow, error)
 	Abort(context.Context, string, string, int64, string) (database.PromotionRolloutRow, error)
 }
@@ -424,20 +424,38 @@ func (s *store) Start(
 	return s.updateStatus(ctx, project, rollout, args, &freight)
 }
 
-// GetFreightCollection returns the FreightCollection recorded for the
-// PromotionRollout with the given id when it started: the Freight it
-// promotes and the Freight carried forward for the Stage's other origins,
+// GetFreightCollection returns the FreightCollection recorded for the named
+// Project's PromotionRollout with the given id when it started: the Freight
+// it promotes and the Freight carried forward for the Stage's other origins,
 // contents included. Read twice, it is the same collection with the same ID.
 // A rollout that has none -- one that has not started, or that started
-// before collections were recorded -- has an empty collection, and so does
-// an id that is no rollout's.
+// before collections were recorded -- has an empty collection.
+// database.ErrNotFound says the Project has no rollout with that id, which
+// is also the answer for another Project's rollout.
 func (s *store) GetFreightCollection(
 	ctx context.Context,
+	project string,
 	id uuid.UUID,
 ) (*kargoapi.FreightCollection, error) {
-	rows, err := s.queries.ListPromotionRolloutFreight(ctx, id)
+	rows, err := s.queries.ListPromotionRolloutFreight(ctx, database.ListPromotionRolloutFreightParams{
+		ProjectName:        project,
+		PromotionRolloutID: id,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("error listing Freight of PromotionRollout %q: %w", id, err)
+	}
+	if len(rows) == 0 {
+		// No rows may be a rollout that recorded none, or no rollout at all.
+		exists, existsErr := s.queries.PromotionRolloutIDExists(ctx, database.PromotionRolloutIDExistsParams{
+			ProjectName: project,
+			ID:          id,
+		})
+		if existsErr != nil {
+			return nil, fmt.Errorf("error getting PromotionRollout %q: %w", id, existsErr)
+		}
+		if !exists {
+			return nil, fmt.Errorf("PromotionRollout %q: %w", id, database.ErrNotFound)
+		}
 	}
 	collection, err := freightCollection(rows)
 	if err != nil {

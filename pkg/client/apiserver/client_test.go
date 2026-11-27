@@ -49,6 +49,8 @@ var (
 type serverFixtures struct {
 	targets  map[string][]kargoapi.Target
 	rollouts map[string][]kargoapi.PromotionRollout
+	// collections are rollouts' FreightCollections by Project, then id.
+	collections map[string]map[string]*kargoapi.FreightCollection
 }
 
 // lastRequest is what newServer records of the request it last answered.
@@ -131,6 +133,24 @@ func newServer(
 		}
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "targets.kargo.akuity.io not found"})
 	})
+	mux.HandleFunc(
+		"GET /v1beta1/projects/{project}/promotion-rollouts/{id}/freight-collection",
+		func(w http.ResponseWriter, r *http.Request) {
+			if !accept(w, r) {
+				return
+			}
+			if r.PathValue("project") == "broken" {
+				broken(w)
+				return
+			}
+			collection, ok := fixtures.collections[r.PathValue("project")][r.PathValue("id")]
+			if !ok {
+				writeJSON(w, http.StatusNotFound, map[string]string{"error": "promotionrollouts.kargo.akuity.io not found"})
+				return
+			}
+			writeJSON(w, http.StatusOK, collection)
+		},
+	)
 	mux.HandleFunc(
 		"GET /v1beta1/projects/{project}/promotion-rollouts",
 		func(w http.ResponseWriter, r *http.Request) {
@@ -500,6 +520,23 @@ func TestClient(t *testing.T) {
 		Namespace: "demo", Name: "us-east", Labels: map[string]string{"region": "us"},
 	}}
 	euWest := kargoapi.Target{ObjectMeta: metav1.ObjectMeta{Namespace: "demo", Name: "eu-west"}}
+	const (
+		recordedID = "0193a6b0-0000-7000-8000-000000000001"
+		emptyID    = "0193a6b0-0000-7000-8000-000000000002"
+	)
+	recorded := &kargoapi.FreightCollection{}
+	recorded.UpdateOrPush(
+		kargoapi.FreightReference{
+			Name:   "images-1",
+			Origin: kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "images"},
+			Images: []kargoapi.Image{{RepoURL: "example.com/app", Tag: "v1", Digest: "sha256:abc"}},
+		},
+		kargoapi.FreightReference{
+			Name:    "config-1",
+			Origin:  kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: "config"},
+			Commits: []kargoapi.GitCommit{{RepoURL: "https://example.com/config.git", ID: "0123abc"}},
+		},
+	)
 	testRollout := kargoapi.PromotionRollout{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "demo", Name: "test.01A.abc"},
 		Number:     1,
@@ -528,6 +565,12 @@ func TestClient(t *testing.T) {
 		rollouts: map[string][]kargoapi.PromotionRollout{
 			"demo":  {testRollout, prodRollout},
 			"empty": {},
+		},
+		collections: map[string]map[string]*kargoapi.FreightCollection{
+			"demo": {
+				recordedID: recorded,
+				emptyID:    {},
+			},
 		},
 	}
 	var last lastRequest
@@ -668,6 +711,34 @@ func TestClient(t *testing.T) {
 	t.Run("other get failures are errors", func(t *testing.T) {
 		_, err := c.GetTarget(t.Context(), "broken", "x")
 		require.ErrorContains(t, err, `error getting Target "x" in Project "broken"`)
+	})
+
+	t.Run("gets the FreightCollection a rollout recorded, contents included", func(t *testing.T) {
+		collection, err := c.GetPromotionRolloutFreightCollection(t.Context(), "demo", recordedID)
+		require.NoError(t, err)
+		require.Equal(t, recorded, collection)
+	})
+
+	t.Run("a rollout that recorded none has an empty collection", func(t *testing.T) {
+		collection, err := c.GetPromotionRolloutFreightCollection(t.Context(), "demo", emptyID)
+		require.NoError(t, err)
+		require.Equal(t, &kargoapi.FreightCollection{}, collection)
+	})
+
+	t.Run("a missing rollout is an error that is not retried", func(t *testing.T) {
+		_, err := c.GetPromotionRolloutFreightCollection(t.Context(), "demo", "absent")
+		require.ErrorContains(
+			t, err, `error getting the FreightCollection of PromotionRollout "absent" in Project "demo"`,
+		)
+		var apiErr *APIError
+		require.ErrorAs(t, err, &apiErr)
+		require.Equal(t, http.StatusNotFound, apiErr.StatusCode)
+		require.False(t, IsRetryable(err))
+	})
+
+	t.Run("a server error getting a collection is retried", func(t *testing.T) {
+		_, err := c.GetPromotionRolloutFreightCollection(t.Context(), "broken", recordedID)
+		require.True(t, IsRetryable(err))
 	})
 
 	t.Run("lists every PromotionRollout in a Project", func(t *testing.T) {
