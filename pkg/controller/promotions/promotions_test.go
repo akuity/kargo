@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/controller/metrics"
 	"github.com/akuity/kargo/pkg/event"
@@ -43,6 +44,7 @@ func TestNewPromotionReconciler(t *testing.T) {
 		&fakeevent.Sender{},
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
+		nil,
 		nil,
 	)
 	require.NotNil(t, r.kargoClient)
@@ -69,6 +71,7 @@ func newFakeReconciler(
 		sender,
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
+		nil,
 		nil,
 	)
 }
@@ -1752,6 +1755,158 @@ func Test_reconciler_promote_targetErrors(t *testing.T) {
 				freight,
 			)
 			testCase.assert(t, status, err)
+		})
+	}
+}
+
+// fakeRolloutFreight is an api.RolloutFreightGetter that answers for every
+// rollout with the same collection or error.
+type fakeRolloutFreight struct {
+	collection *kargoapi.FreightCollection
+	err        error
+}
+
+func (f fakeRolloutFreight) GetPromotionRolloutFreightCollection(
+	context.Context,
+	string,
+	string,
+) (*kargoapi.FreightCollection, error) {
+	return f.collection, f.err
+}
+
+func Test_reconciler_promote_rolloutFreight(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	const testNamespace = "fake-namespace"
+
+	origin := func(name string) kargoapi.FreightOrigin {
+		return kargoapi.FreightOrigin{Kind: kargoapi.FreightOriginKindWarehouse, Name: name}
+	}
+	testFreight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{Name: "images-2", Namespace: testNamespace},
+		Origin:     origin("images"),
+		Images:     []kargoapi.Image{{RepoURL: "example.com/app", Tag: "v2"}},
+	}
+	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{Name: "fake-stage", Namespace: testNamespace},
+		Spec: kargoapi.StageSpec{
+			RequestedFreight: []kargoapi.FreightRequest{
+				{Origin: origin("images"), Sources: kargoapi.FreightSources{Direct: true}},
+				{Origin: origin("config"), Sources: kargoapi.FreightSources{Direct: true}},
+			},
+		},
+	}
+	recorded := &kargoapi.FreightCollection{}
+	recorded.UpdateOrPush(
+		kargoapi.FreightReference{Name: "images-2", Origin: origin("images"), Images: testFreight.Images},
+		kargoapi.FreightReference{Name: "config-1", Origin: origin("config")},
+	)
+
+	testCases := []struct {
+		name     string
+		rollouts api.RolloutFreightGetter
+		assert   func(*testing.T, *kargoapi.PromotionStatus, *kargoapi.FreightCollection, error)
+	}{
+		{
+			name:     "the steps see the collection the rollout recorded",
+			rollouts: fakeRolloutFreight{collection: recorded},
+			assert: func(
+				t *testing.T,
+				status *kargoapi.PromotionStatus,
+				seen *kargoapi.FreightCollection,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionPhaseSucceeded, status.Phase)
+				require.Equal(t, recorded.ID, status.FreightCollection.ID)
+				require.True(t, status.FreightCollection.Includes("config-1"))
+				require.Equal(t, recorded.ID, seen.ID)
+			},
+		},
+		{
+			name: "an API server that could not answer leaves the Promotion Running",
+			rollouts: fakeRolloutFreight{
+				err: &apiserver.APIError{StatusCode: 503},
+			},
+			assert: func(
+				t *testing.T,
+				status *kargoapi.PromotionStatus,
+				seen *kargoapi.FreightCollection,
+				err error,
+			) {
+				require.ErrorContains(t, err, "API server responded 503")
+				require.NotNil(t, status)
+				require.Equal(t, kargoapi.PromotionPhaseRunning, status.Phase)
+				require.Nil(t, seen)
+			},
+		},
+		{
+			name: "a rollout the API server does not know ends the Promotion",
+			rollouts: fakeRolloutFreight{
+				err: &apiserver.APIError{StatusCode: 404, Message: "not found"},
+			},
+			assert: func(
+				t *testing.T,
+				status *kargoapi.PromotionStatus,
+				seen *kargoapi.FreightCollection,
+				err error,
+			) {
+				require.ErrorContains(t, err, "not found")
+				require.Nil(t, status)
+				require.Nil(t, seen)
+			},
+		},
+	}
+	for i, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			promo := kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promotion",
+					Namespace: testNamespace,
+					UID:       types.UID(fmt.Sprintf("promote-rollout-freight-%d", i)),
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage:            testStage.Name,
+					Freight:          testFreight.Name,
+					Target:           "fake-target",
+					PromotionRollout: "0193a6b0-0000-7000-8000-000000000001",
+					Steps:            []kargoapi.PromotionStep{{Uses: "fake-step"}},
+				},
+			}
+			t.Cleanup(func() {
+				require.NoError(t, os.RemoveAll(promotionWorkDir(promo.UID)))
+			})
+
+			stage, freight := testStage.DeepCopy(), testFreight.DeepCopy()
+			var seen *kargoapi.FreightCollection
+			r := &reconciler{
+				kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					stage,
+					freight,
+				).Build(),
+				promoEngine: &promotion.MockEngine{
+					PromoteFn: func(
+						_ context.Context,
+						promoCtx promotion.Context,
+						_ []promotion.Step,
+					) (promotion.Result, error) {
+						seen = promoCtx.Freight.DeepCopy()
+						return promotion.Result{Status: kargoapi.PromotionPhaseSucceeded}, nil
+					},
+				},
+				targets: fakeTargetGetter{
+					"fake-target": {
+						ObjectMeta: metav1.ObjectMeta{Name: "fake-target", Namespace: testNamespace},
+					},
+				},
+				rollouts: testCase.rollouts,
+			}
+
+			status, _, err := r.promote(context.Background(), promo, stage, freight)
+			testCase.assert(t, status, seen, err)
 		})
 	}
 }

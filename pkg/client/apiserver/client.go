@@ -383,6 +383,35 @@ func (c *Client) GetTarget(ctx context.Context, project, name string) (*kargoapi
 	return target, nil
 }
 
+// GetPromotionRolloutFreightCollection returns the FreightCollection the
+// Project's PromotionRollout with the given id recorded when it started, or
+// an empty one if it recorded none. A rollout that does not exist is an
+// error: what its Promotions render cannot be known without it.
+func (c *Client) GetPromotionRolloutFreightCollection(
+	ctx context.Context,
+	project string,
+	id string,
+) (*kargoapi.FreightCollection, error) {
+	model, resp, err := c.api.CoreAPI.GetPromotionRolloutFreightCollection(ctx, project, id).Execute()
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error getting the FreightCollection of PromotionRollout %q in Project %q: %w",
+			id, project, ResponseError(err, resp),
+		)
+	}
+	collection := &kargoapi.FreightCollection{}
+	if err = convert(model, collection); err != nil {
+		return nil, fmt.Errorf(
+			"error decoding the FreightCollection of PromotionRollout %q in Project %q: %w",
+			id, project, err,
+		)
+	}
+	return collection, nil
+}
+
 // PromotionRolloutListOptions narrows and bounds a list of
 // PromotionRollouts, as the API's query parameters do. A list is one page,
 // newest first; the list's Continue names where the next page starts, and

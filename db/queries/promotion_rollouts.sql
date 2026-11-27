@@ -317,12 +317,25 @@ WITH rollout AS (
 )
 SELECT * FROM rollout;
 
--- A rollout's FreightCollection, one row per origin, in origin order. A
--- rollout started before collections were recorded has no rows.
+-- A rollout's FreightCollection, one row per origin, in origin order, if
+-- the rollout with that id is the named Project's: an id is not enough to
+-- read another Project's rows. A rollout started before collections were
+-- recorded has no rows; see PromotionRolloutIDExists to tell it apart from
+-- one that does not exist.
 -- name: ListPromotionRolloutFreight :many
-SELECT * FROM promotion_rollout_freight
-WHERE promotion_rollout_id = sqlc.arg(promotion_rollout_id)
-ORDER BY origin_kind, origin_name;
+SELECT recorded.*
+FROM promotion_rollout_freight AS recorded
+JOIN promotion_rollouts AS rollout ON rollout.id = recorded.promotion_rollout_id
+WHERE rollout.project_name = sqlc.arg(project_name)
+    AND recorded.promotion_rollout_id = sqlc.arg(promotion_rollout_id)
+ORDER BY recorded.origin_kind, recorded.origin_name;
+
+-- Whether the named Project has a rollout with the given id.
+-- name: PromotionRolloutIDExists :one
+SELECT EXISTS (
+    SELECT 1 FROM promotion_rollouts
+    WHERE project_name = sqlc.arg(project_name) AND id = sqlc.arg(id)
+);
 
 -- Records a request to abort one of a Stage's rollouts, by its number, and
 -- returns the row as it now stands. Only a rollout that has not finished can

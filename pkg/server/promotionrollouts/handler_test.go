@@ -52,6 +52,8 @@ type fakeStore struct {
 	targets []database.TargetRow
 	// promotions are the mirrored Promotions that ListTargetStatuses reads.
 	promotions []mirroredPromotion
+	// collections are the FreightCollections rollouts recorded, by id.
+	collections map[uuid.UUID]*kargoapi.FreightCollection
 }
 
 // mirroredPromotion is a Promotion as the mirror records it: linked to the
@@ -436,11 +438,13 @@ func (s *fakeStore) Start(
 	return current.PromotionRolloutRow, nil
 }
 
-// GetFreightCollection returns an empty collection, as the store does for a
-// rollout that recorded none: Start here records none.
+// GetFreightCollection returns the collection recorded for the Project's
+// rollout with the id, or an empty one if it recorded none. As in the store,
+// an id that is not one of the Project's rollouts is not found.
 func (s *fakeStore) GetFreightCollection(
-	context.Context,
-	uuid.UUID,
+	_ context.Context,
+	project string,
+	id uuid.UUID,
 ) (*kargoapi.FreightCollection, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -448,7 +452,29 @@ func (s *fakeStore) GetFreightCollection(
 	if s.err != nil {
 		return nil, s.err
 	}
-	return &kargoapi.FreightCollection{}, nil
+	for _, rollout := range s.project(project) {
+		if rollout.ID != id {
+			continue
+		}
+		if collection, ok := s.collections[id]; ok {
+			return collection, nil
+		}
+		return &kargoapi.FreightCollection{}, nil
+	}
+	return nil, fmt.Errorf("PromotionRollout %q: %w", id, database.ErrNotFound)
+}
+
+// withCollection records the collection for the named rollout and returns
+// the store.
+func (s *fakeStore) withCollection(
+	project, name string,
+	collection *kargoapi.FreightCollection,
+) *fakeStore {
+	if s.collections == nil {
+		s.collections = map[uuid.UUID]*kargoapi.FreightCollection{}
+	}
+	s.collections[rolloutID(project, name)] = collection
+	return s
 }
 
 func (s *fakeStore) UpdateStatus(

@@ -28,6 +28,7 @@ import type {
   CreateConfigMapRequest,
   CreatePromotionRolloutRequest,
   Freight,
+  FreightCollection,
   GetFreightLinksResponse,
   GetStageLinksResponse,
   GetTargetStatusSummaryParams,
@@ -2915,6 +2916,193 @@ export function useListPromotionRollouts<
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getListPromotionRolloutsQueryOptions(project, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type getPromotionRolloutFreightCollectionResponse200 = {
+  data: FreightCollection;
+  status: 200;
+};
+
+export type getPromotionRolloutFreightCollectionResponseSuccess =
+  getPromotionRolloutFreightCollectionResponse200 & {
+    headers: Headers;
+  };
+export type getPromotionRolloutFreightCollectionResponse =
+  getPromotionRolloutFreightCollectionResponseSuccess;
+
+export const getGetPromotionRolloutFreightCollectionUrl = (project: string, id: string) => {
+  return `/v1beta1/projects/${project}/promotion-rollouts/${id}/freight-collection`;
+};
+
+/**
+ * Retrieve the FreightCollection a PromotionRollout recorded when
+ * it started: the Freight it promotes and, for each other origin
+ * its Stage requests Freight from, the Freight carried forward
+ * from the Stage's previous rollout. The rollout is named by its
+ * id, as a Promotion it created names it. A rollout that has not
+ * started, or that recorded no collection, has an empty one.
+ * @summary Retrieve the FreightCollection a PromotionRollout recorded
+ */
+export const getPromotionRolloutFreightCollection = async (
+  project: string,
+  id: string,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<getPromotionRolloutFreightCollectionResponse> => {
+  return customFetch<getPromotionRolloutFreightCollectionResponse>(
+    getGetPromotionRolloutFreightCollectionUrl(project, id),
+    {
+      ...options,
+      method: 'GET'
+    }
+  );
+};
+
+export const getGetPromotionRolloutFreightCollectionQueryKey = (project: string, id: string) => {
+  return [`/v1beta1/projects/${project}/promotion-rollouts/${id}/freight-collection`] as const;
+};
+
+export const getGetPromotionRolloutFreightCollectionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPromotionRolloutFreightCollection>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getPromotionRolloutFreightCollection>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetPromotionRolloutFreightCollectionQueryKey(project, id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPromotionRolloutFreightCollection>>
+  > = () => getPromotionRolloutFreightCollection(project, id, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: project !== null && project !== undefined && id !== null && id !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPromotionRolloutFreightCollection>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetPromotionRolloutFreightCollectionQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPromotionRolloutFreightCollection>>
+>;
+export type GetPromotionRolloutFreightCollectionQueryError = ErrorType<unknown>;
+
+export function useGetPromotionRolloutFreightCollection<
+  TData = Awaited<ReturnType<typeof getPromotionRolloutFreightCollection>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getPromotionRolloutFreightCollection>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPromotionRolloutFreightCollection>>,
+          TError,
+          Awaited<ReturnType<typeof getPromotionRolloutFreightCollection>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPromotionRolloutFreightCollection<
+  TData = Awaited<ReturnType<typeof getPromotionRolloutFreightCollection>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getPromotionRolloutFreightCollection>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPromotionRolloutFreightCollection>>,
+          TError,
+          Awaited<ReturnType<typeof getPromotionRolloutFreightCollection>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPromotionRolloutFreightCollection<
+  TData = Awaited<ReturnType<typeof getPromotionRolloutFreightCollection>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getPromotionRolloutFreightCollection>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Retrieve the FreightCollection a PromotionRollout recorded
+ */
+
+export function useGetPromotionRolloutFreightCollection<
+  TData = Awaited<ReturnType<typeof getPromotionRolloutFreightCollection>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getPromotionRolloutFreightCollection>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetPromotionRolloutFreightCollectionQueryOptions(project, id, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

@@ -1255,6 +1255,41 @@ paths:
       summary: List PromotionRollouts
       tags:
       - Core
+  /v1beta1/projects/{project}/promotion-rollouts/{id}/freight-collection:
+    get:
+      description: |-
+        Retrieve the FreightCollection a PromotionRollout recorded when
+        it started: the Freight it promotes and, for each other origin
+        its Stage requests Freight from, the Freight carried forward
+        from the Stage's previous rollout. The rollout is named by its
+        id, as a Promotion it created names it. A rollout that has not
+        started, or that recorded no collection, has an empty one.
+      operationId: GetPromotionRolloutFreightCollection
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: PromotionRollout id
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FreightCollection"
+          description: FreightCollection
+      security:
+      - BearerAuth: []
+      summary: Retrieve the FreightCollection a PromotionRollout recorded
+      tags:
+      - Core
   /v1beta1/projects/{project}/promotion-tasks:
     get:
       description: |-
@@ -12878,6 +12913,77 @@ components:
       - origin
       type: object
     FreightCollection:
+      example:
+        id: id
+        items:
+          key:
+            artifacts:
+            - artifactType: artifactType
+              metadata: "{}"
+              subscriptionName: subscriptionName
+              version: version
+            - artifactType: artifactType
+              metadata: "{}"
+              subscriptionName: subscriptionName
+              version: version
+            charts:
+            - name: name
+              repoURL: repoURL
+              subscriptionName: subscriptionName
+              version: version
+            - name: name
+              repoURL: repoURL
+              subscriptionName: subscriptionName
+              version: version
+            commits:
+            - author: author
+              branch: branch
+              committer: committer
+              id: id
+              message: message
+              repoURL: repoURL
+              subscriptionName: subscriptionName
+              tag: tag
+            - author: author
+              branch: branch
+              committer: committer
+              id: id
+              message: message
+              repoURL: repoURL
+              subscriptionName: subscriptionName
+              tag: tag
+            images:
+            - annotations:
+                key: annotations
+              digest: digest
+              repoURL: repoURL
+              subscriptionName: subscriptionName
+              tag: tag
+            - annotations:
+                key: annotations
+              digest: digest
+              repoURL: repoURL
+              subscriptionName: subscriptionName
+              tag: tag
+            name: name
+            origin: "{}"
+        verificationHistory:
+        - actor: actor
+          analysisRun: "{}"
+          finishTime: finishTime
+          id: id
+          message: message
+          phase: phase
+          promotionName: promotionName
+          startTime: startTime
+        - actor: actor
+          analysisRun: "{}"
+          finishTime: finishTime
+          id: id
+          message: message
+          phase: phase
+          promotionName: promotionName
+          startTime: startTime
       properties:
         id:
           description: |-
@@ -12928,6 +13034,57 @@ components:
       - name
       type: object
     FreightReference:
+      example:
+        artifacts:
+        - artifactType: artifactType
+          metadata: "{}"
+          subscriptionName: subscriptionName
+          version: version
+        - artifactType: artifactType
+          metadata: "{}"
+          subscriptionName: subscriptionName
+          version: version
+        charts:
+        - name: name
+          repoURL: repoURL
+          subscriptionName: subscriptionName
+          version: version
+        - name: name
+          repoURL: repoURL
+          subscriptionName: subscriptionName
+          version: version
+        commits:
+        - author: author
+          branch: branch
+          committer: committer
+          id: id
+          message: message
+          repoURL: repoURL
+          subscriptionName: subscriptionName
+          tag: tag
+        - author: author
+          branch: branch
+          committer: committer
+          id: id
+          message: message
+          repoURL: repoURL
+          subscriptionName: subscriptionName
+          tag: tag
+        images:
+        - annotations:
+            key: annotations
+          digest: digest
+          repoURL: repoURL
+          subscriptionName: subscriptionName
+          tag: tag
+        - annotations:
+            key: annotations
+          digest: digest
+          repoURL: repoURL
+          subscriptionName: subscriptionName
+          tag: tag
+        name: name
+        origin: "{}"
       properties:
         artifacts:
           description: |-
@@ -16693,6 +16850,15 @@ components:
           type: array
       type: object
     VerificationInfo:
+      example:
+        actor: actor
+        analysisRun: "{}"
+        finishTime: finishTime
+        id: id
+        message: message
+        phase: phase
+        promotionName: promotionName
+        startTime: startTime
       properties:
         actor:
           description: |-

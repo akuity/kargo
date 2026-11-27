@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -259,7 +260,9 @@ func TestResolveFreightRefs(t *testing.T) {
 		stage   *kargoapi.Stage
 		freight *kargoapi.Freight
 		objects []client.Object
-		assert  func(
+		// rollouts, if set, is what rollouts' collections are read through.
+		rollouts *fakeRolloutFreight
+		assert   func(
 			*testing.T,
 			*kargoapi.FreightReference,
 			*kargoapi.FreightCollection,
@@ -341,7 +344,7 @@ func TestResolveFreightRefs(t *testing.T) {
 			},
 		},
 		{
-			name:  "rollout child of a Stage with several origins holds only its own Freight",
+			name:  "rollout child with nothing to read its rollout through holds only its own Freight",
 			promo: rolloutChild,
 			stage: func() *kargoapi.Stage {
 				stage := newTargetAwareStage("images", "config")
@@ -372,6 +375,82 @@ func TestResolveFreightRefs(t *testing.T) {
 					names(freightCol),
 				)
 				require.NotEmpty(t, freightCol.ID)
+			},
+		},
+		{
+			name:     "rollout child holds the collection its rollout recorded",
+			promo:    rolloutChild,
+			stage:    newTargetAwareStage("images", "config"),
+			freight:  testFreight,
+			rollouts: &fakeRolloutFreight{collection: collection(ref("new-images", "images"), ref("cfg", "config"))},
+			assert: func(
+				t *testing.T,
+				freightRef *kargoapi.FreightReference,
+				freightCol *kargoapi.FreightCollection,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, testFreight.Name, freightRef.Name)
+				require.Equal(t, testFreight.Images, freightRef.Images)
+				require.Equal(
+					t,
+					map[string]string{
+						"Warehouse/images": "new-images",
+						"Warehouse/config": "cfg",
+					},
+					names(freightCol),
+				)
+				require.Equal(t, collection(ref("new-images", "images"), ref("cfg", "config")).ID, freightCol.ID)
+			},
+		},
+		{
+			name:     "rollout child of a rollout that recorded nothing holds only its own Freight",
+			promo:    rolloutChild,
+			stage:    newTargetAwareStage("images", "config"),
+			freight:  testFreight,
+			rollouts: &fakeRolloutFreight{collection: &kargoapi.FreightCollection{}},
+			assert: func(
+				t *testing.T,
+				_ *kargoapi.FreightReference,
+				freightCol *kargoapi.FreightCollection,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, map[string]string{"Warehouse/images": "new-images"}, names(freightCol))
+			},
+		},
+		{
+			name:     "rollout child whose rollout recorded other Freight is an error",
+			promo:    rolloutChild,
+			stage:    newTargetAwareStage("images", "config"),
+			freight:  testFreight,
+			rollouts: &fakeRolloutFreight{collection: collection(ref("other-images", "images"), ref("cfg", "config"))},
+			assert: func(
+				t *testing.T,
+				_ *kargoapi.FreightReference,
+				_ *kargoapi.FreightCollection,
+				err error,
+			) {
+				require.ErrorContains(
+					t, err,
+					`PromotionRollout "`+testRollout+`" recorded no Freight "new-images" from Warehouse/images`,
+				)
+			},
+		},
+		{
+			name:     "rollout child whose rollout cannot be read is an error",
+			promo:    rolloutChild,
+			stage:    newTargetAwareStage("images", "config"),
+			freight:  testFreight,
+			rollouts: &fakeRolloutFreight{err: errFakeAPIServer},
+			assert: func(
+				t *testing.T,
+				_ *kargoapi.FreightReference,
+				_ *kargoapi.FreightCollection,
+				err error,
+			) {
+				require.ErrorIs(t, err, errFakeAPIServer)
+				require.ErrorContains(t, err, `error getting the Freight PromotionRollout "`+testRollout+`" recorded`)
 			},
 		},
 		{
@@ -467,12 +546,18 @@ func TestResolveFreightRefs(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
+			// A nil *fakeRolloutFreight is not a nil interface.
+			var rollouts RolloutFreightGetter
+			if testCase.rollouts != nil {
+				rollouts = testCase.rollouts
+			}
 			freightRef, freightCol, err := ResolveFreightRefs(
 				context.Background(),
 				fake.NewClientBuilder().
 					WithScheme(scheme).
 					WithObjects(testCase.objects...).
 					Build(),
+				rollouts,
 				testCase.promo,
 				testCase.stage,
 				testCase.freight,
@@ -480,4 +565,24 @@ func TestResolveFreightRefs(t *testing.T) {
 			testCase.assert(t, freightRef, freightCol, err)
 		})
 	}
+}
+
+var errFakeAPIServer = errors.New("the API server is unreachable")
+
+// fakeRolloutFreight answers for every rollout with the same collection or
+// error, and requires to be asked for the rollout of the test's child.
+type fakeRolloutFreight struct {
+	collection *kargoapi.FreightCollection
+	err        error
+}
+
+func (f *fakeRolloutFreight) GetPromotionRolloutFreightCollection(
+	_ context.Context,
+	project string,
+	id string,
+) (*kargoapi.FreightCollection, error) {
+	if project != "fake-namespace" || id != "0193a6b0-0000-7000-8000-000000000001" {
+		return nil, errors.New("asked for another rollout")
+	}
+	return f.collection, f.err
 }

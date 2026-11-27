@@ -97,6 +97,7 @@ Class | Method | HTTP request | Description
 *CoreAPI* | [**GetPromotion**](docs/CoreAPI.md#getpromotion) | **Get** /v1beta1/projects/{project}/promotions/{promotion} | Retrieve a Promotion
 *CoreAPI* | [**GetPromotionRequest**](docs/CoreAPI.md#getpromotionrequest) | **Get** /v1beta1/projects/{project}/promotion-requests/{promotion-request} | Retrieve a PromotionRequest
 *CoreAPI* | [**GetPromotionRollout**](docs/CoreAPI.md#getpromotionrollout) | **Get** /v1beta1/projects/{project}/stages/{stage}/promotion-rollouts/{number} | Retrieve a PromotionRollout
+*CoreAPI* | [**GetPromotionRolloutFreightCollection**](docs/CoreAPI.md#getpromotionrolloutfreightcollection) | **Get** /v1beta1/projects/{project}/promotion-rollouts/{id}/freight-collection | Retrieve the FreightCollection a PromotionRollout recorded
 *CoreAPI* | [**GetPromotionTask**](docs/CoreAPI.md#getpromotiontask) | **Get** /v1beta1/projects/{project}/promotion-tasks/{promotion-task} | Retrieve a PromotionTask
 *CoreAPI* | [**GetSharedConfigMap**](docs/CoreAPI.md#getsharedconfigmap) | **Get** /v1beta1/shared/configmaps/{configmap} | Retrieve a shared ConfigMap
 *CoreAPI* | [**GetStage**](docs/CoreAPI.md#getstage) | **Get** /v1beta1/projects/{project}/stages/{stage} | Retrieve a Stage

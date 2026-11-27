@@ -51,12 +51,13 @@ func New(
 	}
 }
 
-// paramProject, paramStage and paramNumber are the route parameters the
+// paramProject, paramStage, paramNumber and paramID are the route parameters the
 // handlers read.
 const (
 	paramProject = "project"
 	paramStage   = "stage"
 	paramNumber  = "number"
+	paramID      = "id"
 )
 
 // Register adds the PromotionRollout routes to a project's route group.
@@ -74,6 +75,7 @@ const (
 func (h *Handler) Register(project *gin.RouterGroup) {
 	requireDatabase := middleware.RequireFeature(h.store != nil, errDatabaseNotConfigured)
 	project.GET("/promotion-rollouts", requireDatabase, h.require(can.List()), h.list)
+	project.GET("/promotion-rollouts/:id/freight-collection", requireDatabase, h.getFreightCollection)
 	stage := project.Group("/stages/:stage/promotion-rollouts", requireDatabase)
 	stage.POST("", middleware.RequireFeature(h.creator != nil, errCreateDisabled), h.create)
 	stage.GET("/:number", h.require(can.Get()), h.get)

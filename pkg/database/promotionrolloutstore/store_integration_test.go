@@ -943,7 +943,7 @@ func TestStoreFreightIntegration(t *testing.T) {
 	// byte for byte.
 	requireCollection := func(t *testing.T, rollout Rollout, refs ...kargoapi.FreightReference) {
 		t.Helper()
-		got, err := store.GetFreightCollection(ctx, rollout.ID)
+		got, err := store.GetFreightCollection(ctx, rollout.ProjectName, rollout.ID)
 		require.NoError(t, err)
 		want := &kargoapi.FreightCollection{}
 		if len(refs) > 0 {
@@ -1099,9 +1099,9 @@ func TestStoreFreightIntegration(t *testing.T) {
 				).Scan(&same))
 				require.True(t, same)
 				// Read again, it is the same collection in the same order.
-				once, err := store.GetFreightCollection(ctx, second.ID)
+				once, err := store.GetFreightCollection(ctx, project, second.ID)
 				require.NoError(t, err)
-				again, err := store.GetFreightCollection(ctx, second.ID)
+				again, err := store.GetFreightCollection(ctx, project, second.ID)
 				require.NoError(t, err)
 				require.Equal(t, once, again)
 				require.Equal(t, []string{"config-1", "images-1"}, freightNames(once))
@@ -1212,7 +1212,8 @@ func TestStoreFreightIntegration(t *testing.T) {
 					Name:        "prod",
 				}))
 				require.Zero(t, countRows(t, second))
-				requireCollection(t, second)
+				_, err = store.GetFreightCollection(ctx, project, second.ID)
+				require.ErrorIs(t, err, database.ErrNotFound)
 			},
 		},
 		{
@@ -1295,15 +1296,20 @@ func TestStoreFreightIntegration(t *testing.T) {
 				// to Running by a status update, which records no Freight.
 				old := create(t, project, "prod", "prod.01A", freight("images-1", images))
 				finish(t, old, kargoapi.PromotionRolloutPhaseRunning)
-				collection, err := store.GetFreightCollection(ctx, old.ID)
+				collection, err := store.GetFreightCollection(ctx, project, old.ID)
 				require.NoError(t, err)
 				require.Equal(t, &kargoapi.FreightCollection{}, collection)
 				finish(t, old, succeeded)
 				require.Zero(t, countRows(t, old))
-				// An id that is no rollout's reads the same way.
-				collection, err = store.GetFreightCollection(ctx, uuid.New())
-				require.NoError(t, err)
-				require.Equal(t, &kargoapi.FreightCollection{}, collection)
+				// An id that is no rollout's is not found, and so is one that
+				// is another Project's rollout: an id alone reads nothing.
+				_, err = store.GetFreightCollection(ctx, project, uuid.New())
+				require.ErrorIs(t, err, database.ErrNotFound)
+				seedStage(t, "elsewhere", "prod")
+				other := promote(t, "elsewhere", "prod.01A", freight("images-1", images), succeeded, images)
+				requireCollection(t, other, freight("images-1", images))
+				_, err = store.GetFreightCollection(ctx, project, other.ID)
+				require.ErrorIs(t, err, database.ErrNotFound)
 				// The next rollout has nothing to carry forward: no rollout
 				// before it recorded anything.
 				next := promote(t, project, "prod.01B", freight("config-1", config), succeeded, images, config)

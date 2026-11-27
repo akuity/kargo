@@ -71,6 +71,11 @@ type reconciler struct {
 	// which is usual for a shard installed without one; a Promotion that
 	// names a Target then fails, saying so.
 	targets promotion.TargetGetter
+	// rollouts reads the FreightCollection a PromotionRollout recorded when
+	// it started, through the API server, for the rollout's children. It is
+	// nil when targets is: a rollout's child names a Target, so it fails for
+	// want of one before its collection matters.
+	rollouts api.RolloutFreightGetter
 
 	cfg ReconcilerConfig
 
@@ -112,6 +117,7 @@ func SetupReconcilerWithManager(
 	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
 	targets promotion.TargetGetter,
+	rollouts api.RolloutFreightGetter,
 	sender event.Sender,
 ) error {
 	// Index running Promotions by Argo CD Applications
@@ -163,6 +169,7 @@ func SetupReconcilerWithManager(
 		promoEngine,
 		cfg,
 		targets,
+		rollouts,
 	)
 
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
@@ -262,6 +269,7 @@ func newReconciler(
 	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
 	targets promotion.TargetGetter,
+	rollouts api.RolloutFreightGetter,
 ) *reconciler {
 	r := &reconciler{
 		kargoClient:  kargoClient,
@@ -271,6 +279,7 @@ func newReconciler(
 		promoMetrics: metrics.NewPromotionMetrics(kargoClient),
 		cfg:          cfg,
 		targets:      targets,
+		rollouts:     rollouts,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Promotion]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
@@ -631,12 +640,21 @@ func (r *reconciler) promote(
 	targetFreightRef, freightCollection, freightErr := api.ResolveFreightRefs(
 		ctx,
 		r.kargoClient,
+		r.rollouts,
 		promo,
 		stage,
 		targetFreight)
 
 	if freightErr != nil {
-		return nil, nil, freightErr
+		// A rollout's child reads the collection its rollout recorded through
+		// the API server. As for a Target below, only a failure to reach it
+		// leaves the Promotion Running to back off; anything else ends it.
+		if !apiserver.IsRetryable(freightErr) {
+			return nil, nil, freightErr
+		}
+		running := promo.Status.DeepCopy()
+		running.Phase = kargoapi.PromotionPhaseRunning
+		return running, nil, freightErr
 	}
 
 	// Make a deep copy of the Promotion to pass to the promotion steps execution
