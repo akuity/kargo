@@ -205,7 +205,7 @@ export const Settings = () => {
   return (
     <>
       <BaseHeader>
-        <Breadcrumb separator='>' items={[{ title: 'Settings' }]} />
+        <Breadcrumb items={[{ title: 'Settings' }]} />
       </BaseHeader>
       <div className='py-4 px-6'>
         <Flex gap={24} className='mt-2'>

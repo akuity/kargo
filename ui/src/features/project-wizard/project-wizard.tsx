@@ -1,6 +1,6 @@
-import { faBoxes, faTableColumns } from '@fortawesome/free-solid-svg-icons';
+import { faTableColumns } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Breadcrumb, Button, Space } from 'antd';
+import { Breadcrumb, Button } from 'antd';
 import { useState } from 'react';
 import { generatePath, Link, useNavigate } from 'react-router-dom';
 
@@ -174,18 +174,8 @@ export const ProjectWizard = () => {
       />
       <BaseHeader>
         <Breadcrumb
-          separator='>'
           items={[
-            {
-              title: (
-                <Link to={paths.projects}>
-                  <Space>
-                    <FontAwesomeIcon icon={faBoxes} />
-                    Projects
-                  </Space>
-                </Link>
-              )
-            },
+            { title: <Link to={paths.projects}>Projects</Link> },
             ...(state.basics.name
               ? [{ title: <span className='font-mono'>{state.basics.name}</span> }]
               : [])

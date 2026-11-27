@@ -25,10 +25,7 @@ export const ArgoCDExtension = () => {
   return (
     <>
       <BaseHeader>
-        <Breadcrumb
-          separator='>'
-          items={[...projectBreadcrumbs, { title: 'ArgoCD' }, { title: appName }]}
-        />
+        <Breadcrumb items={[...projectBreadcrumbs, { title: 'ArgoCD' }, { title: appName }]} />
       </BaseHeader>
       {isPending || !argoCDExtension ? (
         <LoadingState />
