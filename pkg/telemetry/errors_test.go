@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
@@ -167,6 +168,61 @@ func TestRecordError_truncates(t *testing.T) {
 		recorder.Ended()[0].Events()[0].Attributes,
 		semconv.ExceptionMessage(want),
 	)
+}
+
+func TestRecordErrorCtx(t *testing.T) {
+	canceledCtx, cancel := context.WithCancel(context.Background())
+	cancel()
+	expiredCtx, expire := context.WithTimeout(context.Background(), 0)
+	defer expire()
+	testCases := []struct {
+		name    string
+		ctx     context.Context
+		err     error
+		wantErr bool
+	}{
+		{
+			name:    "error",
+			ctx:     context.Background(),
+			err:     errors.New("something went wrong"),
+			wantErr: true,
+		},
+		{
+			name: "canceled error",
+			ctx:  context.Background(),
+			err:  fmt.Errorf("error dialing: %w", context.Canceled),
+		},
+		{
+			// A killed command's error doesn't wrap context.Canceled.
+			name: "canceled context",
+			ctx:  canceledCtx,
+			err:  errors.New("signal: terminated"),
+		},
+		{
+			// A timeout is a failure.
+			name:    "deadline exceeded",
+			ctx:     expiredCtx,
+			err:     context.DeadlineExceeded,
+			wantErr: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			tracer, recorder := recordingTracer()
+			_, span := tracer.Start(context.Background(), "test")
+			RecordErrorCtx(testCase.ctx, span, testCase.err)
+			span.End()
+			ended := recorder.Ended()[0]
+			if testCase.wantErr {
+				require.Equal(t, codes.Error, ended.Status().Code)
+				require.Len(t, ended.Events(), 1)
+			} else {
+				require.Equal(t, codes.Unset, ended.Status().Code)
+				require.Empty(t, ended.Events())
+			}
+		})
+	}
 }
 
 // testError is an error type for asserting exception.type.

@@ -22,6 +22,7 @@ import (
 
 	"github.com/akuity/kargo/pkg/cache"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/telemetry"
 )
 
 const (
@@ -132,10 +133,13 @@ func newRepositoryClient(
 		repoURL:    repoURL,
 		repoRef:    repoRef,
 		remoteOptions: []remote.Option{
-			remote.WithTransport(&rateLimitedRoundTripper{
-				limiter:              reg.rateLimiter,
-				internalRoundTripper: httpTransport,
-			}),
+			remote.WithTransport(telemetry.WrapTransport(
+				&rateLimitedRoundTripper{
+					limiter:              reg.rateLimiter,
+					internalRoundTripper: httpTransport,
+				},
+				"registry",
+			)),
 			remote.WithAuth(auth),
 		},
 	}

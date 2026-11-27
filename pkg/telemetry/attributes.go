@@ -41,6 +41,28 @@ const (
 	// VCSCommitKey is the attribute under which a Git commit ID is recorded
 	// (OTel semconv).
 	VCSCommitKey = semconv.VCSRefHeadRevisionKey
+	// FreightCreatedKey is the attribute under which whether a create call
+	// made a new Freight is recorded.
+	FreightCreatedKey = attribute.Key("kargo.freight.created")
+
+	// SubscriptionsKey is the attribute under which the number of a
+	// Warehouse's subscriptions is recorded.
+	SubscriptionsKey = attribute.Key("kargo.subscriptions")
+	// SubscriptionKindKey is the attribute under which a subscription's kind
+	// (git, image, chart, other) is recorded.
+	SubscriptionKindKey = attribute.Key("kargo.subscription.kind")
+	// SubscriptionRepoKey is the attribute under which a subscription's
+	// repository URL, without userinfo or query, is recorded.
+	SubscriptionRepoKey = attribute.Key("kargo.subscription.repo_url")
+	// DiscoveredKey is the attribute under which the number of commits, image
+	// references or chart versions a subscription discovered is recorded.
+	DiscoveredKey = attribute.Key("kargo.discovery.count")
+	// DiscoveredNewestKey is the attribute under which the newest commit ID,
+	// image tag or chart version a subscription discovered is recorded.
+	DiscoveredNewestKey = attribute.Key("kargo.discovery.newest")
+	// CloneSkippedKey is the attribute under which whether Git discovery
+	// skipped its clone is recorded.
+	CloneSkippedKey = attribute.Key("kargo.discovery.clone_skipped")
 
 	// StepAliasKey is the attribute under which a promotion step's alias is
 	// recorded.
