@@ -1,18 +1,18 @@
 import { useDraggable } from '@dnd-kit/core';
 import {
   faCheck,
-  faEllipsis,
-  faPlus,
-  faGripVertical,
+  faEllipsisVertical,
+  faGrip,
   faHourglass,
+  faPlus,
   faTrash,
   faTriangleExclamation
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Divider, Dropdown, Flex, Tooltip, Typography } from 'antd';
+import { Button, Dropdown, Flex, Tooltip } from 'antd';
 import classNames from 'classnames';
 import { Duration, formatDistance, formatDuration } from 'date-fns';
-import { useEffect, useMemo, useRef } from 'react';
+import { CSSProperties, useEffect, useMemo, useRef } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -27,8 +27,24 @@ import { useManualApprovalModal } from '../promotion/use-manual-approval-modal';
 
 import { DeleteFreightModal } from './delete-freight-modal';
 import { FreightArtifactList } from './freight-artifact-list';
+import { FreightStageBar } from './freight-stage-bar';
 import { getFreightDiscoveredAt } from './get-freight-discovered-at';
+import { OverflowText } from './overflow-text';
 import { useSoakTimeCounter } from './use-soak-time-counter';
+
+// Ring and border color for the selected card, from the freightline design.
+const HIGHLIGHT_COLOR = '#4f8cff';
+
+// Secondary text (age, grip), from the freightline design.
+const MUTED_TEXT_CLASS = 'text-[#8c8c8c]';
+
+// Footer controls are squeezed into the card's 18px footer row.
+const footerButtonStyle: CSSProperties = {
+  height: 18,
+  fontSize: 11,
+  paddingInline: 4,
+  borderRadius: 4
+};
 
 type FreightCardProps = {
   freight: Freight;
@@ -50,6 +66,7 @@ export const FreightCard = (props: FreightCardProps) => {
   const navigate = useNavigate();
   const actionContext = useActionContext();
 
+  const freightName = props.freight?.metadata?.name || '';
   const freightAlias = props.freight?.alias;
 
   const deleteFreightModal = useModal();
@@ -62,17 +79,16 @@ export const FreightCard = (props: FreightCardProps) => {
     }
 
     return {
-      relative: formatDistance(creationDate, new Date(), { addSuffix: false })?.replace(
-        'about',
-        ''
-      ),
+      relative: formatDistance(creationDate, new Date(), { addSuffix: false })
+        ?.replace('about', '')
+        .trim(),
       abs: creationDate
     };
   }, [props.freight]);
 
   const isViewingFreight =
-    props.viewingFreight?.metadata?.name === props.freight?.metadata?.name ||
-    actionContext?.action?.freight?.metadata?.name === props.freight?.metadata?.name;
+    props.viewingFreight?.metadata?.name === freightName ||
+    actionContext?.action?.freight?.metadata?.name === freightName;
 
   const soakTime = useSoakTimeCounter(props.soakTime, props.freight?.metadata?.namespace);
 
@@ -87,13 +103,13 @@ export const FreightCard = (props: FreightCardProps) => {
   const soakTimeFormatted = useMemo(() => (soakTime ? formatDuration(soakTime) : ''), [soakTime]);
 
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
-    id: props.freight.metadata?.name || 'name',
+    id: freightName || 'name',
     data: { originName: props.freight.origin?.name }
   });
 
   const showManualApproveModal = useManualApprovalModal();
 
-  const style = transform
+  const dragStyle: CSSProperties | undefined = transform
     ? {
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(1.05)`,
         zIndex: 9999,
@@ -101,200 +117,215 @@ export const FreightCard = (props: FreightCardProps) => {
       }
     : undefined;
 
+  const highlightStyle: CSSProperties | undefined = isViewingFreight
+    ? { borderColor: HIGHLIGHT_COLOR, boxShadow: `0 0 0 1px ${HIGHLIGHT_COLOR}` }
+    : undefined;
+
   return (
     <div
       ref={setNodeRef}
-      style={{ width: 'var(--freight-card-width, 140px)', ...style }}
-      className='relative shrink-0'
+      style={{ width: 'var(--freight-card-width, 140px)', ...dragStyle }}
+      className='relative shrink-0 flex'
     >
-      <div className='absolute bottom-0 left-0 right-0 p-1'>
-        {props.promote ? (
-          <Tooltip
-            title={
-              !props.promotionEligible && !props.isPromotionEligibleLoading
-                ? soakTimeFormatted
-                  ? `Soak: ${soakTimeFormatted}`
-                  : 'Non-approved freight'
-                : ''
-            }
-          >
-            <Button
-              className={classNames('w-full', { 'opacity-70': !props.promotionEligible })}
-              type='primary'
-              size='small'
-              onClick={() => {
-                const freight = props.freight?.metadata?.name || '';
-                const stage = actionContext?.action?.stage?.metadata?.name || '';
-                const projectName = props.freight?.metadata?.namespace || '';
-
-                if (props.promotionEligible) {
-                  props.onReviewAndPromote?.();
-                  return;
-                }
-
-                showManualApproveModal({
-                  freight,
-                  stage,
-                  projectName,
-                  onApprove: () => {
-                    navigate(
-                      generatePath(paths.promote, {
-                        name: projectName,
-                        freight: freight,
-                        stage
-                      })
-                    );
-                  }
-                });
-              }}
-              loading={props.isPromotionEligibleLoading}
-              icon={
-                !props.promotionEligible && !props.isPromotionEligibleLoading ? (
-                  <FontAwesomeIcon icon={soakTimeFormatted ? faHourglass : faTriangleExclamation} />
-                ) : undefined
-              }
-            >
-              Select
-            </Button>
-          </Tooltip>
-        ) : (
-          <div
-            {...listeners}
-            {...attributes}
-            className='bg-gray-100 dark:bg-neutral-700 rounded text-center cursor-pointer hover:bg-gray-200 dark:hover:bg-neutral-600 active:bg-gray-200 dark:active:bg-neutral-600'
-            style={{ padding: '3px 0 1px' }}
-            onMouseEnter={(e) => e.stopPropagation()}
-          >
-            <FontAwesomeIcon
-              icon={faGripVertical}
-              className='text-gray-500 dark:text-neutral-400'
-              size='sm'
-            />
-          </div>
-        )}
-      </div>
       <div
         className={classNames(
-          'rounded-md text-center flex flex-col cursor-pointer pb-7 border border-solid border-gray-100 dark:border-neutral-700 hover:border-gray-300 dark:hover:border-neutral-600',
-          {
-            'bg-gray-50 dark:bg-neutral-800': !isViewingFreight,
-            'bg-gray-100 dark:bg-neutral-700': isViewingFreight
-          },
+          'relative flex-1 min-w-0 flex flex-col overflow-hidden rounded-md border border-solid cursor-pointer py-1.5 pr-2 transition-colors',
+          // the stage bar takes the left edge of a held card; without it, the
+          // card is padded evenly
+          props.inUse ? 'pl-3' : 'pl-2',
+          // Card colors from the freightline design; they sit on the page
+          // background so cards read as raised from the strip. Every card
+          // looks the same: the stage bar alone marks freight a Stage holds.
+          'bg-white border-gray-300 shadow-sm dark:shadow-none dark:bg-[#262626] dark:border-[#3d3d3d]',
+          // one step past the card's border, so hovering shows without
+          // outshining the selected highlight
+          !highlightStyle && 'hover:border-[#c4c9d0] dark:hover:border-[#4d4d4d]',
           props.className
         )}
-        onClick={() =>
+        style={highlightStyle}
+        onClick={(e) => {
+          // React passes up clicks from the card's tooltips and menus, which
+          // are drawn elsewhere in the page; only a click on the card itself
+          // opens the freight.
+          if (!e.currentTarget.contains(e.target as Node)) {
+            return;
+          }
+
           navigate(
             generatePath(paths.freight, {
               name: props.freight?.metadata?.namespace,
-              freightName: props.freight?.metadata?.name
+              freightName
             })
-          )
-        }
+          );
+        }}
       >
-        <div
-          className={classNames('relative px-2 flex-1 flex flex-col', {
-            'pl-4': props.inUse
-          })}
-        >
-          {/* The alias is what a user recognizes a piece of freight by; the
-              head of the generated name takes its place when aliases are
-              turned off. The Warehouse is named once above its run of
-              freight, not on every card. */}
-          <Flex align='center' justify='space-between' gap={4} className='-mr-2 min-w-0'>
-            <Typography.Text
-              className='text-xs min-w-0 flex-1 truncate'
-              title={props.freight?.metadata?.name}
-            >
-              {(props.preferredFilter?.showAlias && freightAlias) ||
-                getShortFreightLabel(props.freight?.metadata?.name)}
-            </Typography.Text>
-            <Dropdown
-              menu={{
-                items: [
-                  {
-                    key: 'similar-freight',
-                    label: 'Clone freight',
-                    icon: <FontAwesomeIcon icon={faPlus} />,
-                    onClick: (e) => {
-                      e.domEvent.stopPropagation();
-                      navigate(
-                        `${generatePath(paths.warehouse, {
-                          name: props.freight?.metadata?.namespace,
-                          warehouseName: props.freight?.origin?.name,
-                          tab: 'create-freight'
-                        })}?clone-freight=${props.freight?.alias}`
-                      );
-                    }
-                  },
-                  {
-                    key: 'manually-approve',
-                    label: 'Manually Approve',
-                    icon: <FontAwesomeIcon icon={faCheck} />,
-                    onClick: (e) => {
-                      e.domEvent.stopPropagation();
-                      actionContext?.actManuallyApprove(props.freight);
-                    }
-                  },
-                  {
-                    key: 'delete-freight',
-                    label: 'Delete Freight',
-                    icon: <FontAwesomeIcon icon={faTrash} />,
-                    onClick: (e) => {
-                      e.domEvent.stopPropagation();
-                      deleteFreightModal.show((modalProps) => (
-                        <DeleteFreightModal
-                          freight={props.freight}
-                          onDelete={modalProps.hide}
-                          {...modalProps}
-                        />
-                      ));
-                    },
-                    disabled: props.inUse
+        <FreightStageBar
+          stages={props.stagesInFreight}
+          stageColorMap={props.stageColorMap}
+          showColors={props.preferredFilter?.showColors}
+        />
+
+        {/* The alias is what a user recognizes a piece of freight by; the
+            head of the generated name takes its place when aliases are turned
+            off. The Warehouse is named once above its run of freight, not on
+            every card. */}
+        <Flex align='center' gap={4} className='h-5 min-w-0'>
+          <OverflowText
+            text={
+              (props.preferredFilter?.showAlias && freightAlias) ||
+              getShortFreightLabel(freightName)
+            }
+            title={freightName}
+            className='flex-1 min-w-0 text-[12px] leading-5'
+          />
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: 'similar-freight',
+                  label: 'Clone freight',
+                  icon: <FontAwesomeIcon icon={faPlus} />,
+                  onClick: (e) => {
+                    e.domEvent.stopPropagation();
+                    navigate(
+                      `${generatePath(paths.warehouse, {
+                        name: props.freight?.metadata?.namespace,
+                        warehouseName: props.freight?.origin?.name,
+                        tab: 'create-freight'
+                      })}?clone-freight=${props.freight?.alias}`
+                    );
                   }
-                ]
-              }}
+                },
+                {
+                  key: 'manually-approve',
+                  label: 'Manually Approve',
+                  icon: <FontAwesomeIcon icon={faCheck} />,
+                  onClick: (e) => {
+                    e.domEvent.stopPropagation();
+                    actionContext?.actManuallyApprove(props.freight);
+                  }
+                },
+                {
+                  key: 'delete-freight',
+                  label: 'Delete Freight',
+                  icon: <FontAwesomeIcon icon={faTrash} />,
+                  onClick: (e) => {
+                    e.domEvent.stopPropagation();
+                    deleteFreightModal.show((modalProps) => (
+                      <DeleteFreightModal
+                        freight={props.freight}
+                        onDelete={modalProps.hide}
+                        {...modalProps}
+                      />
+                    ));
+                  },
+                  disabled: props.inUse
+                }
+              ]
+            }}
+          >
+            {/* A plain button rather than AntD's, so it has no hover fill. It
+                reaches past the header row and into the card's right padding
+                to make a larger target, and is pulled left over the header gap
+                so the dots sit close to the alias. */}
+            <button
+              type='button'
+              aria-label='Freight actions'
+              className='shrink-0 flex items-center justify-center w-6 h-7 -my-1 -ml-2 -mr-2 p-0 border-0 bg-transparent cursor-pointer text-[color:var(--kargo-color-text)]'
+              onClick={(e) => e.stopPropagation()}
+            >
+              <FontAwesomeIcon icon={faEllipsisVertical} className='text-[12px]' />
+            </button>
+          </Dropdown>
+        </Flex>
+
+        {/* at least two artifact rows tall (2 x 20px + 2px gap), so a card with
+            one artifact matches the height of one with two */}
+        <div className='flex flex-col gap-[2px] mt-1 min-w-0 min-h-[42px]'>
+          <FreightArtifactList freight={props.freight} />
+        </div>
+
+        <div
+          className='mt-auto pt-1 min-w-0'
+          // While promoting, the footer is the Select button's, and a click
+          // there never opens the freight -- not even while the button is
+          // loading, when AntD drops the click before its handler sees it.
+          onClick={props.promote ? (e) => e.stopPropagation() : undefined}
+        >
+          {props.promote ? (
+            <Tooltip
+              title={
+                !props.promotionEligible && !props.isPromotionEligibleLoading
+                  ? soakTimeFormatted
+                    ? `Soak: ${soakTimeFormatted}`
+                    : 'Non-approved freight'
+                  : ''
+              }
             >
               <Button
-                icon={<FontAwesomeIcon icon={faEllipsis} />}
+                className={classNames('w-full', { 'opacity-70': !props.promotionEligible })}
+                style={footerButtonStyle}
+                type='primary'
                 size='small'
-                type='text'
+                onClick={() => {
+                  const freight = freightName;
+                  const stage = actionContext?.action?.stage?.metadata?.name || '';
+                  const projectName = props.freight?.metadata?.namespace || '';
+
+                  if (props.promotionEligible) {
+                    props.onReviewAndPromote?.();
+                    return;
+                  }
+
+                  showManualApproveModal({
+                    freight,
+                    stage,
+                    projectName,
+                    onApprove: () => {
+                      navigate(
+                        generatePath(paths.promote, {
+                          name: projectName,
+                          freight: freight,
+                          stage
+                        })
+                      );
+                    }
+                  });
+                }}
+                loading={props.isPromotionEligibleLoading}
+                icon={
+                  !props.promotionEligible && !props.isPromotionEligibleLoading ? (
+                    <FontAwesomeIcon
+                      icon={soakTimeFormatted ? faHourglass : faTriangleExclamation}
+                    />
+                  ) : undefined
+                }
+              >
+                Select
+              </Button>
+            </Tooltip>
+          ) : (
+            <Flex align='center' justify='space-between' gap={4} className='h-[18px] min-w-0'>
+              <span
+                className={classNames('truncate text-[11px] leading-[18px]', MUTED_TEXT_CLASS)}
+                title={creation.abs?.toString()}
+              >
+                {creation.relative}
+              </span>
+              <div
+                {...listeners}
+                {...attributes}
+                className={classNames(
+                  'shrink-0 flex items-center justify-center w-7 h-6 -my-[3px] -mr-1.5 cursor-grab active:cursor-grabbing',
+                  MUTED_TEXT_CLASS
+                )}
                 onClick={(e) => e.stopPropagation()}
-              />
-            </Dropdown>
-          </Flex>
-          <Divider className='mt-0 mb-1' />
-
-          {props.inUse && !props?.preferredFilter?.showColors && (
-            <div className='absolute top-1 bottom-1 left-1 w-1.5 rounded bg-lime-200' />
+                onMouseEnter={(e) => e.stopPropagation()}
+              >
+                <FontAwesomeIcon icon={faGrip} className='text-[11px]' />
+              </div>
+            </Flex>
           )}
-          {props?.preferredFilter?.showColors && (
-            <div className='flex flex-col gap-0.5 justify-center absolute left-1 top-1 bottom-1'>
-              {props.stagesInFreight.map((stage) => (
-                <div
-                  key={stage?.metadata?.uid}
-                  title={stage?.metadata?.name}
-                  className='w-1.5 rounded flex-1'
-                  style={{
-                    background: `linear-gradient(60deg,rgb(255 255 255/0%),rgb(200 200 200/30%)), ${props.stageColorMap[stage?.metadata?.name || '']}`
-                  }}
-                />
-              ))}
-            </div>
-          )}
-
-          <div className='flex flex-col gap-1 justify-center items-center min-w-0 max-w-full [&_.ant-tag]:block [&_.ant-tag]:max-w-full [&_.ant-tag]:truncate'>
-            <FreightArtifactList freight={props.freight} />
-          </div>
-
-          <div className='flex flex-col mx-auto w-full gap-0.5 items-center justify-center text-nowrap py-1 mt-auto'>
-            <Typography.Text
-              className='text-xs text-nowrap'
-              type='secondary'
-              title={creation.abs?.toString()}
-            >
-              {creation.relative}
-            </Typography.Text>
-          </div>
         </div>
       </div>
     </div>

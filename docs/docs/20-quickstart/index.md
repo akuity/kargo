@@ -717,7 +717,7 @@ In the Kargo Dashboard:
 
 1. Locate the `Freight` in the timeline at the top of the screen.
 
-1. Drag it using the <strong>⋮⋮</strong> handle.
+1. Drag it by the grip of dots in the bottom-right corner of its card.
 
 1. Drop it into the **test** `Stage`.
 
