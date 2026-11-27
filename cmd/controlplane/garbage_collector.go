@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/client/storage/dataplane"
+	"github.com/akuity/kargo/pkg/client/storage"
 	"github.com/akuity/kargo/pkg/garbage"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
@@ -98,7 +98,7 @@ func (o *garbageCollectorOptions) run(ctx context.Context) error {
 	}
 
 	// TODO: add DB access here
-	storageClient := dataplane.NewStorageClient(mgr.GetClient(), nil, nil)
+	storageClient := storage.NewStorageClient(mgr.GetClient(), nil, nil)
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()

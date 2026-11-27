@@ -41,7 +41,7 @@ func (s *server) approveFreight(c *gin.Context) {
 		return
 	}
 
-	if err := s.freightClient.ApproveFreight(ctx, project, stageName, freightNameOrAlias); err != nil {
+	if err := s.storageClient.ApproveFreight(ctx, project, stageName, freightNameOrAlias); err != nil {
 		_ = c.Error(err)
 		return
 	}

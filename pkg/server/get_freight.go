@@ -52,6 +52,14 @@ func (s *server) getFreight(c *gin.Context) {
 		return
 	}
 
+	if freight == nil {
+		_ = c.Error(libhttp.Error(
+			errors.New("Freight not found"), // nolint: staticcheck
+			http.StatusNotFound,
+		))
+		return 
+	}
+
 	c.JSON(http.StatusOK, freight)
 }
 

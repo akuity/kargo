@@ -200,20 +200,14 @@ func (o *controllerOptions) run(ctx context.Context) error {
 		credsdb.DatabaseConfigFromEnv(),
 	)
 
-	// Targets live in the control plane's database and are served by the API
-	// server. The controller may run far from both, so it reads Targets
-	// through the API server, acting as the ServiceAccount of the control
-	// plane that its credential for the control plane resolves to, with
-	// tokens it obtains for that ServiceAccount. Without an API server,
-	// Stages that select Targets cannot be promoted and Promotions that name
-	// a Target fail.
+	// Targets and Freight can only be accessed via Kargo API Server. Fail if it's not configured.
 	var apiClient *apiserver.Client
 	if o.APIServer.Address != "" {
 		if apiClient, err = apiserver.New(ctx, o.APIServer, kargoMgr.GetConfig()); err != nil {
-			return fmt.Errorf("error configuring access to Targets: %w", err)
+			return fmt.Errorf("error configuring access to Kargo API Server: %w", err)
 		}
 	} else {
-		o.Logger.Info("API_SERVER_ADDRESS is not set; promotion to Targets is unavailable")
+		return fmt.Errorf("error configuring access to Kargo API Server")
 	}
 
 	if err := o.setupReconcilers(

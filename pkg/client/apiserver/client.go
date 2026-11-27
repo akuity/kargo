@@ -554,13 +554,6 @@ func IsForbidden(err error) bool {
 	return errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusForbidden
 }
 
-// IsNotFound reports whether err is the API server reporting that the resource
-// a request targeted does not exist.
-func IsNotFound(err error) bool {
-	var apiErr *APIError
-	return errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound
-}
-
 func (e *APIError) Error() string {
 	if e.Message == "" {
 		return fmt.Sprintf("API server responded %d", e.StatusCode)

@@ -63,8 +63,6 @@ type FreightClient interface {
 		metadata map[string]apiextensionsv1.JSON,
 	) (*kargoapi.Freight, bool, error)
 
-	DeleteFreight(ctx context.Context, project, nameOrAlias string) error
-
 	// PatchFreightAlias sets the alias of the named Freight.
 	PatchFreightAlias(ctx context.Context, project, nameOrAlias, newAlias string) error
 
@@ -75,10 +73,6 @@ type FreightClient interface {
 		project, freightName string,
 		metadata map[string]apiextensionsv1.JSON,
 	) error
-
-	ApproveFreight(
-		ctx context.Context,
-		project, stageName, nameOrAlias string) error
 
 	ListFreightFromOrigin(
 		ctx context.Context,

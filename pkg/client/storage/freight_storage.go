@@ -1,4 +1,4 @@
-package dataplane
+package storage
 
 import (
 	"context"
@@ -32,11 +32,6 @@ func (storage *StorageClient) CreateFreight(
 	freight *kargoapi.Freight,
 	metadata map[string]apiextensionsv1.JSON,
 ) (*kargoapi.Freight, bool, error) {
-	// Create the Freight. An already-existing piece of Freight is benign -- Freight
-	// is content-addressed, so a re-create carries the same contents -- which keeps
-	// a producer's reconcile idempotent. The response status distinguishes a
-	// genuinely new piece of Freight (201) from a pre-existing one (200) so callers
-	// can tell them apart.
 	created := true
 	if err := storage.client.Create(ctx, freight); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
@@ -68,8 +63,6 @@ func (storage *StorageClient) CreateFreight(
 			changed = true
 		}
 		if changed {
-			// The authorizing client runs a SubjectAccessReview for patch on
-			// freights/status, which is the authorization decision for this write.
 			if err := storage.patchFreightStatus(ctx, storage.client, current, newStatus); err != nil {
 				return nil, false, fmt.Errorf("patch freight status: %w", err)
 			}

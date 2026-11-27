@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/client/storage/dataplane"
+	"github.com/akuity/kargo/pkg/client/storage"
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
 	"github.com/akuity/kargo/pkg/server/auth/can"
@@ -563,7 +563,7 @@ func newRouter(
 	if createEnabled {
 		creator = NewCreator(store, targets, check)
 	}
-	freightClient := dataplane.NewStorageClient(kube, nil, nil)
+	freightClient := storage.NewStorageClient(kube, nil, nil)
 	New(store, creator, authorize, kube, freightClient).Register(router.Group("/v1beta1/projects/:project"))
 	return router
 }

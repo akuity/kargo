@@ -303,7 +303,6 @@ func (s *server) watchK8sResources[T any, L client.ObjectList](
 	if err != nil {
 		return nil, err
 	}
-	w.ResultChan()
 	return storageEventsWatcherK8s[T]{watcher: w}, nil
 }
 

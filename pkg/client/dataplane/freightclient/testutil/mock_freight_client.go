@@ -22,7 +22,6 @@ type MockFreightClient struct {
 		freight *kargoapi.Freight,
 		metadata map[string]apiextensionsv1.JSON,
 	) (*kargoapi.Freight, bool, error)
-	DeleteFreightFun        func(ctx context.Context, project, nameOrAlias string) error
 	PatchFreightAliasFun    func(ctx context.Context, project, nameOrAlias, newAlias string) error
 	PatchFreightMetadataFun func(
 		ctx context.Context,
@@ -47,14 +46,6 @@ type MockFreightClient struct {
 		verifiedAt time.Time,
 	) error
 	ClearStageFreightsFun func(ctx context.Context, project, stage string) error
-	ApproveFreightFn      func(ctx context.Context, project, stageName, nameOrAlias string) error
-}
-
-func (mock *MockFreightClient) ApproveFreight(
-	ctx context.Context,
-	project, stageName, nameOrAlias string,
-) error {
-	return mock.ApproveFreightFn(ctx, project, stageName, nameOrAlias)
 }
 
 func (mock *MockFreightClient) GetFreight(ctx context.Context, project, name string) (*kargoapi.Freight, error) {
@@ -82,9 +73,6 @@ func (mock *MockFreightClient) CreateFreight(
 	return mock.CreateFreightFun(ctx, project, freight, metadata)
 }
 
-func (mock *MockFreightClient) DeleteFreight(ctx context.Context, project, nameOrAlias string) error {
-	return mock.DeleteFreightFun(ctx, project, nameOrAlias)
-}
 func (mock *MockFreightClient) PatchFreightAlias(ctx context.Context, project, nameOrAlias, newAlias string) error {
 	return mock.PatchFreightAliasFun(ctx, project, nameOrAlias, newAlias)
 }

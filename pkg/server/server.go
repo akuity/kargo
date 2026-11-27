@@ -25,7 +25,7 @@ import (
 	"github.com/akuity/kargo/pkg/api"
 	rollouts "github.com/akuity/kargo/pkg/api/stubs/rollouts"
 	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
-	"github.com/akuity/kargo/pkg/client/storage/dataplane"
+	"github.com/akuity/kargo/pkg/client/storage"
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
 	"github.com/akuity/kargo/pkg/database/targetstatusstore"
@@ -61,8 +61,9 @@ type server struct {
 	// in which case nothing is published.
 	events *nats.Publisher
 
-	dataplaneStorageClient *dataplane.StorageClient
-	freightClient          freightclient.FreightClient
+	storageClient         *storage.StorageClient
+	freightClient         freightclient.FreightClient
+	freightClientInternal freightclient.FreightClient
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -152,8 +153,11 @@ func NewServer(
 		events:  events,
 	}
 
-	s.dataplaneStorageClient = dataplane.NewStorageClient(kubeClient, sender, db)
-	s.freightClient = s.dataplaneStorageClient
+	s.storageClient = storage.NewStorageClient(kubeClient, sender, db)
+	// TODO: this is temporary measure to pass InternalClient to approve_freight
+	// Once switched to DB, all auth needs to be made explicit and this client will be deleted
+	s.freightClientInternal = storage.NewStorageClient(kubeClient.InternalClient(), sender, db)
+	s.freightClient = s.storageClient
 
 	s.getStageFn = api.GetStage
 	s.createPromotionFn = kubeClient.Create

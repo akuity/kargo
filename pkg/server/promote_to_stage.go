@@ -163,7 +163,7 @@ func (s *server) promoteToStage(c *gin.Context) {
 		}
 		if s.sender != nil && promotion.Spec.Freight != "" {
 			freight, getFreightErr := s.freightClient.GetFreight(ctx, promotion.Namespace, promotion.Spec.Freight)
-			if getFreightErr != nil {
+			if getFreightErr != nil || freight == nil {
 				logging.LoggerFromContext(ctx).Error(
 					getFreightErr,
 					"error getting resolved Freight for Promotion created event",

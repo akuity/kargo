@@ -15,22 +15,6 @@ import (
 
 var _ freightclient.FreightClient = (*Client)(nil)
 
-func (c *Client) ApproveFreight(
-	ctx context.Context,
-	project, stageName, nameOrAlias string,
-) error {
-	resp, err := c.api.CoreAPI.ApproveFreight(ctx, project, nameOrAlias).
-		Stage(stageName).
-		Execute()
-	if resp != nil {
-		_ = resp.Body.Close()
-	}
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // GetFreight returns, through the API server, the Freight with the given name,
 // or nil if there is no such Freight. Freight is matched explicitly by name.
 func (c *Client) GetFreight(

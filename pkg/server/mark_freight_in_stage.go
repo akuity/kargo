@@ -1,4 +1,3 @@
-// nolint:lll
 package server
 
 import (
@@ -15,7 +14,7 @@ import (
 // a set of Freights were set as current for stage.
 type markFreightsCurrentlyInStageRequest struct {
 	// FreightNames is a list of names of freights to be marked as current in stage
-	FreightNames []string
+	FreightNames []string `json:"freightNames,omitempty"`
 } // @name MarkFreightsCurrentlyInStageRequest
 
 // @id MarkFreightsCurrentlyInStage
@@ -56,7 +55,7 @@ func (s *server) markFreightsCurrentlyInStage(c *gin.Context) {
 // Freight has been verified in a Stage.
 type markFreightsVerifiedInStageRequest struct {
 	// FreightNames is a list of names of freights to be marked as verified in stage
-	FreightNames []string
+	FreightNames []string `json:"freightNames,omitempty"`
 	// VerifiedAt is the time at which the Freight was verified in the Stage. It
 	// defaults to the time the request is handled.
 	VerifiedAt *metav1.Time `json:"verifiedAt,omitempty"`
