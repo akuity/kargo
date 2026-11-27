@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
@@ -12,6 +13,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	sigyaml "sigs.k8s.io/yaml"
 
@@ -548,6 +551,131 @@ func Test_annotateResourceWithCreator(t *testing.T) {
 			if testCase.assert != nil {
 				testCase.assert(t, testCase.obj)
 			}
+		})
+	}
+}
+
+func Test_server_authorizeResourceCreate(t *testing.T) {
+	const project = "fake-project"
+	const stage = "fake-stage"
+
+	promotion := func() *unstructured.Unstructured {
+		return &unstructured.Unstructured{
+			Object: map[string]any{
+				"apiVersion": kargoapi.GroupVersion.String(),
+				"kind":       "Promotion",
+				"metadata": map[string]any{
+					"name":      "fake-promotion",
+					"namespace": project,
+				},
+				"spec": map[string]any{
+					"stage":   stage,
+					"freight": "fake-freight",
+				},
+			},
+		}
+	}
+
+	testCases := []struct {
+		name        string
+		obj         *unstructured.Unstructured
+		authorizeFn func(
+			context.Context,
+			string,
+			schema.GroupVersionResource,
+			string,
+			types.NamespacedName,
+		) error
+		assert func(*testing.T, error, bool)
+	}{
+		{
+			name: "non-Promotion resource is not subject to the promote check",
+			obj: &unstructured.Unstructured{
+				Object: map[string]any{
+					"apiVersion": kargoapi.GroupVersion.String(),
+					"kind":       "Stage",
+					"metadata":   map[string]any{"name": stage, "namespace": project},
+				},
+			},
+			assert: func(t *testing.T, err error, called bool) {
+				require.NoError(t, err)
+				require.False(t, called, "authorizeFn must not be called for non-Promotions")
+			},
+		},
+		{
+			name: "Promotion without a target Stage is left to validation",
+			obj: &unstructured.Unstructured{
+				Object: map[string]any{
+					"apiVersion": kargoapi.GroupVersion.String(),
+					"kind":       "Promotion",
+					"metadata":   map[string]any{"name": "fake-promotion", "namespace": project},
+					"spec":       map[string]any{"freight": "fake-freight"},
+				},
+			},
+			assert: func(t *testing.T, err error, called bool) {
+				require.NoError(t, err)
+				require.False(t, called, "authorizeFn must not be called without a target Stage")
+			},
+		},
+		{
+			name: "Promotion checks the promote verb on the target Stage",
+			obj:  promotion(),
+			authorizeFn: func(
+				_ context.Context,
+				verb string,
+				gvr schema.GroupVersionResource,
+				_ string,
+				key types.NamespacedName,
+			) error {
+				require.Equal(t, "promote", verb)
+				require.Equal(t, kargoapi.GroupVersion.WithResource("stages"), gvr)
+				require.Equal(t, project, key.Namespace)
+				require.Equal(t, stage, key.Name)
+				return nil
+			},
+			assert: func(t *testing.T, err error, called bool) {
+				require.NoError(t, err)
+				require.True(t, called)
+			},
+		},
+		{
+			name: "denied promote authorization is surfaced",
+			obj:  promotion(),
+			authorizeFn: func(
+				context.Context,
+				string,
+				schema.GroupVersionResource,
+				string,
+				types.NamespacedName,
+			) error {
+				return errors.New("not permitted to promote")
+			},
+			assert: func(t *testing.T, err error, called bool) {
+				require.ErrorContains(t, err, "not permitted to promote")
+				require.True(t, called)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			var called bool
+			s := &server{
+				authorizeFn: func(
+					ctx context.Context,
+					verb string,
+					gvr schema.GroupVersionResource,
+					subresource string,
+					key types.NamespacedName,
+				) error {
+					called = true
+					if testCase.authorizeFn != nil {
+						return testCase.authorizeFn(ctx, verb, gvr, subresource, key)
+					}
+					return nil
+				},
+			}
+			err := s.authorizeResourceCreate(context.Background(), testCase.obj)
+			testCase.assert(t, err, called)
 		})
 	}
 }
