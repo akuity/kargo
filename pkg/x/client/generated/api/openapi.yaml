@@ -3840,8 +3840,8 @@ paths:
     get:
       description: |-
         Retrieve information a client may need to know about how the
-        Kargo API server is configured in order to proceed with
-        authentication.
+        Kargo API server is configured before it has authenticated,
+        e.g. in order to proceed with authentication.
       operationId: GetPublicConfig
       responses:
         "200":
@@ -4562,6 +4562,13 @@ components:
         username:
           type: string
       type: object
+    PostHogConfig:
+      properties:
+        apiKey:
+          type: string
+        host:
+          type: string
+      type: object
     PromoteDownstreamRequest:
       example:
         freight: freight
@@ -4618,11 +4625,19 @@ components:
           scopes:
           - scopes
           - scopes
+        posthogConfig: "{}"
       properties:
         adminAccountEnabled:
           type: boolean
         oidcConfig:
           $ref: "#/components/schemas/OIDCConfig"
+        posthogConfig:
+          allOf:
+          - $ref: "#/components/schemas/PostHogConfig"
+          description: |-
+            PostHogConfig is present only when an operator has opted in to the
+            dashboard sending product analytics to PostHog.
+          type: object
       type: object
     ResolvedLink:
       example:

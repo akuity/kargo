@@ -9,6 +9,9 @@ import (
 type publicConfig struct {
 	AdminAccountEnabled bool        `json:"adminAccountEnabled"`
 	OIDCConfig          *oidcConfig `json:"oidcConfig,omitempty"`
+	// PostHogConfig is present only when an operator has opted in to the
+	// dashboard sending product analytics to PostHog.
+	PostHogConfig *postHogConfig `json:"posthogConfig,omitempty"`
 } // @name PublicConfig
 
 type oidcConfig struct {
@@ -18,11 +21,16 @@ type oidcConfig struct {
 	Scopes      []string `json:"scopes,omitempty"`
 } // @name OIDCConfig
 
+type postHogConfig struct {
+	APIKey string `json:"apiKey"`
+	Host   string `json:"host"`
+} // @name PostHogConfig
+
 // @id GetPublicConfig
 // @Summary Retrieve public server configuration
 // @Description Retrieve information a client may need to know about how the
-// @Description Kargo API server is configured in order to proceed with
-// @Description authentication.
+// @Description Kargo API server is configured before it has authenticated,
+// @Description e.g. in order to proceed with authentication.
 // @Tags System, Config
 // @Produce json
 // @Success 200 {object} publicConfig
@@ -37,9 +45,17 @@ func (s *server) getPublicConfig(c *gin.Context) {
 			Scopes:      append(s.cfg.OIDCConfig.DefaultScopes, s.cfg.OIDCConfig.AdditionalScopes...),
 		}
 	}
+	var postHogCfg *postHogConfig
+	if s.cfg.PostHogConfig != nil {
+		postHogCfg = &postHogConfig{
+			APIKey: s.cfg.PostHogConfig.APIKey,
+			Host:   s.cfg.PostHogConfig.Host,
+		}
+	}
 	resp := publicConfig{
 		AdminAccountEnabled: s.cfg.AdminConfig != nil,
 		OIDCConfig:          oidcCfg,
+		PostHogConfig:       postHogCfg,
 	}
 	c.JSON(http.StatusOK, resp)
 }

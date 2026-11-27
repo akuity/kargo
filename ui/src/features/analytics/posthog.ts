@@ -1,0 +1,51 @@
+import type { PostHogConfig } from 'posthog-js';
+
+import { sanitizeEvent } from './sanitize-event';
+
+/**
+ * postHogOptions returns the options PostHog is started with. They limit what
+ * is reported to page views: nothing a user clicks, types, or sees is
+ * captured, users are not identified, and resource names are removed from
+ * what remains.
+ */
+export const postHogOptions = (host: string): Partial<PostHogConfig> => ({
+  api_host: host,
+  // The UI is a single-page app: a page view is a change of route.
+  capture_pageview: 'history_change',
+  before_send: sanitizeEvent,
+  // Users are anonymous. Their random ID is kept in localStorage rather than
+  // in a cookie, which PostHog would share with sibling subdomains.
+  person_profiles: 'never',
+  persistence: 'localStorage',
+  respect_dnt: true,
+  // Each of these would capture what is on screen or what the user does
+  // with it, and with that the names and contents of resources.
+  autocapture: false,
+  rageclick: false,
+  capture_heatmaps: false,
+  capture_dead_clicks: false,
+  capture_exceptions: false,
+  capture_performance: false,
+  disable_session_recording: true,
+  // PostHog loads further features (surveys, session replay, and so on) as
+  // scripts from its own host when they are enabled in the PostHog project.
+  // Refusing those scripts keeps such features off whatever the project's
+  // settings say.
+  disable_external_dependency_loading: true
+});
+
+let started = false;
+
+/**
+ * startPostHog loads PostHog and starts reporting to it. PostHog is loaded on
+ * demand so that a UI without analytics enabled never downloads it. Calls
+ * after the first do nothing.
+ */
+export const startPostHog = async (apiKey: string, host: string): Promise<void> => {
+  if (started) {
+    return;
+  }
+  started = true;
+  const { default: posthog } = await import('posthog-js');
+  posthog.init(apiKey, postHogOptions(host));
+};

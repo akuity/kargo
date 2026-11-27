@@ -337,6 +337,54 @@ client choose its own address.
 
 :::
 
+### Product Analytics
+
+The Kargo dashboard can report how it is used to
+[PostHog](https://posthog.com). This is disabled by default, in which case the
+dashboard loads no analytics code and sends nothing anywhere.
+
+To enable it, supply the API key of a PostHog project of your own:
+
+```yaml
+api:
+  posthog:
+    enabled: true
+    apiKey: phc_...
+    # Optional. Defaults to PostHog Cloud (US).
+    host: https://eu.i.posthog.com
+```
+
+`api.posthog.host` may be PostHog Cloud, a self-hosted PostHog instance, or a
+reverse proxy in front of either.
+
+When enabled, the dashboard reports page views, and only page views:
+
+- Users are anonymous. No name, email address, or other claim from a user's
+  identity is sent.
+- The names of Projects, Stages, and other resources are removed from the URLs
+  that are reported. For example, a visit to `/project/my-project/stage/prod`
+  is reported as a visit to `/project/:name/stage/:stageName`. Query strings
+  and page titles are not reported at all.
+- Clicks, form input, and screen contents are never captured, and PostHog's
+  session replay, autocapture, heatmaps, surveys, and error tracking remain
+  off even if they are enabled in the PostHog project.
+
+:::info
+
+PostHog project API keys can only be used to send events and are meant to be
+public, so the key is not stored in a `Secret`. The API server shares it, and
+the host, with the dashboard before a user has logged in.
+
+:::
+
+:::note
+
+Users' browsers send events directly to `api.posthog.host`. If a proxy in front
+of the API server sets a `Content-Security-Policy` header, it will need to
+permit connections to that host.
+
+:::
+
 ## Git Configuration
 
 Kargo supports a number of Git-related configurations that can be set at

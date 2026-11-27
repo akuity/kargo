@@ -593,8 +593,8 @@ func (r ApiGetPublicConfigRequest) Execute() (*PublicConfig, *http.Response, err
 GetPublicConfig Retrieve public server configuration
 
 Retrieve information a client may need to know about how the
-Kargo API server is configured in order to proceed with
-authentication.
+Kargo API server is configured before it has authenticated,
+e.g. in order to proceed with authentication.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @return ApiGetPublicConfigRequest

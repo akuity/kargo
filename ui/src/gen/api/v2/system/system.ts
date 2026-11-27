@@ -564,8 +564,8 @@ export const getGetPublicConfigUrl = () => {
 
 /**
  * Retrieve information a client may need to know about how the
- * Kargo API server is configured in order to proceed with
- * authentication.
+ * Kargo API server is configured before it has authenticated,
+ * e.g. in order to proceed with authentication.
  * @summary Retrieve public server configuration
  */
 export const getPublicConfig = async (
