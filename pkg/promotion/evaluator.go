@@ -6,12 +6,14 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/expr-lang/expr"
 	gocache "github.com/patrickmn/go-cache"
 	"go.yaml.in/yaml/v3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/expressions"
 	exprfn "github.com/akuity/kargo/pkg/expressions/function"
@@ -26,9 +28,10 @@ import (
 // expressions within the same step access the same data, such as Secrets or
 // ConfigMaps.
 type StepEvaluator struct {
-	client  client.Client
-	credsDB credentials.Database
-	cache   *gocache.Cache
+	client        client.Client
+	freightClient freightclient.FreightClient
+	credsDB       credentials.Database
+	cache         *gocache.Cache
 }
 
 // NewStepEvaluator creates a new StepEvaluator instance with the provided
@@ -40,13 +43,15 @@ type StepEvaluator struct {
 // unnecessary API calls and improve performance.
 func NewStepEvaluator(
 	cl client.Client,
+	freightClient freightclient.FreightClient,
 	credsDB credentials.Database,
 	cache *gocache.Cache,
 ) *StepEvaluator {
 	return &StepEvaluator{
-		client:  cl,
-		credsDB: credsDB,
-		cache:   cache,
+		client:        cl,
+		freightClient: freightClient,
+		credsDB:       credsDB,
+		cache:         cache,
 	}
 }
 
@@ -196,13 +201,7 @@ func (p *StepEvaluator) Vars(ctx context.Context, promoCtx Context, step Step) (
 	// Prepare the expression functions that will be available during variable
 	// evaluation. These functions provide access to data operations, freight
 	// operations, and utility functions.
-	exprOpts := slices.Concat(
-		exprfn.DataOperations(ctx, p.client, p.credsDB, p.cache, promoCtx.Project),
-		exprfn.FreightOperations(
-			ctx, p.client, promoCtx.Project, promoCtx.FreightRequests, promoCtx.Freight.References(),
-		),
-		exprfn.UtilityOperations(),
-	)
+	exprOpts := p.KargoOperations(ctx, promoCtx)
 
 	// Evaluate the global variables defined in the Promotion itself, these
 	// variables DO NOT have access to the (task) outputs.
@@ -271,16 +270,8 @@ func (p *StepEvaluator) ShouldSkip(ctx context.Context, promoCtx Context, step S
 		step.If,
 		env,
 		slices.Concat(
-			exprfn.DataOperations(ctx, p.client, p.credsDB, p.cache, promoCtx.Project),
-			exprfn.FreightOperations(
-				ctx,
-				p.client,
-				promoCtx.Project,
-				promoCtx.FreightRequests,
-				promoCtx.Freight.References(),
-			),
+			p.KargoOperations(ctx, promoCtx),
 			exprfn.StatusOperations(step.Alias, promoCtx.StepExecutionMetadata),
-			exprfn.UtilityOperations(),
 		)...,
 	)
 	if err != nil {
@@ -326,16 +317,8 @@ func (p *StepEvaluator) Config(ctx context.Context, promoCtx Context, step Step)
 		step.Config,
 		env,
 		slices.Concat(
-			exprfn.FreightOperations(
-				ctx,
-				p.client,
-				promoCtx.Project,
-				promoCtx.FreightRequests,
-				promoCtx.Freight.References(),
-			),
-			exprfn.DataOperations(ctx, p.client, p.credsDB, p.cache, promoCtx.Project),
+			p.KargoOperations(ctx, promoCtx),
 			exprfn.StatusOperations(step.Alias, promoCtx.StepExecutionMetadata),
-			exprfn.UtilityOperations(),
 		)...,
 	)
 	if err != nil {
@@ -347,6 +330,27 @@ func (p *StepEvaluator) Config(ctx context.Context, promoCtx Context, step Step)
 		return nil, nil
 	}
 	return config, nil
+}
+
+func (p *StepEvaluator) KargoOperations(ctx context.Context, promoCtx Context) []expr.Option {
+	return slices.Concat(exprfn.DataOperations(
+		ctx,
+		p.client,
+		p.freightClient,
+		p.credsDB,
+		p.cache,
+		promoCtx.Project,
+	),
+		exprfn.FreightOperations(
+			ctx,
+			p.client,
+			p.freightClient,
+			promoCtx.Project,
+			promoCtx.FreightRequests,
+			promoCtx.Freight.References(),
+		),
+		exprfn.UtilityOperations(),
+	)
 }
 
 // BuildStepContext builds a StepContext for the given Step in the context of

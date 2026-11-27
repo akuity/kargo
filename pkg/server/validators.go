@@ -1,15 +1,11 @@
 package server
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
@@ -99,72 +95,4 @@ func validateGenericCredentialSecret(secret *corev1.Secret) error {
 		)
 	}
 	return nil
-}
-
-// getFreightByNameOrAlias resolves a Freight resource by name or, when no
-// Freight has that name, by alias. Errors carry an HTTP status: 404 when
-// nothing matches and 409 when the alias matches more than one piece of
-// Freight.
-func (s *server) getFreightByNameOrAlias(
-	ctx context.Context,
-	project string,
-	nameOrAlias string,
-) (*kargoapi.Freight, error) {
-	freight := &kargoapi.Freight{}
-	err := s.client.Get(
-		ctx,
-		client.ObjectKey{Name: nameOrAlias, Namespace: project},
-		freight,
-	)
-	if err == nil {
-		return freight, nil
-	}
-	if !apierrors.IsNotFound(err) {
-		return nil, err
-	}
-	return s.getFreightByAlias(ctx, project, nameOrAlias)
-}
-
-// getFreightByAlias resolves a Freight resource by alias. Errors carry an
-// HTTP status: 404 when nothing matches and 409 when the alias matches more
-// than one piece of Freight.
-func (s *server) getFreightByAlias(
-	ctx context.Context,
-	project string,
-	alias string,
-) (*kargoapi.Freight, error) {
-	list := &kargoapi.FreightList{}
-	if err := s.client.List(
-		ctx,
-		list,
-		client.InNamespace(project),
-		client.MatchingLabels{kargoapi.LabelKeyAlias: alias},
-	); err != nil {
-		return nil, err
-	}
-	switch len(list.Items) {
-	case 0:
-		return nil, libhttp.ErrorStr(
-			fmt.Sprintf(
-				"Freight with name or alias %q not found in project %q",
-				alias, project,
-			),
-			http.StatusNotFound,
-		)
-	case 1:
-		return &list.Items[0], nil
-	default:
-		names := make([]string, len(list.Items))
-		for i, freight := range list.Items {
-			names[i] = freight.Name
-		}
-		return nil, libhttp.ErrorStr(
-			fmt.Sprintf(
-				"alias %q is shared by multiple pieces of Freight in project %q (%s); "+
-					"refer to the Freight by name or give one of them a new alias",
-				alias, project, strings.Join(names, ", "),
-			),
-			http.StatusConflict,
-		)
-	}
 }

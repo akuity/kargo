@@ -181,6 +181,7 @@ func TestLocalStepExecutor_ExecuteStep_tracing(t *testing.T) {
 				nil,
 				nil,
 				nil,
+				nil,
 			)
 			res, err := executor.ExecuteStep(
 				context.Background(),

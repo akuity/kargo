@@ -756,6 +756,46 @@ paths:
       summary: Query Freight
       tags:
       - Core
+    post:
+      description: |-
+        Create a Freight resource, optionally recording status metadata on
+        it. The operation is idempotent: creating a piece of Freight that
+        already exists is not an error, and any metadata is applied
+        fill-if-missing so existing metadata is preserved.
+      operationId: CreateFreight
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFreightRequest"
+        description: Freight to create
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Freight"
+          description: Freight already existed
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Freight"
+          description: Freight was created
+      security:
+      - BearerAuth: []
+      summary: Create a piece of Freight
+      tags:
+      - Core
+      x-codegen-request-body-name: body
   /v1beta1/projects/{project}/freight/{freight-name-or-alias}:
     delete:
       description: |-
@@ -802,6 +842,16 @@ paths:
         required: true
         schema:
           type: string
+      - description: "Match only the Freight name, not its alias"
+        in: query
+        name: nameOnly
+        schema:
+          type: boolean
+      - description: "Match only the Freight alias, not its name"
+        in: query
+        name: aliasOnly
+        schema:
+          type: boolean
       responses:
         "200":
           content:
@@ -1127,6 +1177,209 @@ paths:
       summary: List container images
       tags:
       - Core
+  /v1beta1/projects/{project}/internal/freight/{freight}/metadata:
+    patch:
+      description: |-
+        Upsert keys in the status metadata of a Freight resource. A value
+        already recorded under a key named in the request is
+        overwritten; other keys are left as they are.
+      operationId: PatchFreightMetadata
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Freight name
+        in: path
+        name: freight
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchFreightMetadataRequest"
+        description: Metadata
+        required: true
+      responses:
+        "200":
+          content: {}
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Update a Freight resource's status metadata
+      tags:
+      - Core
+      x-codegen-request-body-name: body
+  /v1beta1/projects/{project}/internal/origin/{origin-kind}/{origin-name}/freight:
+    get:
+      description: |-
+        List Freight that originated from the named Origin, optionally
+        filtered to that approved for or verified in given Stages, currently
+        in a Stage, and having soaked for a minimum duration. Returns a
+        FreightList resource.
+      operationId: ListFreightFromOrigin
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Origin kind
+        in: path
+        name: origin-kind
+        required: true
+        schema:
+          type: string
+      - description: Origin name
+        in: path
+        name: origin-name
+        required: true
+        schema:
+          type: string
+      - description: Include Freight approved for this Stage
+        in: query
+        name: approvedFor
+        schema:
+          type: string
+      - description: Include Freight verified in these Stages
+        explode: true
+        in: query
+        name: verifiedIn
+        schema:
+          items:
+            type: string
+          type: array
+        style: form
+      - description: Only Freight currently in this Stage
+        in: query
+        name: currentlyIn
+        schema:
+          type: string
+      - description: How verifiedIn Stages are combined (OneOf or All)
+        in: query
+        name: availabilityStrategy
+        schema:
+          type: string
+      - description: "Minimum soak duration, e.g. 1h"
+        in: query
+        name: requiredSoakTime
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FreightList"
+          description: FreightList custom resource
+      security:
+      - BearerAuth: []
+      summary: List Freight from an Origin
+      tags:
+      - Core
+  /v1beta1/projects/{project}/internal/stage-freight/{stage}:
+    delete:
+      description: |-
+        Remove the named Stage from all Freights which reference it. This is used by
+        the Stage controller to clean up Freight status when a Stage is deleted.
+      operationId: ClearStageFreights
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Stage name
+        in: path
+        name: stage
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content: {}
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Remove all of a Stage's entries from any Freight's status
+      tags:
+      - Core
+  /v1beta1/projects/{project}/internal/stage-freight/{stage}/current:
+    post:
+      description: |-
+        Record that the named Freights are currently in use by the Stage,
+        adding the Stage to the Freight's currentlyIn status. Any other
+        Freights will have this Stage removed from their currentlyIn.
+      operationId: MarkFreightsCurrentlyInStage
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Stage name
+        in: path
+        name: stage
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkFreightsCurrentlyInStageRequest"
+        description: CurrentlyIn
+        required: true
+      responses:
+        "200":
+          content: {}
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Mark a set of Freights as currently in use by a Stage
+      tags:
+      - Core
+      x-codegen-request-body-name: body
+  /v1beta1/projects/{project}/internal/stage-freight/{stage}/verified:
+    post:
+      operationId: MarkFreightsVerifiedInStage
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        schema:
+          type: string
+      - description: Stage name
+        in: path
+        name: stage
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkFreightsVerifiedInStageRequest"
+        description: Verification
+        required: true
+      responses:
+        "200":
+          content: {}
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: "Mark a set of Freights as verified in a Stage, adding to verifiedIn"
+      tags:
+      - Core
+      x-codegen-request-body-name: body
   /v1beta1/projects/{project}/promotion-requests:
     get:
       description: |-
@@ -4027,6 +4280,28 @@ components:
         replicate:
           type: boolean
       type: object
+    CreateFreightRequest:
+      example:
+        freight: "{}"
+        metadata:
+          key: "{}"
+      properties:
+        freight:
+          allOf:
+          - $ref: "#/components/schemas/Freight"
+          description: |-
+            Freight is the Freight resource to create. Its namespace is overridden with
+            the Project from the request path.
+          type: object
+        metadata:
+          additionalProperties:
+            type: object
+          description: |-
+            Metadata is optional status metadata to record on the Freight. Each key is
+            set only if absent (fill-if-missing), so re-creating an already-existing
+            piece of Freight never overwrites metadata already recorded for it.
+          type: object
+      type: object
     CreateGenericCredentialsRequest:
       example:
         data:
@@ -4477,6 +4752,38 @@ components:
         total:
           type: integer
       type: object
+    MarkFreightsCurrentlyInStageRequest:
+      example:
+        freightNames:
+        - freightNames
+        - freightNames
+      properties:
+        freightNames:
+          description: FreightNames is a list of names of freights to be marked as
+            current in stage
+          items:
+            type: string
+          type: array
+      type: object
+    MarkFreightsVerifiedInStageRequest:
+      example:
+        freightNames:
+        - freightNames
+        - freightNames
+        verifiedAt: verifiedAt
+      properties:
+        freightNames:
+          description: FreightNames is a list of names of freights to be marked as
+            verified in stage
+          items:
+            type: string
+          type: array
+        verifiedAt:
+          description: |-
+            VerifiedAt is the time at which the Freight was verified in the Stage. It
+            defaults to the time the request is handled.
+          type: string
+      type: object
     OIDCConfig:
       example:
         cliClientId: cliClientId
@@ -4516,6 +4823,20 @@ components:
           items:
             type: string
           type: array
+      type: object
+    PatchFreightMetadataRequest:
+      example:
+        metadata:
+          key: "{}"
+      properties:
+        metadata:
+          additionalProperties:
+            type: object
+          description: |-
+            Metadata is the status metadata to record on the Freight. Each key is
+            upserted: an existing value under the same key is overwritten, and keys
+            not named in the request are left as they are.
+          type: object
       type: object
     PatchGenericCredentialsRequest:
       example:
@@ -12906,6 +13227,242 @@ components:
             Expression is an expr-lang expression that must evaluate to true for
             Freight to be created automatically from new artifacts following discovery.
           type: string
+      type: object
+    FreightList:
+      example:
+        apiVersion: apiVersion
+        items:
+        - alias: alias
+          apiVersion: apiVersion
+          artifacts:
+          - artifactType: artifactType
+            metadata: "{}"
+            subscriptionName: subscriptionName
+            version: version
+          - artifactType: artifactType
+            metadata: "{}"
+            subscriptionName: subscriptionName
+            version: version
+          charts:
+          - name: name
+            repoURL: repoURL
+            subscriptionName: subscriptionName
+            version: version
+          - name: name
+            repoURL: repoURL
+            subscriptionName: subscriptionName
+            version: version
+          commits:
+          - author: author
+            branch: branch
+            committer: committer
+            id: id
+            message: message
+            repoURL: repoURL
+            subscriptionName: subscriptionName
+            tag: tag
+          - author: author
+            branch: branch
+            committer: committer
+            id: id
+            message: message
+            repoURL: repoURL
+            subscriptionName: subscriptionName
+            tag: tag
+          discoveredAt: discoveredAt
+          images:
+          - annotations:
+              key: annotations
+            digest: digest
+            repoURL: repoURL
+            subscriptionName: subscriptionName
+            tag: tag
+          - annotations:
+              key: annotations
+            digest: digest
+            repoURL: repoURL
+            subscriptionName: subscriptionName
+            tag: tag
+          kind: kind
+          metadata:
+            annotations:
+              key: annotations
+            creationTimestamp: creationTimestamp
+            deletionGracePeriodSeconds: 0
+            deletionTimestamp: deletionTimestamp
+            finalizers:
+            - finalizers
+            - finalizers
+            generateName: generateName
+            generation: 6
+            labels:
+              key: labels
+            managedFields:
+            - apiVersion: apiVersion
+              fieldsType: fieldsType
+              fieldsV1: "{}"
+              manager: manager
+              operation: operation
+              subresource: subresource
+              time: time
+            - apiVersion: apiVersion
+              fieldsType: fieldsType
+              fieldsV1: "{}"
+              manager: manager
+              operation: operation
+              subresource: subresource
+              time: time
+            name: name
+            namespace: namespace
+            ownerReferences:
+            - apiVersion: apiVersion
+              blockOwnerDeletion: true
+              controller: true
+              kind: kind
+              name: name
+              uid: uid
+            - apiVersion: apiVersion
+              blockOwnerDeletion: true
+              controller: true
+              kind: kind
+              name: name
+              uid: uid
+            resourceVersion: resourceVersion
+            selfLink: selfLink
+            uid: uid
+          origin: "{}"
+          status: "{}"
+        - alias: alias
+          apiVersion: apiVersion
+          artifacts:
+          - artifactType: artifactType
+            metadata: "{}"
+            subscriptionName: subscriptionName
+            version: version
+          - artifactType: artifactType
+            metadata: "{}"
+            subscriptionName: subscriptionName
+            version: version
+          charts:
+          - name: name
+            repoURL: repoURL
+            subscriptionName: subscriptionName
+            version: version
+          - name: name
+            repoURL: repoURL
+            subscriptionName: subscriptionName
+            version: version
+          commits:
+          - author: author
+            branch: branch
+            committer: committer
+            id: id
+            message: message
+            repoURL: repoURL
+            subscriptionName: subscriptionName
+            tag: tag
+          - author: author
+            branch: branch
+            committer: committer
+            id: id
+            message: message
+            repoURL: repoURL
+            subscriptionName: subscriptionName
+            tag: tag
+          discoveredAt: discoveredAt
+          images:
+          - annotations:
+              key: annotations
+            digest: digest
+            repoURL: repoURL
+            subscriptionName: subscriptionName
+            tag: tag
+          - annotations:
+              key: annotations
+            digest: digest
+            repoURL: repoURL
+            subscriptionName: subscriptionName
+            tag: tag
+          kind: kind
+          metadata:
+            annotations:
+              key: annotations
+            creationTimestamp: creationTimestamp
+            deletionGracePeriodSeconds: 0
+            deletionTimestamp: deletionTimestamp
+            finalizers:
+            - finalizers
+            - finalizers
+            generateName: generateName
+            generation: 6
+            labels:
+              key: labels
+            managedFields:
+            - apiVersion: apiVersion
+              fieldsType: fieldsType
+              fieldsV1: "{}"
+              manager: manager
+              operation: operation
+              subresource: subresource
+              time: time
+            - apiVersion: apiVersion
+              fieldsType: fieldsType
+              fieldsV1: "{}"
+              manager: manager
+              operation: operation
+              subresource: subresource
+              time: time
+            name: name
+            namespace: namespace
+            ownerReferences:
+            - apiVersion: apiVersion
+              blockOwnerDeletion: true
+              controller: true
+              kind: kind
+              name: name
+              uid: uid
+            - apiVersion: apiVersion
+              blockOwnerDeletion: true
+              controller: true
+              kind: kind
+              name: name
+              uid: uid
+            resourceVersion: resourceVersion
+            selfLink: selfLink
+            uid: uid
+          origin: "{}"
+          status: "{}"
+        kind: kind
+        metadata:
+          continue: continue
+          remainingItemCount: 0
+          resourceVersion: resourceVersion
+          selfLink: selfLink
+          shardInfo: "{}"
+      properties:
+        apiVersion:
+          description: |-
+            APIVersion defines the versioned schema of this representation of an object.
+            Servers should convert recognized schemas to the latest internal value, and
+            may reject unrecognized values.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            +optional
+          type: string
+        items:
+          items:
+            $ref: "#/components/schemas/Freight"
+          type: array
+        kind:
+          description: |-
+            Kind is a string value representing the REST resource this object represents.
+            Servers may infer this from the endpoint the client submits requests to.
+            Cannot be updated.
+            In CamelCase.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            +optional
+          type: string
+        metadata:
+          $ref: "#/components/schemas/V1ListMeta"
       type: object
     FreightOrigin:
       properties:

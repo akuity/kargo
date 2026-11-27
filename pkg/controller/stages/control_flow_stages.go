@@ -2,28 +2,33 @@ package stages
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"maps"
+	"slices"
+	"strings"
 	"time"
 
+	"github.com/nats-io/nats.go"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/client/apiserver"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
+	"github.com/akuity/kargo/pkg/controller/stages/verification"
 	"github.com/akuity/kargo/pkg/event"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/kargo"
 	"github.com/akuity/kargo/pkg/kubeclient"
-	"github.com/akuity/kargo/pkg/kubernetes"
 	"github.com/akuity/kargo/pkg/logging"
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
 	"github.com/akuity/kargo/pkg/telemetry"
@@ -32,8 +37,14 @@ import (
 type ControlFlowStageReconciler struct {
 	cfg            ReconcilerConfig
 	client         client.Client
+	apiClient      *apiserver.Client
 	eventSender    event.Sender
 	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
+
+	// freightClient reads and writes Freight status through the control plane's
+	// API server rather than the Kubernetes client. It is a field so tests can
+	// substitute a fake; the constructor wires it to the API server client.
+	freightClient freightclient.FreightClient
 }
 
 // NewControlFlowStageReconciler returns a new control flow Stage reconciler.
@@ -41,14 +52,20 @@ type ControlFlowStageReconciler struct {
 // controller manager.
 func NewControlFlowStageReconciler(
 	cfg ReconcilerConfig,
+	apiClient *apiserver.Client,
 ) *ControlFlowStageReconciler {
-	return &ControlFlowStageReconciler{
-		cfg: cfg,
+	r := &ControlFlowStageReconciler{
+		cfg:       cfg,
+		apiClient: apiClient,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
 		},
 	}
+	if apiClient != nil {
+		r.freightClient = apiClient
+	}
+	return r
 }
 
 // SetupWithManager sets up the control flow Stage reconciler with the given
@@ -59,56 +76,20 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 	mgr ctrl.Manager,
 	sharedIndexer client.FieldIndexer,
 	eventSender event.Sender,
+	natsConn *nats.Conn,
 ) error {
+	// The reconciler reads and writes Freight status through the API server
+	// rather than Kubernetes, so an API server client is required.
+	if r.apiClient == nil {
+		return errors.New(
+			"the control flow Stage reconciler requires an API server client; " +
+				"set API_SERVER_ADDRESS",
+		)
+	}
+
 	// Configure client using manager.
 	r.client = mgr.GetClient()
 	r.eventSender = eventSender
-
-	// This index is used to find all Freight that are directly available from
-	// a Warehouse. It is used to find Freight that can be sourced directly from
-	// the Warehouse for the control flow Stage.
-	if err := sharedIndexer.IndexField(
-		ctx,
-		&kargoapi.Freight{},
-		indexer.FreightByWarehouseField,
-		indexer.FreightByWarehouse,
-	); err != nil {
-		return fmt.Errorf("error setting up index for Freight by Warehouse: %w", err)
-	}
-
-	if err := sharedIndexer.IndexField(
-		ctx,
-		&kargoapi.Freight{},
-		indexer.FreightByCurrentStagesField,
-		indexer.FreightByCurrentStages,
-	); err != nil {
-		return fmt.Errorf("error setting up index for Freight by current Stages: %w", err)
-	}
-
-	// This index is used to find and watch all Freight that have been verified
-	// in a specific Stage (upstream) to which the control flow Stage is the
-	// downstream consumer.
-	if err := sharedIndexer.IndexField(
-		ctx,
-		&kargoapi.Freight{},
-		indexer.FreightByVerifiedStagesField,
-		indexer.FreightByVerifiedStages,
-	); err != nil {
-		return fmt.Errorf("error setting up index for Freight by verified Stages: %w", err)
-	}
-
-	// This index is solely used to garbage collect any Freight that was
-	// to a Stage before it became a control flow Stage. It is not used for
-	// the actual reconciliation process beyond facilitating the garbage
-	// collection of related objects when the Stage is deleted.
-	if err := sharedIndexer.IndexField(
-		ctx,
-		&kargoapi.Freight{},
-		indexer.FreightApprovedForStagesField,
-		indexer.FreightApprovedForStages,
-	); err != nil {
-		return fmt.Errorf("error setting up index for Freight approved for Stages: %w", err)
-	}
 
 	// This index is used by a watch on Stages to find all Stages that have a
 	// specific Stage as an upstream Stage.
@@ -159,24 +140,37 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 	// Configure the watches.
 	// Changes to these objects that match the constraints from the predicates
 	// will enqueue a reconciliation for the related Stage(s).
+	//
+	// The Freight signals this reconciler reacts to are delivered as Kargo
+	// CloudEvents over NATS and consumed via source.Channel watches, mirroring the
+	// regular Stage reconciler, rather than through Kubernetes Freight watches.
 
-	// Watch for Freight that are directly available from a Warehouse.
-	if err := c.Watch(
-		source.Kind(
-			mgr.GetCache(),
-			&kargoapi.Freight{},
-			NewWarehouseStageEnqueuer(mgr.GetClient(), true),
+	// Watch for newly produced Freight from a Warehouse (FreightCreated events)
+	// and enqueue the subscribed control flow Stages for reconciliation.
+	freightCreatedCh, err := subscribeFreightCreated(ctx, natsConn)
+	if err != nil {
+		return fmt.Errorf("unable to subscribe to FreightCreated events: %w", err)
+	}
+	if err = c.Watch(
+		source.Channel(
+			freightCreatedCh,
+			NewFreightCreatedStageEnqueuer(mgr.GetClient(), true),
 		),
 	); err != nil {
 		return fmt.Errorf("unable to watch Freight produced by Warehouse: %w", err)
 	}
 
-	// Watch for Freight that have been verified in upstream Stages.
-	if err := c.Watch(
-		source.Kind(
-			mgr.GetCache(),
-			&kargoapi.Freight{},
-			NewDownstreamStageEnqueuer(mgr.GetClient(), true),
+	// Watch for Freight newly verified in an upstream Stage
+	// (FreightVerifiedInStage events) and enqueue downstream control flow Stages
+	// for reconciliation.
+	verifiedCh, err := subscribeFreightVerifiedInStage(ctx, natsConn)
+	if err != nil {
+		return fmt.Errorf("unable to subscribe to FreightVerifiedInStage events: %w", err)
+	}
+	if err = c.Watch(
+		source.Channel(
+			verifiedCh,
+			NewFreightVerifiedStageEnqueuer(mgr.GetClient(), true),
 		),
 	); err != nil {
 		return fmt.Errorf("unable to watch Freight verified in upstream Stages: %w", err)
@@ -285,7 +279,7 @@ func (r *ControlFlowStageReconciler) reconcile(
 
 	// Get the available Freight for the Stage.
 	logger.Debug("getting available Freight")
-	freight, err := api.ListFreightAvailableToStage(ctx, r.client, stage)
+	freight, err := r.listAvailableFreight(ctx, stage)
 	if err != nil {
 		conditions.Set(
 			&newStatus,
@@ -299,6 +293,25 @@ func (r *ControlFlowStageReconciler) reconcile(
 				Type:    kargoapi.ConditionTypeReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  "FreightRetrievalFailed",
+				Message: err.Error(),
+			},
+		)
+		return newStatus, err
+	}
+
+	if err != nil {
+		conditions.Set(
+			&newStatus,
+			&metav1.Condition{
+				Type:    kargoapi.ConditionTypeReconciling,
+				Status:  metav1.ConditionTrue,
+				Reason:  "RetryAfterUnmarkingFreightFailed",
+				Message: err.Error(),
+			},
+			&metav1.Condition{
+				Type:    kargoapi.ConditionTypeReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  "UnmarkingFreightFailed",
 				Message: err.Error(),
 			},
 		)
@@ -329,6 +342,26 @@ func (r *ControlFlowStageReconciler) reconcile(
 			)
 			return newStatus, err
 		}
+
+		err = r.markFreightAsCurrentForStage(ctx, stage, freight)
+		if err != nil {
+			conditions.Set(
+				&newStatus,
+				&metav1.Condition{
+					Type:    kargoapi.ConditionTypeReconciling,
+					Status:  metav1.ConditionTrue,
+					Reason:  "RetryAfterMarkCurrentFailed",
+					Message: err.Error(),
+				},
+				&metav1.Condition{
+					Type:    kargoapi.ConditionTypeReady,
+					Status:  metav1.ConditionFalse,
+					Reason:  "FreightMarkCurrentFailed",
+					Message: err.Error(),
+				},
+			)
+			return newStatus, err
+		}
 	}
 
 	// Mark the Stage as Ready and remove any reconciling condition.
@@ -340,6 +373,64 @@ func (r *ControlFlowStageReconciler) reconcile(
 	conditions.Delete(&newStatus, kargoapi.ConditionTypeReconciling)
 
 	return newStatus, nil
+}
+
+// markFreightAsCurrentForStage marks one freight per origin as currentlyIn for stage.
+// All other freights will be unmarked from that stage.
+// This is necessary for MatchUpstream to work with control flow stages.
+func (r *ControlFlowStageReconciler) markFreightAsCurrentForStage(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+	freight []kargoapi.Freight,
+) error {
+
+	freightsByOrigin := make(map[string][]kargoapi.Freight)
+	for _, f := range freight {
+		origin := f.Origin.String()
+		freightsByOrigin[origin] = append(freightsByOrigin[origin], f)
+	}
+
+	var errs []error
+	currentFreightNamesByOrigin := make(map[string]string)
+	for origin, freights := range freightsByOrigin {
+		// Select the newest available Freight for each origin. This uses the same
+		// ordering as the upstream matching in SelectAutoPromotionCandidates, so both
+		// agree on which Freight is "current" for an origin.
+
+		slices.SortFunc(freights, func(lhs, rhs kargoapi.Freight) int {
+			if cmp := rhs.EffectiveDiscoveredAt().Compare(lhs.EffectiveDiscoveredAt()); cmp != 0 {
+				return cmp
+			}
+			return strings.Compare(rhs.Name, lhs.Name)
+		})
+		currentFreightNamesByOrigin[origin] = freights[0].Name
+	}
+
+	freightNames := slices.Collect(maps.Values(currentFreightNamesByOrigin))
+	err := r.freightClient.MarkFreightsCurrentlyInStage(
+		ctx,
+		stage.Namespace,
+		stage.Name,
+		freightNames,
+	)
+
+	if err != nil {
+		errs = append(errs, fmt.Errorf(
+			"error adding Stage %q to currentlyIn status of Freights %v in namespace %q: %w",
+			stage.Name, freightNames, stage.Namespace, err,
+		))
+	}
+
+	return kerrors.NewAggregate(errs)
+}
+
+// listAvailableFreight lists the Freight available to the Stage, reading through
+// the API server rather than the Kubernetes client.
+func (r *ControlFlowStageReconciler) listAvailableFreight(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+) ([]kargoapi.Freight, error) {
+	return api.ListFreightAvailableToStage(ctx, r.freightClient, stage)
 }
 
 // initializeStatus initializes the status of the given Stage with the values
@@ -394,8 +485,8 @@ func (r *ControlFlowStageReconciler) markFreightVerifiedForStage(
 ) (int, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	var newlyVerified int
-	var failures int
+	verifiedFreightNames := []string{}
+	verifiedFreights := map[string]kargoapi.Freight{}
 	for _, f := range freight {
 		// Skip Freight that has already been verified in this Stage.
 		//
@@ -407,29 +498,23 @@ func (r *ControlFlowStageReconciler) markFreightVerifiedForStage(
 		if f.IsVerifiedIn(stage.Name) {
 			continue
 		}
+		verifiedFreightNames = append(verifiedFreightNames, f.Name)
+		verifiedFreights[f.Name] = f
+	}
 
-		// Verify the Freight.
-		newStatus := f.Status.DeepCopy()
-		if newStatus.VerifiedIn == nil {
-			newStatus.VerifiedIn = make(map[string]kargoapi.VerifiedStage)
-		}
-		newStatus.AddVerifiedStage(stage.Name, finishTime)
-		if err := kubeclient.PatchStatus(ctx, r.client, &f, func(status *kargoapi.FreightStatus) {
-			*status = *newStatus
-		}); err != nil {
-			if client.IgnoreNotFound(err) != nil {
-				logger.Error(
-					err,
-					"failed to mark Freight as verified in Stage",
-					"freight", f.Name,
-				)
-				failures++
-			}
-			continue
-		}
+	if err := r.freightClient.MarkFreightsVerifiedInStage(
+		ctx, stage.Namespace, stage.Name, verifiedFreightNames, finishTime,
+	); err != nil {
+		logger.Error(
+			err,
+			"failed to mark Freights as verified in Stage",
+			"freights", verifiedFreightNames,
+		)
+		return 0, fmt.Errorf("failed to verify Freights")
+	}
 
-		newlyVerified++
-
+	for _, freightName := range verifiedFreightNames {
+		f := verifiedFreights[freightName]
 		evt, err := event.NewFreightVerification(
 			api.FormatEventControllerActor(r.cfg.Name()),
 			stage.Name,
@@ -452,12 +537,7 @@ func (r *ControlFlowStageReconciler) markFreightVerifiedForStage(
 		}
 	}
 
-	if failures > 0 {
-		// Return an error if any of the verifications failed.
-		// This will cause the Stage to be requeued.
-		return newlyVerified, fmt.Errorf("failed to verify %d Freight", failures)
-	}
-	return newlyVerified, nil
+	return len(verifiedFreightNames), nil
 }
 
 // handleDelete handles the deletion of the given control flow Stage. It clears
@@ -468,145 +548,28 @@ func (r *ControlFlowStageReconciler) markFreightVerifiedForStage(
 // It returns an error aggregate of all errors that occurred during the deletion
 // process.
 func (r *ControlFlowStageReconciler) handleDelete(ctx context.Context, stage *kargoapi.Stage) error {
-	// If the Stage does not have the finalizer, there is nothing to do.
-	if !controllerutil.ContainsFinalizer(stage, kargoapi.FinalizerName) {
-		return nil
-	}
-
-	// Clear the verification and approval status of all Freight that have been
-	// verified or approved for the Stage, and delete all AnalysisRuns.
-	toClear := []func(context.Context, *kargoapi.Stage) error{
-		r.clearVerifications,
-		r.clearApprovals,
-		r.clearAnalysisRuns,
-	}
-	var errs []error
-	for _, c := range toClear {
-		if err := c(ctx, stage); err != nil {
-			errs = append(errs, err)
-		}
-	}
-	if err := kerrors.Flatten(kerrors.NewAggregate(errs)); err != nil {
-		// We ran into an error, return it before proceeding with removing the
-		// finalizer.
-		return fmt.Errorf("error handling deletion of Stage: %w", err)
-	}
-
-	// Remove the finalizer from the Stage.
-	if err := api.RemoveFinalizer(ctx, r.client, stage); err != nil {
-		return fmt.Errorf("error removing finalizer from Stage: %w", err)
-	}
-
-	return nil
+	return HandleDelete(ctx, r.newVerifier(), r.client, r.freightClient, stage)
 }
 
-// clearVerifications clears the verification status of all Freight that have
-// been verified in the given Stage. It removes the Stage from the VerifiedIn
-// map of each Freight.
-func (r *ControlFlowStageReconciler) clearVerifications(ctx context.Context, stage *kargoapi.Stage) error {
-	verified := kargoapi.FreightList{}
-	if err := r.client.List(
-		ctx,
-		&verified,
-		client.InNamespace(stage.Namespace),
-		client.MatchingFieldsSelector{
-			Selector: fields.OneTermEqualSelector(
-				indexer.FreightByVerifiedStagesField,
-				stage.Name,
-			),
-		},
-	); err != nil {
-		return fmt.Errorf(
-			"error listing Freight verified in Stage %q in namespace %q: %w",
-			stage.Name,
-			stage.Namespace,
-			err,
-		)
+// Instantiate verifier similar to regular stages in case stage transitions from regular to control flow.
+func (r *ControlFlowStageReconciler) newVerifier() verification.Verifier {
+	analysisRunners := map[kargoapi.AnalysisRunKind]verification.AnalysisRunner{
+		kargoapi.AnalysisRunKindRun: verification.NewAnalysisRunnerRollouts(
+			r.cfg.RolloutsControllerInstanceID,
+			wait.Backoff{},
+			r.client,
+			r.apiClient,
+			nil,
+			r.cfg.RolloutsIntegrationEnabled,
+		),
 	}
-
-	var errs []error
-	for _, f := range verified.Items {
-		newStatus := *f.Status.DeepCopy()
-		if newStatus.VerifiedIn == nil {
-			continue
-		}
-		delete(newStatus.VerifiedIn, stage.Name)
-
-		if err := kubeclient.PatchStatus(ctx, r.client, &f, func(status *kargoapi.FreightStatus) {
-			*status = newStatus
-		}); client.IgnoreNotFound(err) != nil {
-			errs = append(errs, fmt.Errorf(
-				"error clearing verification status of Freight %q in namespace %q: %w",
-				f.Name, f.Namespace, err,
-			))
-		}
-	}
-	return kerrors.NewAggregate(errs)
-}
-
-// clearApprovals clears the approval status of all Freight that have been
-// approved for the given Stage. It removes the Stage from the ApprovedFor map
-// of each Freight.
-func (r *ControlFlowStageReconciler) clearApprovals(ctx context.Context, stage *kargoapi.Stage) error {
-	approved := kargoapi.FreightList{}
-	if err := r.client.List(
-		ctx,
-		&approved,
-		client.InNamespace(stage.Namespace),
-		client.MatchingFieldsSelector{
-			Selector: fields.OneTermEqualSelector(
-				indexer.FreightApprovedForStagesField,
-				stage.Name,
-			),
-		},
-	); err != nil {
-		return fmt.Errorf("error listing Freight approved for Stage %q in namespace %q: %w",
-			stage.Name,
-			stage.Namespace,
-			err,
-		)
-	}
-
-	var errs []error
-	for _, f := range approved.Items {
-		newStatus := *f.Status.DeepCopy()
-		if newStatus.ApprovedFor == nil {
-			continue
-		}
-		delete(newStatus.ApprovedFor, stage.Name)
-
-		if err := kubeclient.PatchStatus(ctx, r.client, &f, func(status *kargoapi.FreightStatus) {
-			*status = newStatus
-		}); client.IgnoreNotFound(err) != nil {
-			errs = append(errs, fmt.Errorf(
-				"error clearing approval status of Freight %q in namespace %q: %w",
-				f.Name, f.Namespace, err,
-			))
-		}
-	}
-	return kerrors.NewAggregate(errs)
-}
-
-// clearAnalysisRuns clears all AnalysisRuns that are associated with the given
-// Stage. This is only done if the Rollouts integration is enabled.
-func (r *ControlFlowStageReconciler) clearAnalysisRuns(ctx context.Context, stage *kargoapi.Stage) error {
-	if !r.cfg.RolloutsIntegrationEnabled {
-		return nil
-	}
-
-	if err := r.client.DeleteAllOf(
-		ctx,
-		&rollouts.AnalysisRun{},
-		client.InNamespace(stage.Namespace),
-		client.MatchingLabels(map[string]string{
-			kargoapi.LabelKeyStage: kubernetes.ShortenLabelValue(stage.Name),
-		}),
-	); err != nil {
-		return fmt.Errorf("error deleting AnalysisRuns for Stage %q in namespace %q: %w",
-			stage.Name,
-			stage.Namespace,
-			err,
-		)
-	}
-	return nil
+	ver := verification.NewVerifier(
+		r.cfg.Name(),
+		r.client,
+		r.freightClient,
+		r.eventSender,
+		analysisRunners,
+		nil,
+	)
+	return ver
 }

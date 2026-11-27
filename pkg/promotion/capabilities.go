@@ -3,6 +3,7 @@ package promotion
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/credentials"
 )
 
@@ -11,6 +12,7 @@ import (
 // they may otherwise lack.
 type StepRunnerCapabilities struct {
 	KargoClient     client.Client
+	APIClient       *apiserver.Client
 	ArgoCDClient    client.Client
 	CredsDB         credentials.Database
 	GitUserResolver GitUserResolver

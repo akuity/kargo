@@ -152,6 +152,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 					nil,
 					nil,
 					nil,
+					nil,
 				),
 			}
 

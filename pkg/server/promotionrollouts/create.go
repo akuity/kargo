@@ -86,10 +86,10 @@ func (h *Handler) create(c *gin.Context) {
 		return
 	}
 
-	freight, err := api.GetFreight(
+	freight, err := h.freightClient.GetFreight(
 		ctx,
-		h.kube,
-		types.NamespacedName{Namespace: project, Name: req.Freight},
+		project,
+		req.Freight,
 	)
 	if err != nil {
 		_ = c.Error(err)

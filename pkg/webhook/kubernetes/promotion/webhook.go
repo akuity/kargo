@@ -20,6 +20,8 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
+	"github.com/akuity/kargo/pkg/client/storage"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	"github.com/akuity/kargo/pkg/kubernetes"
 	"github.com/akuity/kargo/pkg/logging"
@@ -47,17 +49,13 @@ type webhook struct {
 	apiReader client.Reader
 	sender    kargoEvent.Sender
 
-	// The following behaviors are overridable for testing purposes:
+	freightClient freightclient.FreightClient
 
-	getFreightFn func(
-		context.Context,
-		client.Client,
-		types.NamespacedName,
-	) (*kargoapi.Freight, error)
+	// The following behaviors are overridable for testing purposes:
 
 	listFreightAvailableToStageFn func(
 		context.Context,
-		client.Client,
+		freightclient.FreightLister,
 		*kargoapi.Stage,
 	) ([]kargoapi.Freight, error)
 
@@ -66,6 +64,13 @@ type webhook struct {
 		client.Client,
 		types.NamespacedName,
 	) (*kargoapi.Stage, error)
+
+	getStageNoCacheFn func(
+		context.Context,
+		client.ObjectKey,
+		client.Object,
+		...client.GetOption,
+	) error
 
 	validateProjectFn func(
 		context.Context,
@@ -113,33 +118,13 @@ func SetupWebhookWithManager(
 		sender,
 	)
 	w.apiReader = mgr.GetAPIReader()
-	return libWebhook.SetupValidatingAndDefaultingWebhook(mgr, &kargoapi.Promotion{}, w)
-}
+	w.getStageNoCacheFn = w.apiReader.Get
 
-// getUncached reads the Promotion's Stage and Freight from the API server. A missing
-// Freight is nil, as api.GetFreight returns it.
-func (w *webhook) getUncached(
-	ctx context.Context,
-	promo *kargoapi.Promotion,
-) (*kargoapi.Stage, *kargoapi.Freight, error) {
-	stage := &kargoapi.Stage{}
-	if err := w.apiReader.Get(ctx, types.NamespacedName{
-		Namespace: promo.Namespace,
-		Name:      promo.Spec.Stage,
-	}, stage); err != nil {
-		return nil, nil, fmt.Errorf("get stage from the API server: %w", err)
-	}
-	freight := &kargoapi.Freight{}
-	if err := w.apiReader.Get(ctx, types.NamespacedName{
-		Namespace: promo.Namespace,
-		Name:      promo.Spec.Freight,
-	}, freight); err != nil {
-		if apierrors.IsNotFound(err) {
-			return stage, nil, nil
-		}
-		return nil, nil, fmt.Errorf("get freight from the API server: %w", err)
-	}
-	return stage, freight, nil
+	// TODO: add DB access here
+	storageClient := storage.NewStorageClient(mgr.GetClient(), sender, nil)
+	w.freightClient = storageClient
+
+	return libWebhook.SetupValidatingAndDefaultingWebhook(mgr, &kargoapi.Promotion{}, w)
 }
 
 func newWebhook(
@@ -153,7 +138,6 @@ func newWebhook(
 		decoder: decoder,
 		sender:  sender,
 	}
-	w.getFreightFn = api.GetFreight
 	w.listFreightAvailableToStageFn = api.ListFreightAvailableToStage
 	w.getStageFn = api.GetStage
 	w.isAutoPromotionEnabledFn = api.IsAutoPromotionEnabled
@@ -428,7 +412,7 @@ func (w *webhook) resolveOriginToFreight(
 	promo *kargoapi.Promotion,
 	stage *kargoapi.Stage,
 ) (*kargoapi.Freight, error) {
-	availableFreight, err := w.listFreightAvailableToStageFn(ctx, w.client, stage)
+	availableFreight, err := w.listFreightAvailableToStageFn(ctx, w.freightClient, stage)
 	if err != nil {
 		return nil, apierrors.NewInternalError(
 			fmt.Errorf("list available freight: %w", err),
@@ -519,7 +503,7 @@ func (w *webhook) syncHoldAnnotations(
 	// Strip any caller-supplied intent to prevent circumvention, then infer.
 	delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionHold)
 	delete(promo.Annotations, kargoapi.AnnotationKeyAutoPromotionResume)
-	if w.getFreightFn == nil || w.listFreightAvailableToStageFn == nil ||
+	if w.freightClient == nil || w.listFreightAvailableToStageFn == nil ||
 		w.isAutoPromotionEnabledFn == nil || promo.Spec.Freight == "" {
 		return
 	}
@@ -535,10 +519,7 @@ func (w *webhook) syncHoldAnnotations(
 	if !enabled {
 		return
 	}
-	freight, err := w.getFreightFn(ctx, w.client, types.NamespacedName{
-		Namespace: promo.Namespace,
-		Name:      promo.Spec.Freight,
-	})
+	freight, err := w.freightClient.GetFreight(ctx, promo.Namespace, promo.Spec.Freight)
 	if err != nil {
 		logger.Error(err, "skipping auto-promotion intent annotation")
 		return
@@ -548,7 +529,7 @@ func (w *webhook) syncHoldAnnotations(
 	}
 	origin := freight.Origin
 
-	availableFreight, err := w.listFreightAvailableToStageFn(ctx, w.client, stage)
+	availableFreight, err := w.listFreightAvailableToStageFn(ctx, w.freightClient, stage)
 	if err != nil {
 		logger.Error(err, "skipping auto-promotion intent annotation")
 		return
@@ -644,30 +625,17 @@ func (w *webhook) ValidateCreate(
 		return nil, apierrors.NewInvalid(promotionGroupKind, promo.Name, errs)
 	}
 
-	freight, err := w.getFreightFn(ctx, w.client, types.NamespacedName{
-		Namespace: promo.Namespace,
-		Name:      promo.Spec.Freight,
-	})
+	freight, err := w.freightClient.GetFreight(ctx, promo.Namespace, promo.Spec.Freight)
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("get freight: %w", err))
 	}
 
-	if !stage.IsFreightAvailable(freight) && w.apiReader != nil {
-		// The cache can trail the writer that just made the Freight available, so
-		// confirm with the API server. If it can't answer, keep the cached decision.
-		logger := logging.LoggerFromContext(ctx)
-		if s, f, err := w.getUncached(ctx, promo); err != nil {
-			logger.Error(err, "confirming Freight availability; using the cached result",
-				"stage", promo.Spec.Stage, "freight", promo.Spec.Freight)
-		} else {
-			stage, freight = s, f
-			if stage.IsFreightAvailable(freight) {
-				logger.Debug(
-					"Freight available on the API server but not yet in the cache",
-					"stage", promo.Spec.Stage, "freight", promo.Spec.Freight,
-				)
-			}
-		}
+	// Refresh potentially cached stage from the api server
+	if err := w.getStageNoCacheFn(ctx, types.NamespacedName{
+		Namespace: promo.Namespace,
+		Name:      promo.Spec.Stage,
+	}, stage); err != nil {
+		return nil, apierrors.NewInternalError(fmt.Errorf("get stage from the API server: %w", err))
 	}
 
 	if !stage.IsFreightAvailable(freight) {

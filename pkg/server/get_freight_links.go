@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,6 +11,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/deeplinks"
+	libhttp "github.com/akuity/kargo/pkg/http"
 )
 
 type getFreightLinksResponse struct {
@@ -34,9 +36,16 @@ func (s *server) getFreightLinks(c *gin.Context) {
 	project := c.Param("project")
 	nameOrAlias := c.Param("freight-name-or-alias")
 
-	freight, err := s.getFreightByNameOrAlias(ctx, project, nameOrAlias)
+	freight, err := s.freightClientFn().GetFreightByNameOrAlias(ctx, project, nameOrAlias)
 	if err != nil {
 		_ = c.Error(err)
+		return
+	}
+	if freight == nil {
+		_ = c.Error(libhttp.Error(
+			errors.New("Freight not found"), // nolint: staticcheck
+			http.StatusNotFound,
+		))
 		return
 	}
 

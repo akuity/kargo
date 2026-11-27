@@ -579,6 +579,7 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 				RunningPromotionsByArgoCDApplications(
 					t.Context(),
 					c,
+					nil,
 					testCase.shardName,
 					false,
 				)(testCase.obj),

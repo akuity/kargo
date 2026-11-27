@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/storage"
 	"github.com/akuity/kargo/pkg/garbage"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
@@ -96,6 +97,9 @@ func (o *garbageCollectorOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up controller manager: %w", err)
 	}
 
+	// TODO: add DB access here
+	storageClient := storage.NewStorageClient(mgr.GetClient(), nil, nil)
+
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -110,7 +114,7 @@ func (o *garbageCollectorOptions) run(ctx context.Context) error {
 	}
 
 	cfg := garbage.CollectorConfigFromEnv()
-	return garbage.NewCollector(mgr.GetClient(), cfg).Run(ctx)
+	return garbage.NewCollector(mgr.GetClient(), cfg, storageClient).Run(ctx)
 }
 
 func (o *garbageCollectorOptions) setupManager(ctx context.Context) (manager.Manager, error) {

@@ -24,6 +24,8 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	rollouts "github.com/akuity/kargo/pkg/api/stubs/rollouts"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
+	"github.com/akuity/kargo/pkg/client/storage"
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
 	"github.com/akuity/kargo/pkg/database/targetstatusstore"
@@ -59,6 +61,11 @@ type server struct {
 	// in which case nothing is published.
 	events *nats.Publisher
 
+	storageClient         *storage.Client
+	storageClientInternal *storage.Client
+
+	freightClientFn func() freightclient.FreightClient
+
 	// The following behaviors are overridable for testing purposes:
 
 	// Common lookups:
@@ -67,14 +74,6 @@ type server struct {
 		client.Client,
 		types.NamespacedName,
 	) (*kargoapi.Stage, error)
-	getFreightByNameOrAliasFn func(
-		ctx context.Context,
-		c client.Client,
-		project string,
-		name string,
-		alias string,
-	) (*kargoapi.Freight, error)
-	isFreightAvailableFn func(*kargoapi.Stage, *kargoapi.Freight) bool
 
 	// Common Promotions:
 	createPromotionFn func(
@@ -89,42 +88,6 @@ type server struct {
 		*kargoapi.Stage,
 		kargoapi.FreightOrigin,
 	) ([]kargoapi.Stage, error)
-
-	// QueryFreight API:
-	listFreightFn func(
-		context.Context,
-		client.ObjectList,
-		...client.ListOption,
-	) error
-	getAvailableFreightForStageFn func(
-		context.Context,
-		*kargoapi.Stage,
-	) ([]kargoapi.Freight, error)
-	getFreightFromWarehousesFn func(
-		ctx context.Context,
-		project string,
-		warehouses []string,
-	) ([]kargoapi.Freight, error)
-	getVerifiedFreightFn func(
-		ctx context.Context,
-		project string,
-		upstreams []string,
-	) ([]kargoapi.Freight, error)
-
-	// Freight aliasing:
-	patchFreightAliasFn func(
-		ctx context.Context,
-		freight *kargoapi.Freight,
-		alias string,
-	) error
-
-	// Freight approval:
-	patchFreightStatusFn func(
-		ctx context.Context,
-		cl client.Client,
-		freight *kargoapi.Freight,
-		newStatus kargoapi.FreightStatus,
-	) error
 
 	// Rollouts integration:
 	getAnalysisTemplateFn func(
@@ -191,17 +154,14 @@ func NewServer(
 		events:  events,
 	}
 
+	s.storageClient = storage.NewStorageClient(kubeClient, sender, db)
+	// TODO: this is temporary measure to pass InternalClient to approve_freight
+	// Once switched to DB, all auth needs to be made explicit and this client will be deleted
+	s.storageClientInternal = storage.NewStorageClient(kubeClient.InternalClient(), sender, db)
+
 	s.getStageFn = api.GetStage
-	s.getFreightByNameOrAliasFn = api.GetFreightByNameOrAlias
-	s.isFreightAvailableFn = s.isFreightAvailable
 	s.createPromotionFn = kubeClient.Create
 	s.findDownstreamStagesFn = s.findDownstreamStages
-	s.listFreightFn = kubeClient.List
-	s.getAvailableFreightForStageFn = s.getAvailableFreightForStage
-	s.getFreightFromWarehousesFn = s.getFreightFromWarehouses
-	s.getVerifiedFreightFn = s.getVerifiedFreight
-	s.patchFreightAliasFn = s.patchFreightAlias
-	s.patchFreightStatusFn = s.patchFreightStatus
 	s.authorizeFn = kubeClient.Authorize
 	if store := s.targetStore(); store != nil {
 		s.listTargetsFn = func(ctx context.Context, project string) ([]kargoapi.Target, error) {
@@ -218,6 +178,7 @@ func NewServer(
 	s.getAnalysisTemplateFn = rollouts.GetAnalysisTemplate
 	s.getClusterAnalysisTemplateFn = rollouts.GetClusterAnalysisTemplate
 	s.getAnalysisRunFn = rollouts.GetAnalysisRun
+	s.freightClientFn = s.freightClient
 
 	return s
 }
@@ -489,4 +450,8 @@ func (s *server) targetStatusStore() targetstatusstore.Store {
 		return nil
 	}
 	return targetstatusstore.New(s.db)
+}
+
+func (s *server) freightClient() freightclient.FreightClient {
+	return s.storageClient
 }

@@ -20,9 +20,14 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 )
 
+type FreightGetter interface {
+	GetFreight(ctx context.Context, project, nameOrAlias string) (*kargoapi.Freight, error)
+}
+
 type Verifier struct {
 	controllerName          string
 	client                  client.Client
+	freightClient           FreightGetter
 	eventSender             kargoEvent.Sender
 	analysisRunners         map[kargoapi.AnalysisRunKind]AnalysisRunner
 	selectRunnerForCreateFn func(
@@ -33,6 +38,7 @@ type Verifier struct {
 func NewVerifier(
 	controllerName string,
 	cl client.Client,
+	freightClient FreightGetter,
 	eventSender kargoEvent.Sender,
 	analysisRunners map[kargoapi.AnalysisRunKind]AnalysisRunner,
 	selectRunnerForCreateFn func(
@@ -45,6 +51,7 @@ func NewVerifier(
 	return Verifier{
 		controllerName:          controllerName,
 		client:                  cl,
+		freightClient:           freightClient,
 		eventSender:             eventSender,
 		analysisRunners:         analysisRunners,
 		selectRunnerForCreateFn: selectRunnerForCreateFn,
@@ -261,13 +268,19 @@ func (ver Verifier) recordFreightVerificationEvent(
 	freightRef kargoapi.FreightReference,
 	vi *kargoapi.VerificationInfo,
 ) {
-	freight := &kargoapi.Freight{}
-	if err := ver.client.Get(context.Background(), types.NamespacedName{
-		Namespace: stage.Namespace,
-		Name:      freightRef.Name,
-	}, freight); err != nil {
+	freight, err := ver.freightClient.GetFreight(
+		context.Background(), stage.Namespace, freightRef.Name,
+	)
+	if err != nil {
 		logging.LoggerFromContext(context.Background()).Error(
 			err, "failed to get Freight for verification event",
+			"freight", freightRef.Name,
+		)
+		return
+	}
+	if freight == nil {
+		logging.LoggerFromContext(context.Background()).Error(
+			nil, "Freight not found for verification event",
 			"freight", freightRef.Name,
 		)
 		return

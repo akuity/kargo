@@ -109,6 +109,7 @@ func TestPromotionSelectorsMatchApp(t *testing.T) {
 				promotionSelectorsMatchApp(
 					t.Context(),
 					c,
+					nil,
 					testCase.promo,
 					testCase.appNamespace,
 					testCase.appLabels,
@@ -122,6 +123,7 @@ func TestPromotionSelectorsMatchApp(t *testing.T) {
 		require.False(t, promotionSelectorsMatchApp(
 			t.Context(),
 			c,
+			nil,
 			promoWithStep(`{"apps":[{"namespace":"argocd","selector":{"matchLabels":{"app":"foo"}}}]}`),
 			"argocd",
 			map[string]string{"app": "foo"},

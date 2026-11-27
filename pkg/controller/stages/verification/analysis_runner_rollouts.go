@@ -17,6 +17,7 @@ import (
 
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
 	"github.com/akuity/kargo/pkg/credentials"
 	exprfn "github.com/akuity/kargo/pkg/expressions/function"
 	"github.com/akuity/kargo/pkg/kubernetes"
@@ -27,6 +28,7 @@ type analysisRunnerRollouts struct {
 	rolloutsControllerInstanceID string
 	backoffCfg                   wait.Backoff
 	client                       client.Client
+	freightClient                freightclient.FreightClient
 	credentialsDB                credentials.Database
 	// If rollouts integration is disabled, this runner is invalid and would return error in Validate()
 	// We still create an instance in order to encapsulate the error in the runner.
@@ -55,6 +57,7 @@ func NewAnalysisRunnerRollouts(
 	rolloutsControllerInstanceID string,
 	backoffCfg wait.Backoff,
 	cl client.Client,
+	freightClient freightclient.FreightClient,
 	credentialsDB credentials.Database,
 	rolloutsIntegrationEnabled bool,
 ) AnalysisRunner {
@@ -62,6 +65,7 @@ func NewAnalysisRunnerRollouts(
 		rolloutsControllerInstanceID: rolloutsControllerInstanceID,
 		backoffCfg:                   backoffCfg,
 		client:                       cl,
+		freightClient:                freightClient,
 		credentialsDB:                credentialsDB,
 		rolloutsIntegrationEnabled:   rolloutsIntegrationEnabled,
 	}
@@ -210,6 +214,7 @@ func (runner *analysisRunnerRollouts) CreateAnalysisRun(
 				exprfn.DataOperations(
 					ctx,
 					runner.client,
+					runner.freightClient,
 					runner.credentialsDB,
 					gocache.New(gocache.NoExpiration, gocache.NoExpiration),
 					stage.Namespace,
@@ -217,6 +222,7 @@ func (runner *analysisRunnerRollouts) CreateAnalysisRun(
 				exprfn.FreightOperations(
 					ctx,
 					runner.client,
+					runner.freightClient,
 					stage.Namespace,
 					stage.Spec.RequestedFreight,
 					freightCollection.References(),
@@ -232,7 +238,7 @@ func (runner *analysisRunnerRollouts) CreateAnalysisRun(
 			kargoapi.AnnotationKeyStage: stage.Name,
 		}))
 	}
-
+	// TODO: remove that when switching freight to DB
 	for _, freightRef := range freightCollection.Freight {
 		builderOpts = append(builderOpts, rollouts.WithOwner{
 			APIVersion: kargoapi.GroupVersion.String(),

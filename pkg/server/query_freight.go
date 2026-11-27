@@ -1,24 +1,20 @@
 package server
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"path"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/gin-gonic/gin"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/fields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -46,86 +42,6 @@ const (
 	// TODO: KR: Maybe we should add OrderBySemVer since charts are always
 	// semantically versioned and images sometimes are.
 )
-
-func (s *server) getAvailableFreightForStage(
-	ctx context.Context,
-	stage *kargoapi.Stage,
-) ([]kargoapi.Freight, error) {
-	return api.ListFreightAvailableToStage(ctx, s.client, stage)
-}
-
-func (s *server) getFreightFromWarehouses(
-	ctx context.Context,
-	project string,
-	warehouses []string,
-) ([]kargoapi.Freight, error) {
-	var allFreight []kargoapi.Freight
-	for _, warehouse := range warehouses {
-		var freight kargoapi.FreightList
-		if err := s.listFreightFn(
-			ctx,
-			&freight,
-			&client.ListOptions{
-				Namespace: project,
-				FieldSelector: fields.OneTermEqualSelector(
-					indexer.FreightByWarehouseField,
-					warehouse,
-				),
-			},
-		); err != nil {
-			return nil, fmt.Errorf(
-				"error listing Freight for Warehouse %q in namespace %q: %w",
-				warehouse,
-				project,
-				err,
-			)
-		}
-		allFreight = append(allFreight, freight.Items...)
-	}
-	return allFreight, nil
-}
-
-func (s *server) getVerifiedFreight(
-	ctx context.Context,
-	project string,
-	upstreams []string,
-) ([]kargoapi.Freight, error) {
-	var verifiedFreight []kargoapi.Freight
-	for _, upstream := range upstreams {
-		var freight kargoapi.FreightList
-		if err := s.listFreightFn(
-			ctx,
-			&freight,
-			&client.ListOptions{
-				Namespace: project,
-				FieldSelector: fields.OneTermEqualSelector(
-					indexer.FreightByVerifiedStagesField,
-					upstream,
-				),
-			},
-		); err != nil {
-			return nil, fmt.Errorf(
-				"error listing Freight verified in Stage %q in namespace %q: %w",
-				upstream,
-				project,
-				err,
-			)
-		}
-		verifiedFreight = append(verifiedFreight, freight.Items...)
-	}
-	if len(verifiedFreight) == 0 {
-		return nil, nil
-	}
-	// De-dupe the verified Freight
-	slices.SortFunc(verifiedFreight, func(lhs, rhs kargoapi.Freight) int {
-		return strings.Compare(lhs.Name, rhs.Name)
-	})
-	verifiedFreight = slices.CompactFunc(verifiedFreight, func(lhs, rhs kargoapi.Freight) bool {
-		return lhs.Name == rhs.Name
-	})
-
-	return verifiedFreight, nil
-}
 
 // groupFreightByImageRepo groups freight by image repository URL.
 func groupFreightByImageRepo(
@@ -284,8 +200,7 @@ func (s *server) queryFreight(c *gin.Context) {
 	var resourceVersion string
 	var err error
 
-	switch {
-	case stageName != "":
+	if stageName != "" {
 		// Get freight available to a specific stage
 		stage := &kargoapi.Stage{}
 		if err = s.client.Get(ctx, client.ObjectKey{Namespace: project, Name: stageName}, stage); err != nil {
@@ -299,7 +214,7 @@ func (s *server) queryFreight(c *gin.Context) {
 			_ = c.Error(err)
 			return
 		}
-		freight, err = api.ListFreightAvailableToStage(ctx, s.client, stage)
+		freight, err = api.ListFreightAvailableToStage(ctx, s.freightClientFn(), stage)
 		if err != nil {
 			_ = c.Error(fmt.Errorf("get available freight for stage: %w", err))
 			return
@@ -308,28 +223,16 @@ func (s *server) queryFreight(c *gin.Context) {
 		// than a single watchable namespace list, so ResourceVersion is left
 		// empty and clients fall back to an unseeded watch for this view.
 
-	case len(origins) > 0:
-		// Get freight from specific warehouses. The seed list goes through the
-		// uncached reader for a watchable ResourceVersion, then origins are
-		// filtered in-process (see filterFreightByOrigins) to match the
-		// unfiltered follow-up watch.
-		freightList := &kargoapi.FreightList{}
-		if err = s.listForWatchSeed(ctx, "freights", freightList, client.InNamespace(project)); err != nil {
+		// TODO: we could fix that going to DB
+	} else {
+		freight, resourceVersion, err = s.listFreightForWatchSeed(ctx, project)
+		if err != nil {
 			_ = c.Error(fmt.Errorf("list freight: %w", err))
 			return
 		}
-		freight = filterFreightByOrigins(freightList.Items, origins)
-		resourceVersion = normalizeListResourceVersion(freightList.ResourceVersion)
-
-	default:
-		// Get all freight in the project
-		freightList := &kargoapi.FreightList{}
-		if err = s.listForWatchSeed(ctx, "freights", freightList, client.InNamespace(project)); err != nil {
-			_ = c.Error(fmt.Errorf("list freight: %w", err))
-			return
+		if len(origins) > 0 {
+			freight = filterFreightByOrigins(freight, origins)
 		}
-		freight = freightList.Items
-		resourceVersion = normalizeListResourceVersion(freightList.ResourceVersion)
 	}
 
 	// Split the Freight into groups using the generic functions
@@ -365,11 +268,8 @@ func (s *server) watchFreight(c *gin.Context, project string, origins []string, 
 	ctx := c.Request.Context()
 	logger := logging.LoggerFromContext(ctx)
 
-	w, err := s.client.Watch(
-		ctx,
-		&kargoapi.FreightList{},
-		buildWatchListOptions(project, resourceVersion)...,
-	)
+	watcher, err := s.watchFreightEvents(ctx, project, resourceVersion)
+
 	if err != nil {
 		if SendSSEWatchStartError(c, err) {
 			return
@@ -378,56 +278,12 @@ func (s *server) watchFreight(c *gin.Context, project string, origins []string, 
 		_ = c.Error(fmt.Errorf("watch freight: %w", err))
 		return
 	}
-	defer w.Stop()
-
-	keepaliveTicker := time.NewTicker(30 * time.Second)
-	defer keepaliveTicker.Stop()
-
-	SetSSEHeaders(c)
-
-	for {
-		select {
-		case <-ctx.Done():
-			logger.Debug("watch context done", "error", ctx.Err())
-			return
-
-		case <-keepaliveTicker.C:
-			if !WriteSSEKeepalive(c) {
-				return
-			}
-
-		case e, ok := <-w.ResultChan():
-			if !ok {
-				logger.Debug("watch channel closed")
-				return
-			}
-			if watchErr := ErrorFromWatchEvent(e); watchErr != nil {
-				SendSSEWatchError(c, watchErr)
-				return
-			}
-
-			freight, ok := ConvertWatchEventObject(c, e, (*kargoapi.Freight)(nil))
-			if !ok {
-				continue
-			}
-
-			eventType := e.Type
-			if len(origins) > 0 {
-				var send bool
-				eventType, send = FilteredWatchEventType(
-					e.Type,
-					slices.Contains(origins, freight.Origin.Name),
-				)
-				if !send {
-					continue
-				}
-			}
-
-			if !SendSSEWatchEvent(c, eventType, freight) {
-				return
-			}
+	s.watchResources(c, watcher, func(freight *kargoapi.Freight) bool {
+		if len(origins) > 0 {
+			return slices.Contains(origins, freight.Origin.Name)
 		}
-	}
+		return true
+	})
 }
 
 // filterFreightByOrigins returns Freight whose origin Warehouse is one of the

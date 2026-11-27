@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
 	"github.com/akuity/kargo/pkg/database/promotionrolloutstore"
 	"github.com/akuity/kargo/pkg/server/auth/can"
 	"github.com/akuity/kargo/pkg/server/middleware"
@@ -32,6 +33,8 @@ type Handler struct {
 	// which case the create endpoint responds 501; rollouts can still be
 	// read.
 	creator Creator
+
+	freightClient freightclient.FreightClient
 }
 
 // New returns a Handler. The store may be nil; see the store field. The
@@ -42,12 +45,14 @@ func New(
 	creator Creator,
 	authorize func(context.Context, can.Access) error,
 	kube client.Client,
+	freightClient freightclient.FreightClient,
 ) *Handler {
 	return &Handler{
-		store:     store,
-		creator:   creator,
-		authorize: authorize,
-		kube:      kube,
+		store:         store,
+		creator:       creator,
+		authorize:     authorize,
+		kube:          kube,
+		freightClient: freightClient,
 	}
 }
 

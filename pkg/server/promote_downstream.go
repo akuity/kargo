@@ -109,25 +109,10 @@ func (s *server) promoteDownstream(c *gin.Context) {
 
 	// Get the Freight by name or alias
 	var freight *kargoapi.Freight
-	if req.Freight != "" {
-		freight = &kargoapi.Freight{}
-		if err := s.client.Get(ctx, client.ObjectKey{Namespace: project, Name: req.Freight}, freight); err != nil {
-			if apierrors.IsNotFound(err) {
-				_ = c.Error(libhttp.ErrorStr(
-					fmt.Sprintf("Freight %q not found in project %q", req.Freight, project),
-					http.StatusNotFound,
-				))
-				return
-			}
-			_ = c.Error(err)
-			return
-		}
-	} else {
-		var err error
-		if freight, err = s.getFreightByAlias(ctx, project, req.FreightAlias); err != nil {
-			_ = c.Error(err)
-			return
-		}
+	var err error
+	if freight, err = s.getFreightForPromotion(ctx, project, req.Freight, req.FreightAlias); err != nil {
+		_ = c.Error(err)
+		return
 	}
 
 	// Find downstream stages

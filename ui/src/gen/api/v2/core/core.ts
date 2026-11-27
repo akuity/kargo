@@ -26,11 +26,15 @@ import type {
   ClusterPromotionTask,
   ClusterPromotionTaskList,
   CreateConfigMapRequest,
+  CreateFreightRequest,
   CreatePromotionRolloutRequest,
   Freight,
+  FreightList,
   GetFreightLinksResponse,
+  GetFreightParams,
   GetStageLinksResponse,
   GetTargetStatusSummaryParams,
+  ListFreightFromOriginParams,
   ListImages200,
   ListProjectsParams,
   ListProjectsResponse,
@@ -41,8 +45,11 @@ import type {
   ListTargetPromotionsParams,
   ListTargetStatusesParams,
   ListTargetsParams,
+  MarkFreightsCurrentlyInStageRequest,
+  MarkFreightsVerifiedInStageRequest,
   PatchConfigMapRequest,
   PatchFreightAliasParams,
+  PatchFreightMetadataRequest,
   PkgServerQueryFreightsResponse,
   Project,
   ProjectConfig,
@@ -1677,6 +1684,118 @@ export function useQueryFreightsRest<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export type createFreightResponse200 = {
+  data: Freight;
+  status: 200;
+};
+
+export type createFreightResponse201 = {
+  data: Freight;
+  status: 201;
+};
+
+export type createFreightResponseSuccess = (createFreightResponse200 | createFreightResponse201) & {
+  headers: Headers;
+};
+export type createFreightResponse = createFreightResponseSuccess;
+
+export const getCreateFreightUrl = (project: string) => {
+  return `/v1beta1/projects/${project}/freight`;
+};
+
+/**
+ * Create a Freight resource, optionally recording status metadata on
+ * it. The operation is idempotent: creating a piece of Freight that
+ * already exists is not an error, and any metadata is applied
+ * fill-if-missing so existing metadata is preserved.
+ * @summary Create a piece of Freight
+ */
+export const createFreight = async (
+  project: string,
+  createFreightRequest: CreateFreightRequest,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<createFreightResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<createFreightResponse>(getCreateFreightUrl(project), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createFreightRequest)
+  });
+};
+
+export const getCreateFreightMutationKey = () => ['createFreight'] as const;
+
+export const getCreateFreightMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createFreight>>,
+    TError,
+    CreateFreightMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createFreight>>,
+  TError,
+  CreateFreightMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateFreightMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createFreight>>,
+    CreateFreightMutationVariables
+  > = (props) => {
+    const { project, data } = props ?? {};
+
+    return createFreight(project, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateFreightMutationResult = NonNullable<Awaited<ReturnType<typeof createFreight>>>;
+export type CreateFreightMutationBody = CreateFreightRequest;
+export type CreateFreightMutationError = ErrorType<unknown>;
+export type CreateFreightMutationVariables = { project: string; data: CreateFreightRequest };
+
+/**
+ * @summary Create a piece of Freight
+ */
+export const useCreateFreight = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createFreight>>,
+      TError,
+      CreateFreightMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof createFreight>>,
+  TError,
+  CreateFreightMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateFreightMutationOptions(options), queryClient);
+};
 export type getFreightResponse200 = {
   data: Freight;
   status: 200;
@@ -1687,8 +1806,16 @@ export type getFreightResponseSuccess = getFreightResponse200 & {
 };
 export type getFreightResponse = getFreightResponseSuccess;
 
-export const getGetFreightUrl = (project: string, freightNameOrAlias: string) => {
-  return `/v1beta1/projects/${project}/freight/${freightNameOrAlias}`;
+export const getGetFreightUrl = (
+  project: string,
+  freightNameOrAlias: string,
+  params?: GetFreightParams
+) => {
+  const stringifiedParams = serializeParams(params);
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects/${project}/freight/${freightNameOrAlias}?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/freight/${freightNameOrAlias}`;
 };
 
 /**
@@ -1699,16 +1826,24 @@ export const getGetFreightUrl = (project: string, freightNameOrAlias: string) =>
 export const getFreight = async (
   project: string,
   freightNameOrAlias: string,
+  params?: GetFreightParams,
   options?: Parameters<typeof customFetch>[1]
 ): Promise<getFreightResponse> => {
-  return customFetch<getFreightResponse>(getGetFreightUrl(project, freightNameOrAlias), {
+  return customFetch<getFreightResponse>(getGetFreightUrl(project, freightNameOrAlias, params), {
     ...options,
     method: 'GET'
   });
 };
 
-export const getGetFreightQueryKey = (project: string, freightNameOrAlias: string) => {
-  return [`/v1beta1/projects/${project}/freight/${freightNameOrAlias}`] as const;
+export const getGetFreightQueryKey = (
+  project: string,
+  freightNameOrAlias: string,
+  params?: GetFreightParams
+) => {
+  return [
+    `/v1beta1/projects/${project}/freight/${freightNameOrAlias}`,
+    ...(params ? [params] : [])
+  ] as const;
 };
 
 export const getGetFreightQueryOptions = <
@@ -1717,6 +1852,7 @@ export const getGetFreightQueryOptions = <
 >(
   project: string,
   freightNameOrAlias: string,
+  params?: GetFreightParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFreight>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
@@ -1724,10 +1860,11 @@ export const getGetFreightQueryOptions = <
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetFreightQueryKey(project, freightNameOrAlias);
+  const queryKey =
+    queryOptions?.queryKey ?? getGetFreightQueryKey(project, freightNameOrAlias, params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getFreight>>> = () =>
-    getFreight(project, freightNameOrAlias, requestOptions);
+    getFreight(project, freightNameOrAlias, params, requestOptions);
 
   return {
     queryKey,
@@ -1752,6 +1889,7 @@ export function useGetFreight<
 >(
   project: string,
   freightNameOrAlias: string,
+  params: undefined | GetFreightParams,
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFreight>>, TError, TData>> &
       Pick<
@@ -1772,6 +1910,7 @@ export function useGetFreight<
 >(
   project: string,
   freightNameOrAlias: string,
+  params?: GetFreightParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFreight>>, TError, TData>> &
       Pick<
@@ -1792,6 +1931,7 @@ export function useGetFreight<
 >(
   project: string,
   freightNameOrAlias: string,
+  params?: GetFreightParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFreight>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
@@ -1808,13 +1948,14 @@ export function useGetFreight<
 >(
   project: string,
   freightNameOrAlias: string,
+  params?: GetFreightParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFreight>>, TError, TData>>;
     request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getGetFreightQueryOptions(project, freightNameOrAlias, options);
+  const queryOptions = getGetFreightQueryOptions(project, freightNameOrAlias, params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -2424,6 +2565,650 @@ export function useListImages<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export type patchFreightMetadataResponse200 = {
+  data: void;
+  status: 200;
+};
+
+export type patchFreightMetadataResponseSuccess = patchFreightMetadataResponse200 & {
+  headers: Headers;
+};
+export type patchFreightMetadataResponse = patchFreightMetadataResponseSuccess;
+
+export const getPatchFreightMetadataUrl = (project: string, freight: string) => {
+  return `/v1beta1/projects/${project}/internal/freight/${freight}/metadata`;
+};
+
+/**
+ * Upsert keys in the status metadata of a Freight resource. A value
+ * already recorded under a key named in the request is
+ * overwritten; other keys are left as they are.
+ * @summary Update a Freight resource's status metadata
+ */
+export const patchFreightMetadata = async (
+  project: string,
+  freight: string,
+  patchFreightMetadataRequest: PatchFreightMetadataRequest,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<patchFreightMetadataResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<patchFreightMetadataResponse>(getPatchFreightMetadataUrl(project, freight), {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(patchFreightMetadataRequest)
+  });
+};
+
+export const getPatchFreightMetadataMutationKey = () => ['patchFreightMetadata'] as const;
+
+export const getPatchFreightMetadataMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof patchFreightMetadata>>,
+    TError,
+    PatchFreightMetadataMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof patchFreightMetadata>>,
+  TError,
+  PatchFreightMetadataMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPatchFreightMetadataMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof patchFreightMetadata>>,
+    PatchFreightMetadataMutationVariables
+  > = (props) => {
+    const { project, freight, data } = props ?? {};
+
+    return patchFreightMetadata(project, freight, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PatchFreightMetadataMutationResult = NonNullable<
+  Awaited<ReturnType<typeof patchFreightMetadata>>
+>;
+export type PatchFreightMetadataMutationBody = PatchFreightMetadataRequest;
+export type PatchFreightMetadataMutationError = ErrorType<unknown>;
+export type PatchFreightMetadataMutationVariables = {
+  project: string;
+  freight: string;
+  data: PatchFreightMetadataRequest;
+};
+
+/**
+ * @summary Update a Freight resource's status metadata
+ */
+export const usePatchFreightMetadata = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof patchFreightMetadata>>,
+      TError,
+      PatchFreightMetadataMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof patchFreightMetadata>>,
+  TError,
+  PatchFreightMetadataMutationVariables,
+  TContext
+> => {
+  return useMutation(getPatchFreightMetadataMutationOptions(options), queryClient);
+};
+export type listFreightFromOriginResponse200 = {
+  data: FreightList;
+  status: 200;
+};
+
+export type listFreightFromOriginResponseSuccess = listFreightFromOriginResponse200 & {
+  headers: Headers;
+};
+export type listFreightFromOriginResponse = listFreightFromOriginResponseSuccess;
+
+export const getListFreightFromOriginUrl = (
+  project: string,
+  originKind: string,
+  originName: string,
+  params?: ListFreightFromOriginParams
+) => {
+  const stringifiedParams = serializeParams(params);
+
+  return stringifiedParams.length > 0
+    ? `/v1beta1/projects/${project}/internal/origin/${originKind}/${originName}/freight?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/internal/origin/${originKind}/${originName}/freight`;
+};
+
+/**
+ * List Freight that originated from the named Origin, optionally
+ * filtered to that approved for or verified in given Stages, currently
+ * in a Stage, and having soaked for a minimum duration. Returns a
+ * FreightList resource.
+ * @summary List Freight from an Origin
+ */
+export const listFreightFromOrigin = async (
+  project: string,
+  originKind: string,
+  originName: string,
+  params?: ListFreightFromOriginParams,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<listFreightFromOriginResponse> => {
+  return customFetch<listFreightFromOriginResponse>(
+    getListFreightFromOriginUrl(project, originKind, originName, params),
+    {
+      ...options,
+      method: 'GET'
+    }
+  );
+};
+
+export const getListFreightFromOriginQueryKey = (
+  project: string,
+  originKind: string,
+  originName: string,
+  params?: ListFreightFromOriginParams
+) => {
+  return [
+    `/v1beta1/projects/${project}/internal/origin/${originKind}/${originName}/freight`,
+    ...(params ? [params] : [])
+  ] as const;
+};
+
+export const getListFreightFromOriginQueryOptions = <
+  TData = Awaited<ReturnType<typeof listFreightFromOrigin>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  originKind: string,
+  originName: string,
+  params?: ListFreightFromOriginParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightFromOrigin>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getListFreightFromOriginQueryKey(project, originKind, originName, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listFreightFromOrigin>>> = () =>
+    listFreightFromOrigin(project, originKind, originName, params, requestOptions);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      project !== null &&
+      project !== undefined &&
+      originKind !== null &&
+      originKind !== undefined &&
+      originName !== null &&
+      originName !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof listFreightFromOrigin>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListFreightFromOriginQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listFreightFromOrigin>>
+>;
+export type ListFreightFromOriginQueryError = ErrorType<unknown>;
+
+export function useListFreightFromOrigin<
+  TData = Awaited<ReturnType<typeof listFreightFromOrigin>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  originKind: string,
+  originName: string,
+  params: undefined | ListFreightFromOriginParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightFromOrigin>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFreightFromOrigin>>,
+          TError,
+          Awaited<ReturnType<typeof listFreightFromOrigin>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListFreightFromOrigin<
+  TData = Awaited<ReturnType<typeof listFreightFromOrigin>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  originKind: string,
+  originName: string,
+  params?: ListFreightFromOriginParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightFromOrigin>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFreightFromOrigin>>,
+          TError,
+          Awaited<ReturnType<typeof listFreightFromOrigin>>
+        >,
+        'initialData'
+      >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListFreightFromOrigin<
+  TData = Awaited<ReturnType<typeof listFreightFromOrigin>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  originKind: string,
+  originName: string,
+  params?: ListFreightFromOriginParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightFromOrigin>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Freight from an Origin
+ */
+
+export function useListFreightFromOrigin<
+  TData = Awaited<ReturnType<typeof listFreightFromOrigin>>,
+  TError = ErrorType<unknown>
+>(
+  project: string,
+  originKind: string,
+  originName: string,
+  params?: ListFreightFromOriginParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listFreightFromOrigin>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListFreightFromOriginQueryOptions(
+    project,
+    originKind,
+    originName,
+    params,
+    options
+  );
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type clearStageFreightsResponse200 = {
+  data: void;
+  status: 200;
+};
+
+export type clearStageFreightsResponseSuccess = clearStageFreightsResponse200 & {
+  headers: Headers;
+};
+export type clearStageFreightsResponse = clearStageFreightsResponseSuccess;
+
+export const getClearStageFreightsUrl = (project: string, stage: string) => {
+  return `/v1beta1/projects/${project}/internal/stage-freight/${stage}`;
+};
+
+/**
+ * Remove the named Stage from all Freights which reference it. This is used by
+ * the Stage controller to clean up Freight status when a Stage is deleted.
+ * @summary Remove all of a Stage's entries from any Freight's status
+ */
+export const clearStageFreights = async (
+  project: string,
+  stage: string,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<clearStageFreightsResponse> => {
+  return customFetch<clearStageFreightsResponse>(getClearStageFreightsUrl(project, stage), {
+    ...options,
+    method: 'DELETE'
+  });
+};
+
+export const getClearStageFreightsMutationKey = () => ['clearStageFreights'] as const;
+
+export const getClearStageFreightsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearStageFreights>>,
+    TError,
+    ClearStageFreightsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clearStageFreights>>,
+  TError,
+  ClearStageFreightsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getClearStageFreightsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clearStageFreights>>,
+    ClearStageFreightsMutationVariables
+  > = (props) => {
+    const { project, stage } = props ?? {};
+
+    return clearStageFreights(project, stage, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearStageFreightsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clearStageFreights>>
+>;
+
+export type ClearStageFreightsMutationError = ErrorType<unknown>;
+export type ClearStageFreightsMutationVariables = { project: string; stage: string };
+
+/**
+ * @summary Remove all of a Stage's entries from any Freight's status
+ */
+export const useClearStageFreights = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof clearStageFreights>>,
+      TError,
+      ClearStageFreightsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof clearStageFreights>>,
+  TError,
+  ClearStageFreightsMutationVariables,
+  TContext
+> => {
+  return useMutation(getClearStageFreightsMutationOptions(options), queryClient);
+};
+export type markFreightsCurrentlyInStageResponse200 = {
+  data: void;
+  status: 200;
+};
+
+export type markFreightsCurrentlyInStageResponseSuccess =
+  markFreightsCurrentlyInStageResponse200 & {
+    headers: Headers;
+  };
+export type markFreightsCurrentlyInStageResponse = markFreightsCurrentlyInStageResponseSuccess;
+
+export const getMarkFreightsCurrentlyInStageUrl = (project: string, stage: string) => {
+  return `/v1beta1/projects/${project}/internal/stage-freight/${stage}/current`;
+};
+
+/**
+ * Record that the named Freights are currently in use by the Stage,
+ * adding the Stage to the Freight's currentlyIn status. Any other
+ * Freights will have this Stage removed from their currentlyIn.
+ * @summary Mark a set of Freights as currently in use by a Stage
+ */
+export const markFreightsCurrentlyInStage = async (
+  project: string,
+  stage: string,
+  markFreightsCurrentlyInStageRequest: MarkFreightsCurrentlyInStageRequest,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<markFreightsCurrentlyInStageResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<markFreightsCurrentlyInStageResponse>(
+    getMarkFreightsCurrentlyInStageUrl(project, stage),
+    {
+      ...options,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(markFreightsCurrentlyInStageRequest)
+    }
+  );
+};
+
+export const getMarkFreightsCurrentlyInStageMutationKey = () =>
+  ['markFreightsCurrentlyInStage'] as const;
+
+export const getMarkFreightsCurrentlyInStageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markFreightsCurrentlyInStage>>,
+    TError,
+    MarkFreightsCurrentlyInStageMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markFreightsCurrentlyInStage>>,
+  TError,
+  MarkFreightsCurrentlyInStageMutationVariables,
+  TContext
+> => {
+  const mutationKey = getMarkFreightsCurrentlyInStageMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markFreightsCurrentlyInStage>>,
+    MarkFreightsCurrentlyInStageMutationVariables
+  > = (props) => {
+    const { project, stage, data } = props ?? {};
+
+    return markFreightsCurrentlyInStage(project, stage, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkFreightsCurrentlyInStageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markFreightsCurrentlyInStage>>
+>;
+export type MarkFreightsCurrentlyInStageMutationBody = MarkFreightsCurrentlyInStageRequest;
+export type MarkFreightsCurrentlyInStageMutationError = ErrorType<unknown>;
+export type MarkFreightsCurrentlyInStageMutationVariables = {
+  project: string;
+  stage: string;
+  data: MarkFreightsCurrentlyInStageRequest;
+};
+
+/**
+ * @summary Mark a set of Freights as currently in use by a Stage
+ */
+export const useMarkFreightsCurrentlyInStage = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof markFreightsCurrentlyInStage>>,
+      TError,
+      MarkFreightsCurrentlyInStageMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof markFreightsCurrentlyInStage>>,
+  TError,
+  MarkFreightsCurrentlyInStageMutationVariables,
+  TContext
+> => {
+  return useMutation(getMarkFreightsCurrentlyInStageMutationOptions(options), queryClient);
+};
+export type markFreightsVerifiedInStageResponse200 = {
+  data: void;
+  status: 200;
+};
+
+export type markFreightsVerifiedInStageResponseSuccess = markFreightsVerifiedInStageResponse200 & {
+  headers: Headers;
+};
+export type markFreightsVerifiedInStageResponse = markFreightsVerifiedInStageResponseSuccess;
+
+export const getMarkFreightsVerifiedInStageUrl = (project: string, stage: string) => {
+  return `/v1beta1/projects/${project}/internal/stage-freight/${stage}/verified`;
+};
+
+/**
+ * @summary Mark a set of Freights as verified in a Stage, adding to verifiedIn
+ */
+export const markFreightsVerifiedInStage = async (
+  project: string,
+  stage: string,
+  markFreightsVerifiedInStageRequest: MarkFreightsVerifiedInStageRequest,
+  options?: Parameters<typeof customFetch>[1]
+): Promise<markFreightsVerifiedInStageResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  return customFetch<markFreightsVerifiedInStageResponse>(
+    getMarkFreightsVerifiedInStageUrl(project, stage),
+    {
+      ...options,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+      body: JSON.stringify(markFreightsVerifiedInStageRequest)
+    }
+  );
+};
+
+export const getMarkFreightsVerifiedInStageMutationKey = () =>
+  ['markFreightsVerifiedInStage'] as const;
+
+export const getMarkFreightsVerifiedInStageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markFreightsVerifiedInStage>>,
+    TError,
+    MarkFreightsVerifiedInStageMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markFreightsVerifiedInStage>>,
+  TError,
+  MarkFreightsVerifiedInStageMutationVariables,
+  TContext
+> => {
+  const mutationKey = getMarkFreightsVerifiedInStageMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markFreightsVerifiedInStage>>,
+    MarkFreightsVerifiedInStageMutationVariables
+  > = (props) => {
+    const { project, stage, data } = props ?? {};
+
+    return markFreightsVerifiedInStage(project, stage, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkFreightsVerifiedInStageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markFreightsVerifiedInStage>>
+>;
+export type MarkFreightsVerifiedInStageMutationBody = MarkFreightsVerifiedInStageRequest;
+export type MarkFreightsVerifiedInStageMutationError = ErrorType<unknown>;
+export type MarkFreightsVerifiedInStageMutationVariables = {
+  project: string;
+  stage: string;
+  data: MarkFreightsVerifiedInStageRequest;
+};
+
+/**
+ * @summary Mark a set of Freights as verified in a Stage, adding to verifiedIn
+ */
+export const useMarkFreightsVerifiedInStage = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof markFreightsVerifiedInStage>>,
+      TError,
+      MarkFreightsVerifiedInStageMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof markFreightsVerifiedInStage>>,
+  TError,
+  MarkFreightsVerifiedInStageMutationVariables,
+  TContext
+> => {
+  return useMutation(getMarkFreightsVerifiedInStageMutationOptions(options), queryClient);
+};
 export type listPromotionRequestsResponse200 = {
   data: PromotionRequestList;
   status: 200;

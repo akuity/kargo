@@ -7,9 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
@@ -20,13 +18,6 @@ import (
 	"github.com/akuity/kargo/pkg/server/request"
 	"github.com/akuity/kargo/pkg/server/user"
 )
-
-func (s *server) isFreightAvailable(
-	stage *kargoapi.Stage,
-	freight *kargoapi.Freight,
-) bool {
-	return stage.IsFreightAvailable(freight)
-}
 
 func (s *server) recordPromotionCreatedEvent(
 	ctx context.Context,
@@ -170,14 +161,10 @@ func (s *server) promoteToStage(c *gin.Context) {
 			return
 		}
 		if s.sender != nil && promotion.Spec.Freight != "" {
-			freight := &kargoapi.Freight{}
-			if err = s.client.Get(
-				ctx,
-				client.ObjectKey{Namespace: promotion.Namespace, Name: promotion.Spec.Freight},
-				freight,
-			); err != nil {
+			freight, getFreightErr := s.freightClientFn().GetFreight(ctx, promotion.Namespace, promotion.Spec.Freight)
+			if getFreightErr != nil || freight == nil {
 				logging.LoggerFromContext(ctx).Error(
-					err,
+					getFreightErr,
 					"error getting resolved Freight for Promotion created event",
 				)
 			} else {
@@ -188,25 +175,10 @@ func (s *server) promoteToStage(c *gin.Context) {
 		return
 	}
 
-	var freight *kargoapi.Freight
-	if req.Freight != "" {
-		freight = &kargoapi.Freight{}
-		if err = s.client.Get(ctx, client.ObjectKey{Namespace: project, Name: req.Freight}, freight); err != nil {
-			if apierrors.IsNotFound(err) {
-				_ = c.Error(libhttp.ErrorStr(
-					fmt.Sprintf("Freight %q not found in project %q", req.Freight, project),
-					http.StatusNotFound,
-				))
-				return
-			}
-			_ = c.Error(err)
-			return
-		}
-	} else {
-		if freight, err = s.getFreightByAlias(ctx, project, req.FreightAlias); err != nil {
-			_ = c.Error(err)
-			return
-		}
+	freight, err := s.getFreightForPromotion(ctx, project, req.Freight, req.FreightAlias)
+	if err != nil {
+		_ = c.Error(err)
+		return
 	}
 
 	if !stage.IsFreightAvailable(freight) {
@@ -268,6 +240,34 @@ func (s *server) promoteToStage(c *gin.Context) {
 	c.JSON(http.StatusCreated, newPromo)
 }
 
+func (s *server) getFreightForPromotion(
+	ctx context.Context, project string, freightName string, alias string,
+) (*kargoapi.Freight, error) {
+	var freight *kargoapi.Freight
+	var err error
+	if freightName != "" {
+		freight, err = s.freightClientFn().GetFreight(ctx, project, freightName)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		if freight, err = s.freightClientFn().GetFreightByAlias(ctx, project, alias); err != nil {
+			return nil, err
+		}
+	}
+	if freight == nil {
+		freightID := freightName
+		if freightID == "" {
+			freightID = alias
+		}
+		return nil, libhttp.ErrorStr(
+			fmt.Sprintf("Freight %q not found in project %q", freightID, project),
+			http.StatusNotFound,
+		)
+	}
+	return freight, nil
+}
+
 func (s *server) createPromotion(
 	ctx context.Context,
 	stage *kargoapi.Stage,
@@ -282,7 +282,6 @@ func (s *server) createPromotion(
 	if actor != "" {
 		api.SetCreateActorAnnotation(newPromo, actor)
 	}
-	// FIXME: resolve name conflict
 	if err := s.createPromotionFn(ctx, newPromo); err != nil {
 		return nil, err
 	}

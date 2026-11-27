@@ -78,6 +78,7 @@ type webhook struct {
 	isRequestFromKargoControlplaneFn libWebhook.IsRequestFromKargoControlplaneFn
 }
 
+// TODO: freight webhook will be removed and adopted for DB.
 func SetupWebhookWithManager(
 	cfg libWebhook.Config,
 	mgr ctrl.Manager,
@@ -208,26 +209,47 @@ func (w *webhook) ValidateCreate(
 	); err != nil {
 		return nil, apierrors.NewInternalError(err)
 	}
-	if len(freightList.Items) > 0 {
-		errs = append(
-			errs,
-			field.Invalid(
-				field.NewPath("alias"),
-				freight.Alias,
-				fmt.Sprintf(
-					"alias already used by another piece of Freight in namespace %q",
-					freight.Namespace,
+	// Verify that other freight does not have the same alias
+	// Same freight should hit "AlreadyExists" error instead
+	for _, existing := range freightList.Items {
+		if existing.Name != freight.Name {
+			errs = append(
+				errs,
+				field.Invalid(
+					field.NewPath("alias"),
+					freight.Alias,
+					fmt.Sprintf(
+						"alias already used by another piece of Freight %q in namespace %q",
+						existing.Name,
+						freight.Namespace,
+					),
 				),
-			),
-		)
+			)
+			break
+		}
+	}
+	if freight.Origin.Kind == kargoapi.FreightOriginKindWarehouse {
+		warehouseErrs, err := w.validateWarehouse(ctx, freight)
+		if err != nil {
+			return nil, err
+		}
+		errs = append(errs, warehouseErrs...)
 	}
 
+	if len(errs) > 0 {
+		return nil, apierrors.NewInvalid(freightGroupKind, freight.Name, errs)
+	}
+	return nil, nil
+}
+
+func (w *webhook) validateWarehouse(ctx context.Context, freight *kargoapi.Freight) (field.ErrorList, error) {
+	var errs field.ErrorList
 	warehouse, err := w.getWarehouseFn(ctx, w.client, types.NamespacedName{
 		Namespace: freight.Namespace,
 		Name:      freight.Origin.Name,
 	})
 	if err != nil {
-		return nil, apierrors.NewInternalError(err)
+		return errs, apierrors.NewInternalError(err)
 	}
 	if warehouse == nil {
 		errs = append(
@@ -246,11 +268,7 @@ func (w *webhook) ValidateCreate(
 			w.validateFreightArtifactsFn(freight, warehouse)...,
 		)
 	}
-
-	if len(errs) > 0 {
-		return nil, apierrors.NewInvalid(freightGroupKind, freight.Name, errs)
-	}
-	return nil, nil
+	return errs, nil
 }
 
 func (w *webhook) ValidateUpdate(

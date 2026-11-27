@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/health"
 	"github.com/akuity/kargo/pkg/promotion/metrics"
@@ -27,6 +28,7 @@ type LocalOrchestrator struct {
 	credsDB   credentials.Database
 	cacheFunc ExprDataCacheFn
 	metrics   *metrics.StepMetrics
+	apiClient *apiserver.Client
 }
 
 // NewLocalOrchestrator creates a new LocalOrchestrator instance with the
@@ -37,6 +39,7 @@ func NewLocalOrchestrator(
 	credsDB credentials.Database,
 	gitUserResolver GitUserResolver,
 	cacheFunc ExprDataCacheFn,
+	apiClient *apiserver.Client,
 ) *LocalOrchestrator {
 	return &LocalOrchestrator{
 		executor: NewLocalStepExecutor(
@@ -45,12 +48,14 @@ func NewLocalOrchestrator(
 			argoCDClient,
 			credsDB,
 			gitUserResolver,
+			apiClient,
 		),
 		registry:  registry,
 		client:    kargoClient,
 		credsDB:   credsDB,
 		cacheFunc: cacheFunc,
 		metrics:   metrics.NewStepMetrics(),
+		apiClient: apiClient,
 	}
 }
 
@@ -103,7 +108,7 @@ func (o *LocalOrchestrator) ExecuteSteps(
 			// Continue execution if the context is still active.
 		}
 
-		processor := NewStepEvaluator(o.client, o.credsDB, o.newCache())
+		processor := NewStepEvaluator(o.client, o.apiClient, o.credsDB, o.newCache())
 
 		// Only evaluate the "if" conditio when the step has not yet started.
 		// If the step has already started (on a previous reconciliation), we

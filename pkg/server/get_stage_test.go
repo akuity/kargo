@@ -108,7 +108,9 @@ func Test_server_getStage_watch(t *testing.T) {
 					_ = c.Get(ctx, client.ObjectKey{Namespace: projectName, Name: stageName}, stage)
 
 					// Update the stage to trigger a watch event
-					stage.Spec.RequestedFreight = []kargoapi.FreightRequest{{Origin: kargoapi.FreightOrigin{Kind: "Warehouse"}}}
+					stage.Spec.RequestedFreight = []kargoapi.FreightRequest{
+						{Origin: kargoapi.FreightOrigin{Kind: "Warehouse"}},
+					}
 					_ = c.Update(ctx, stage)
 				},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {

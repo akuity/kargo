@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/client/apiserver"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/telemetry"
 )
@@ -19,6 +20,7 @@ type LocalStepExecutor struct {
 	registry StepRunnerRegistry
 
 	kargoClient     client.Client
+	apiClient       *apiserver.Client
 	argoCDClient    client.Client
 	credsDB         credentials.Database
 	gitUserResolver GitUserResolver
@@ -32,10 +34,12 @@ func NewLocalStepExecutor(
 	kargoClient, argoCDClient client.Client,
 	credsDB credentials.Database,
 	gitUserResolver GitUserResolver,
+	apiClient *apiserver.Client,
 ) *LocalStepExecutor {
 	return &LocalStepExecutor{
 		registry:        registry,
 		kargoClient:     kargoClient,
+		apiClient:       apiClient,
 		argoCDClient:    argoCDClient,
 		credsDB:         credsDB,
 		gitUserResolver: gitUserResolver,
@@ -77,6 +81,11 @@ func (e *LocalStepExecutor) ExecuteStep(
 		switch capability {
 		case StepCapabilityAccessControlPlane:
 			capabilities.KargoClient = e.kargoClient
+			if e.apiClient == nil {
+				return StepResult{Status: kargoapi.PromotionStepStatusErrored},
+					fmt.Errorf("error getting apiClient for step kind %q", req.Step.Kind)
+			}
+			capabilities.APIClient = e.apiClient
 		case StepCapabilityAccessArgoCD:
 			capabilities.ArgoCDClient = e.argoCDClient
 		case StepCapabilityAccessCredentials:

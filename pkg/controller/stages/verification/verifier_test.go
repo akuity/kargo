@@ -25,6 +25,20 @@ import (
 	fakeevent "github.com/akuity/kargo/pkg/event/fake"
 )
 
+type fakeFreightGetter struct{ freights []*kargoapi.Freight }
+
+func (g fakeFreightGetter) GetFreight(
+	_ context.Context,
+	_, nameOrAlias string,
+) (*kargoapi.Freight, error) {
+	for _, freight := range g.freights {
+		if freight.Name == nameOrAlias {
+			return freight, nil
+		}
+	}
+	return nil, nil
+}
+
 func TestVerifier_recordFreightVerificationEvent(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
@@ -59,6 +73,7 @@ func TestVerifier_recordFreightVerificationEvent(t *testing.T) {
 		stage      *kargoapi.Stage
 		freightRef kargoapi.FreightReference
 		vi         *kargoapi.VerificationInfo
+		freights   []*kargoapi.Freight
 		objects    []client.Object
 		assertions func(*testing.T, *fakeevent.Sender)
 	}{
@@ -71,7 +86,7 @@ func TestVerifier_recordFreightVerificationEvent(t *testing.T) {
 				StartTime:  &startTime,
 				FinishTime: &finishTime,
 			},
-			objects: []client.Object{baseFreight},
+			freights: []*kargoapi.Freight{baseFreight},
 			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
 				evt := requireOneSentEvent(
 					t,
@@ -113,7 +128,7 @@ func TestVerifier_recordFreightVerificationEvent(t *testing.T) {
 				Phase:   kargoapi.VerificationPhaseFailed,
 				Message: "verification failed due to metrics",
 			},
-			objects: []client.Object{baseFreight},
+			freights: []*kargoapi.Freight{baseFreight},
 			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
 				evt := requireOneSentEvent(
 					t,
@@ -138,8 +153,8 @@ func TestVerifier_recordFreightVerificationEvent(t *testing.T) {
 				},
 				PromotionName: "test-promotion",
 			},
+			freights: []*kargoapi.Freight{baseFreight},
 			objects: []client.Object{
-				baseFreight,
 				&rolloutsapi.AnalysisRun{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-analysis",
@@ -170,7 +185,7 @@ func TestVerifier_recordFreightVerificationEvent(t *testing.T) {
 				Phase: kargoapi.VerificationPhaseSuccessful,
 				Actor: "manual-user",
 			},
-			objects: []client.Object{baseFreight},
+			freights: []*kargoapi.Freight{baseFreight},
 			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
 				evt := requireOneSentEvent(
 					t,
@@ -191,9 +206,8 @@ func TestVerifier_recordFreightVerificationEvent(t *testing.T) {
 			vi: &kargoapi.VerificationInfo{
 				Phase: kargoapi.VerificationPhaseSuccessful,
 			},
-			objects: []client.Object{
-				// Freight does not exist
-			},
+			freights: []*kargoapi.Freight{},
+			objects:  []client.Object{},
 			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
 				// No events should be recorded
 				assert.Len(t, recorder.Sent(), 0)
@@ -210,7 +224,7 @@ func TestVerifier_recordFreightVerificationEvent(t *testing.T) {
 					Namespace: "test-project",
 				},
 			},
-			objects: []client.Object{baseFreight},
+			freights: []*kargoapi.Freight{baseFreight},
 			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
 				// Should still record event even though analysis run wasn't found
 				evt := requireOneSentEvent(
@@ -234,7 +248,7 @@ func TestVerifier_recordFreightVerificationEvent(t *testing.T) {
 				Phase:   kargoapi.VerificationPhaseError,
 				Message: "internal error occurred",
 			},
-			objects: []client.Object{baseFreight},
+			freights: []*kargoapi.Freight{baseFreight},
 			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
 				evt := requireOneSentEvent(
 					t,
@@ -255,7 +269,7 @@ func TestVerifier_recordFreightVerificationEvent(t *testing.T) {
 				Phase:   kargoapi.VerificationPhaseAborted,
 				Message: "verification was canceled",
 			},
-			objects: []client.Object{baseFreight},
+			freights: []*kargoapi.Freight{baseFreight},
 			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
 				evt := requireOneSentEvent(
 					t,
@@ -276,7 +290,7 @@ func TestVerifier_recordFreightVerificationEvent(t *testing.T) {
 				Phase:   kargoapi.VerificationPhaseInconclusive,
 				Message: "results were inconclusive",
 			},
-			objects: []client.Object{baseFreight},
+			freights: []*kargoapi.Freight{baseFreight},
 			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
 				evt := requireOneSentEvent(
 					t,
@@ -297,7 +311,7 @@ func TestVerifier_recordFreightVerificationEvent(t *testing.T) {
 				Phase:   "invalid-phase",
 				Message: "custom message",
 			},
-			objects: []client.Object{baseFreight},
+			freights: []*kargoapi.Freight{baseFreight},
 			assertions: func(t *testing.T, recorder *fakeevent.Sender) {
 				evt := requireOneSentEvent(
 					t,
@@ -321,8 +335,9 @@ func TestVerifier_recordFreightVerificationEvent(t *testing.T) {
 
 			recorder := &fakeevent.Sender{}
 			ver := Verifier{
-				client:      c,
-				eventSender: recorder,
+				client:        c,
+				freightClient: fakeFreightGetter{tt.freights},
+				eventSender:   recorder,
 				analysisRunners: map[kargoapi.AnalysisRunKind]AnalysisRunner{
 					kargoapi.AnalysisRunKindRun: &analysisRunnerRollouts{
 						client: c,

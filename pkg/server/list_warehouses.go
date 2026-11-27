@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,7 +45,7 @@ func (s *server) watchWarehouses(c *gin.Context, project string, resourceVersion
 	ctx := c.Request.Context()
 	logger := logging.LoggerFromContext(ctx)
 
-	w, err := s.client.Watch(
+	watcher, err := s.watchK8sResources[*kargoapi.Warehouse](
 		ctx,
 		&kargoapi.WarehouseList{},
 		buildWatchListOptions(project, resourceVersion)...,
@@ -59,36 +58,5 @@ func (s *server) watchWarehouses(c *gin.Context, project string, resourceVersion
 		_ = c.Error(fmt.Errorf("watch warehouses: %w", err))
 		return
 	}
-	defer w.Stop()
-
-	keepaliveTicker := time.NewTicker(30 * time.Second)
-	defer keepaliveTicker.Stop()
-
-	SetSSEHeaders(c)
-
-	for {
-		select {
-		case <-ctx.Done():
-			logger.Debug("watch context done", "error", ctx.Err())
-			return
-
-		case <-keepaliveTicker.C:
-			if !WriteSSEKeepalive(c) {
-				return
-			}
-
-		case e, ok := <-w.ResultChan():
-			if !ok {
-				logger.Debug("watch channel closed")
-				return
-			}
-			// convertAndSendWatchEvent surfaces watch.Error events itself, so
-			// no separate errorFromWatchEvent check is needed here (unlike the
-			// filtered Stage/Promotion handlers, which inspect the event before
-			// applying their event-type filter).
-			if !ConvertAndSendWatchEvent(c, e, (*kargoapi.Warehouse)(nil)) {
-				return
-			}
-		}
-	}
+	s.watchResources(c, watcher, nil)
 }

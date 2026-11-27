@@ -13,7 +13,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/metrics"
@@ -116,8 +115,14 @@ func TestSyncWarehouse_metrics(t *testing.T) {
 						Commits:    []kargoapi.GitCommit{{ID: "fake-commit"}},
 					}, nil
 				},
-				createFreightFn: func(context.Context, client.Object, ...client.CreateOption) error {
-					return testCase.createErr
+				createFreightFn: func(
+					_ context.Context,
+					freight *kargoapi.Freight,
+				) (*kargoapi.Freight, error) {
+					if testCase.createErr != nil {
+						return nil, testCase.createErr
+					}
+					return freight, nil
 				},
 				patchStatusFn: func(
 					context.Context,

@@ -8,6 +8,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/pkg/argocd"
+	"github.com/akuity/kargo/pkg/client/dataplane/freightclient"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	rbuiltin "github.com/akuity/kargo/pkg/promotion/runner/builtin"
@@ -38,6 +39,7 @@ type argoCDSelectorStepConfig struct {
 func promotionSelectorsMatchApp(
 	ctx context.Context,
 	cl client.Client,
+	freightClient freightclient.FreightClient,
 	promo *kargoapi.Promotion,
 	appNamespace string,
 	appLabels map[string]string,
@@ -62,7 +64,7 @@ func promotionSelectorsMatchApp(
 	}
 
 	promoCtx := promotion.NewContext(promo, stage)
-	evaluator := promotion.NewStepEvaluator(cl, nil, nil)
+	evaluator := promotion.NewStepEvaluator(cl, freightClient, nil, nil)
 
 	for i, step := range promo.Spec.Steps {
 		if int64(i) > promo.Status.CurrentStep {
