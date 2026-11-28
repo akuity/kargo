@@ -85,13 +85,24 @@ its [CLI](../../05-cli/10-installation.md), you will need to log in first.
       kargo login https://kargo.example.com --sso
       ```
 
-      This will open your system's default web browser. Follow the instructions
-      to authenticate to your identity provider.
+      This will print a login URL and open it in your system's default web
+      browser. Follow the instructions to authenticate to your identity
+      provider.
 
       When you have successfully authenticated, you will be redirected to a
       splash page that will indicate you may proceed with using the CLI.
 
       ![Kargo Splash Page](./img/splash.png)
+
+      :::info
+
+      If no web browser can be opened, as in a remote development
+      environment, the CLI keeps waiting after printing the login URL. Open
+      that URL in any web browser that can reach `localhost` on the CLI's
+      callback port, for example through a forwarded port. To skip opening a
+      browser altogether, add `--no-browser`.
+
+      :::
 
     </TabItem>
     </Tabs>

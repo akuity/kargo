@@ -9,10 +9,12 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -49,6 +51,7 @@ type loginOptions struct {
 	// anywhere directly.
 	Password      string
 	CallbackPort  int
+	NoBrowser     bool
 	ServerAddress string
 }
 
@@ -72,6 +75,9 @@ kargo login
 
 # Log in using the admin user
 kargo login https://kargo.example.com --admin
+
+# Log in using SSO without opening a web browser
+kargo login https://kargo.example.com --sso --no-browser
 
 # Log in using SSO and ignore cert warnings
 kargo login https://kargo.example.com --sso --insecure-skip-tls-verify
@@ -118,6 +124,9 @@ func (o *loginOptions) addFlags(cmd *cobra.Command) {
 			"If set, --admin must not be set.")
 	cmd.Flags().IntVar(&o.CallbackPort, "port", 0,
 		"Port to use for the callback URL; 0 selects any available, unprivileged port. "+
+			"Only used when --sso is specified.")
+	cmd.Flags().BoolVar(&o.NoBrowser, "no-browser", false,
+		"Print the login URL without trying to open a web browser. "+
 			"Only used when --sso is specified.")
 
 	cmd.MarkFlagsMutuallyExclusive("admin", "sso")
@@ -183,7 +192,7 @@ func (o *loginOptions) run(ctx context.Context) error {
 	case o.UseSSO:
 		authMethod = authMethodSSO
 		if bearerToken, refreshToken, err = ssoLogin(
-			ctx, o.ServerAddress, o.CallbackPort, o.InsecureTLS,
+			ctx, o.ServerAddress, o.CallbackPort, o.NoBrowser, o.InsecureTLS,
 		); err != nil {
 			return err
 		}
@@ -274,6 +283,7 @@ func ssoLogin(
 	ctx context.Context,
 	serverAddress string,
 	callbackPort int,
+	noBrowser bool,
 	insecureTLS bool,
 ) (string, string, error) {
 	apiClient, err := client.GetClient(serverAddress, "", insecureTLS)
@@ -371,9 +381,7 @@ func ssoLogin(
 		oauth2.SetAuthURLParam("code_challenge", codeChallenge),
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
 	)
-	if err = browser.OpenURL(u); err != nil {
-		return "", "", fmt.Errorf("error opening system default browser: %w", err)
-	}
+	presentAuthURL(os.Stderr, u, noBrowser)
 
 	var code string
 	select {
@@ -404,6 +412,28 @@ func ssoLogin(
 	<-time.After(2 * time.Second)
 
 	return idToken, token.RefreshToken, nil
+}
+
+var openBrowser = browser.OpenURL
+
+// presentAuthURL prints the authorization URL to w and, unless noBrowser is
+// true, then tries to open it in the default web browser. It prints first
+// because opening can block, for example on a text-based browser. A failure to
+// open is not an error, because the user can open the printed URL.
+func presentAuthURL(w io.Writer, u string, noBrowser bool) {
+	if noBrowser {
+		_, _ = fmt.Fprintf(w, "Open the following URL in a web browser to log in:\n\n%s\n\n", u)
+		return
+	}
+	_, _ = fmt.Fprintf(
+		w,
+		"Opening the following URL in your default web browser. "+
+			"If no browser opens, open the URL yourself to log in:\n\n%s\n\n",
+		u,
+	)
+	if err := openBrowser(u); err != nil {
+		_, _ = fmt.Fprintf(w, "error opening system default browser: %v\n", err)
+	}
 }
 
 // receiveAuthCode runs a web server that serves the callback endpoint for
