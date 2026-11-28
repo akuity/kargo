@@ -140,6 +140,21 @@ func (ver Verifier) VerifyStageFreight(
 					ObservedGeneration: stage.Generation,
 				})
 			case kargoapi.VerificationPhaseInconclusive:
+				// Stage health takes precedence when verification is blocked by
+				// an unhealthy Stage. In particular, a matching re-verification
+				// request must not replace StageUnhealthy with this historical
+				// inconclusive result.
+				verifiedCondition := conditions.Get(
+					&newStatus,
+					kargoapi.ConditionTypeVerified,
+				)
+				if verifiedCondition != nil &&
+					verifiedCondition.Status == metav1.ConditionFalse &&
+					verifiedCondition.Reason == "StageUnhealthy" &&
+					stage.Status.Health != nil &&
+					stage.Status.Health.Status == kargoapi.HealthStateUnhealthy {
+					return
+				}
 				conditions.Set(&newStatus, &metav1.Condition{
 					Type:               kargoapi.ConditionTypeVerified,
 					Status:             metav1.ConditionUnknown,
@@ -215,6 +230,38 @@ func (ver Verifier) VerifyStageFreight(
 	// verify the Freight.
 	if stage.Status.Health == nil || stage.Status.Health.Status != kargoapi.HealthStateHealthy {
 		logger.Debug("Stage has not passed health checks: skipping verification")
+		// If the Stage has become unhealthy, verification can never proceed
+		// from here. Mark the Freight as failed verification rather than
+		// leaving the Verified condition Unknown, which would show the Stage
+		// as "Verifying" indefinitely.
+		if stage.Status.Health != nil && stage.Status.Health.Status == kargoapi.HealthStateUnhealthy {
+			conditions.Set(&newStatus, &metav1.Condition{
+				Type:               kargoapi.ConditionTypeVerified,
+				Status:             metav1.ConditionFalse,
+				Reason:             "StageUnhealthy",
+				Message:            "Stage is unhealthy: verification cannot be performed",
+				ObservedGeneration: stage.Generation,
+			})
+		} else {
+			// If a previous health check failed, but health is now unknown or
+			// progressing, verification is pending again. Do not clear failures
+			// caused by verification itself.
+			verifiedCondition := conditions.Get(
+				&newStatus,
+				kargoapi.ConditionTypeVerified,
+			)
+			if verifiedCondition != nil &&
+				verifiedCondition.Status == metav1.ConditionFalse &&
+				verifiedCondition.Reason == "StageUnhealthy" {
+				conditions.Set(&newStatus, &metav1.Condition{
+					Type:               kargoapi.ConditionTypeVerified,
+					Status:             metav1.ConditionUnknown,
+					Reason:             "VerificationPending",
+					Message:            "Freight is pending verification",
+					ObservedGeneration: stage.Generation,
+				})
+			}
+		}
 		return newStatus, nil
 	}
 
