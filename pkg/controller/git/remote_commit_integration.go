@@ -123,6 +123,17 @@ func (w *workTree) IntegrateRemoteChanges(
 		return w.rebase(ctx, remoteRef)
 	}
 	if integrationPolicy == PushIntegrationPolicyRebaseOrFail {
+		// If shallow history is why rebasing is unsafe, say so, since cloning
+		// with greater depth would fix it
+		var mayReplayShared bool
+		mayReplayShared, err = w.mayReplaySharedCommits(ctx, remoteRef)
+		if err != nil {
+			return fmt.Errorf("error checking commits to replay: %w", err)
+		}
+		if mayReplayShared {
+			logger.Trace("shallow clone history is insufficient for rebasing")
+			return ErrShallowHistoryIncomplete
+		}
 		logger.Trace("rebase is unsafe and policy prohibits merge fallback")
 		return ErrRebaseUnsafe
 	}

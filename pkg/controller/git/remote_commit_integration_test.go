@@ -625,11 +625,11 @@ func Test_workTree_IntegrateRemoteChanges_MergeAroundShallowBoundary(t *testing.
 			},
 		},
 		{
-			name:   "shallow clone: RebaseOrFail returns ErrRebaseUnsafe",
+			name:   "shallow clone: RebaseOrFail fails on incomplete history",
 			depth:  6,
 			policy: PushIntegrationPolicyRebaseOrFail,
 			assert: func(t *testing.T, wt *workTree, err error) {
-				require.ErrorIs(t, err, ErrRebaseUnsafe)
+				require.ErrorIs(t, err, ErrShallowHistoryIncomplete)
 				requireMisjudgedHistory(t, wt)
 			},
 		},
