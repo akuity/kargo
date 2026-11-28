@@ -7,6 +7,7 @@ import (
 	"runtime"
 
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/pkg/database"
 	"github.com/akuity/kargo/pkg/event"
@@ -16,6 +17,7 @@ import (
 	"github.com/akuity/kargo/pkg/password"
 	reconcilernats "github.com/akuity/kargo/pkg/reconciler/nats"
 	"github.com/akuity/kargo/pkg/server"
+	"github.com/akuity/kargo/pkg/server/auth/authz"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/rbac"
@@ -115,6 +117,13 @@ func (o *apiOptions) run(ctx context.Context) error {
 
 	kubeClientOptions := kubernetes.ClientOptions{
 		KargoNamespace: serverCfg.KargoNamespace,
+		NewAuthorizer: func(kube client.Client) authz.Authorizer {
+			return authz.WithDecisionCache(
+				authz.NewAuthorizer(kube),
+				serverCfg.AuthCacheConfig.DecisionAllowTTL,
+				serverCfg.AuthCacheConfig.DecisionDenyTTL,
+			)
+		},
 	}
 	kubeClient, err := kubernetes.NewClient(ctx, restCfg, kubeClientOptions)
 	if err != nil {
