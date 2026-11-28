@@ -56,6 +56,12 @@ type WorkTree interface {
 	Dir() string
 	// Fetch fetches updates from the remote repository.
 	Fetch(ctx context.Context, opts *FetchOptions) error
+	// FetchCommits fetches those of the specified commits, given by full commit
+	// IDs, that are not already present in the repository. In a shallow
+	// repository, each is fetched without its history. The remote repository's
+	// server must allow fetching commits by ID; if it refuses, FetchCommits
+	// returns an error saying so.
+	FetchCommits(ctx context.Context, commitIDs []string) error
 	// HasDiffs returns a bool indicating whether the working tree currently
 	// contains any differences from what's already at the head of the current
 	// branch.
@@ -402,6 +408,60 @@ func (w *workTree) CurrentBranch(ctx context.Context) (string, error) {
 	return strings.TrimSpace(string(res)), nil
 }
 
+// unadvertisedObjectMsg appears in git's output when a server refuses to serve
+// a commit requested by ID.
+const unadvertisedObjectMsg = "allow request for unadvertised object"
+
+// FetchCommits implements WorkTree.
+//
+// Equivalent to:
+//
+//	git fetch --no-tags [--depth=1] origin <commit ID>...
+func (w *workTree) FetchCommits(ctx context.Context, commitIDs []string) error {
+	for _, id := range commitIDs {
+		if !isCommitID(id) {
+			return fmt.Errorf("%q is not a full commit ID", id)
+		}
+	}
+	missing, err := w.missingCommits(ctx, commitIDs)
+	if err != nil {
+		return err
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	shallow, err := w.isShallow(ctx)
+	if err != nil {
+		return err
+	}
+	args := []string{"fetch", "--no-tags"}
+	if shallow {
+		// Fetching a commit's history into a shallow repository could pull in far
+		// more than was asked for.
+		args = append(args, "--depth", "1")
+	}
+	args = append(args, "origin")
+	args = append(args, missing...)
+	if _, err = libExec.Exec(w.buildGitCommand(ctx, args...)); err != nil {
+		return fmt.Errorf(
+			"error fetching commits %v from repo %q: %w",
+			missing, w.url, explainCommitFetchError(err),
+		)
+	}
+	return nil
+}
+
+// explainCommitFetchError adds an explanation to err if it reports that the
+// server refused to serve a commit requested by ID.
+func explainCommitFetchError(err error) error {
+	var exitErr *libExec.ExitError
+	if errors.As(err, &exitErr) &&
+		bytes.Contains(exitErr.Output, []byte(unadvertisedObjectMsg)) {
+		return fmt.Errorf("server does not support fetching commits by ID: %w", err)
+	}
+	return err
+}
+
 func (w *workTree) DeleteBranch(ctx context.Context, branch string) error {
 	if _, err := libExec.Exec(w.buildGitCommand(
 		ctx, "branch", "--delete", "--force", branch,
@@ -426,7 +486,9 @@ func (w *workTree) Fetch(ctx context.Context, opts *FetchOptions) error {
 		opts = &FetchOptions{}
 	}
 	args := []string{"fetch", "origin"}
+	ref := branchRefPrefix + "*"
 	if opts.Branch != "" {
+		ref = branchRefPrefix + opts.Branch
 		args = append(args,
 			fmt.Sprintf("+refs/heads/%s:refs/remotes/origin/%s",
 				opts.Branch, opts.Branch,
@@ -443,7 +505,7 @@ func (w *workTree) Fetch(ctx context.Context, opts *FetchOptions) error {
 			"error fetching from repo %q: %w", w.url, err,
 		)
 	}
-	return nil
+	return w.trackBranches(ctx, []string{ref})
 }
 
 func (w *workTree) GetDiffPathsForCommitID(
@@ -517,7 +579,7 @@ func (w *workTree) IsRebasing(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("error determining rebase status: %w", err)
 	}
-	rebaseMerge := filepath.Join(w.dir, strings.TrimSpace(string(res)))
+	rebaseMerge := w.absGitPath(strings.TrimSpace(string(res)))
 	if _, err = os.Stat(rebaseMerge); !os.IsNotExist(err) {
 		if err != nil {
 			return false, err
@@ -529,7 +591,7 @@ func (w *workTree) IsRebasing(ctx context.Context) (bool, error) {
 	)); err != nil {
 		return false, fmt.Errorf("error determining rebase status: %w", err)
 	}
-	rebaseApply := filepath.Join(w.dir, strings.TrimSpace(string(res)))
+	rebaseApply := w.absGitPath(strings.TrimSpace(string(res)))
 	if _, err = os.Stat(rebaseApply); !os.IsNotExist(err) {
 		if err != nil {
 			return false, err
@@ -537,6 +599,16 @@ func (w *workTree) IsRebasing(ctx context.Context) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+// absGitPath returns the absolute form of a path printed by
+// git rev-parse --git-path, which is relative to the working tree in a main
+// working tree but already absolute in a linked one.
+func (w *workTree) absGitPath(gitPath string) string {
+	if filepath.IsAbs(gitPath) {
+		return gitPath
+	}
+	return filepath.Join(w.dir, gitPath)
 }
 
 func (w *workTree) LastCommitID(ctx context.Context) (string, error) {

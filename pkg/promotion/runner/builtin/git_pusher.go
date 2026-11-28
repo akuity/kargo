@@ -2,7 +2,6 @@ package builtin
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -230,20 +229,7 @@ func (g *gitPushPusher) run(
 			return g.push(ctx, workTree, pushOpts)
 		},
 	); err != nil {
-		if git.IsMergeConflict(err) {
-			// A merge conflict requires manual resolution and no amount of retries
-			// will fix that.
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-				&promotion.TerminalError{Err: err}
-		}
-		if errors.Is(err, git.ErrRebaseUnsafe) {
-			// The integration policy prohibits merge fallback and rebase is unsafe.
-			// No amount of retries will fix this.
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-				&promotion.TerminalError{Err: err}
-		}
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("error pushing commits to remote: %w", err)
+		return pushFailureResult(err)
 	}
 
 	commitID, err := workTree.LastCommitID(ctx)
@@ -307,4 +293,21 @@ func (g *gitPushPusher) getBranchMu(repoURL, branch string) *sync.Mutex {
 		g.branchMus[key] = mu
 	}
 	return mu
+}
+
+// pushFailureResult returns the step result and error for an error that
+// occurred while integrating remote changes and pushing. Errors that retrying
+// cannot fix are terminal.
+func pushFailureResult(err error) (promotion.StepResult, error) {
+	// A merge conflict requires manual resolution. An unsafe rebase is prohibited
+	// by policy. Insufficient shallow clone history requires cloning with a
+	// greater depth or with no depth limit.
+	if git.IsMergeConflict(err) ||
+		git.IsRebaseUnsafe(err) ||
+		git.IsShallowHistoryIncomplete(err) {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+			&promotion.TerminalError{Err: err}
+	}
+	return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+		fmt.Errorf("error pushing commits to remote: %w", err)
 }

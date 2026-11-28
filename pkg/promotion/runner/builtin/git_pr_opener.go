@@ -120,6 +120,7 @@ func (g *gitPROpener) run(
 		}
 	}
 
+	sourceRef := "refs/heads/" + sourceBranch
 	repo, err := git.Clone(
 		ctx,
 		cfg.RepoURL,
@@ -128,8 +129,9 @@ func (g *gitPROpener) run(
 			InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify,
 		},
 		&git.CloneOptions{
-			Depth:  1,
-			Branch: sourceBranch,
+			Refs:     []string{sourceRef},
+			Depth:    1,
+			Checkout: sourceRef,
 		},
 	)
 	if err != nil {

@@ -102,7 +102,7 @@ func (n *newestFromBranchSelector) MatchesRef(ref string) bool {
 // When the subscription names no branch, it implicitly targets the repository's
 // default branch. Rather than guess that branch's name, this resolves the
 // remote's HEAD, whose commit is the default branch tip whatever it is called --
-// the same branch Select clones via an empty CloneOptions.Branch.
+// the same branch Select clones by requesting HEAD.
 func (n *newestFromBranchSelector) ListRefs(
 	ctx context.Context,
 ) (*kargoapi.GitDiscoveryRefs, error) {
@@ -144,6 +144,10 @@ func (n *newestFromBranchSelector) Select(ctx context.Context) (
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	logger.Debug("cloning repository")
+	cloneRef := headRef
+	if n.branch != "" {
+		cloneRef = branchPrefix + n.branch
+	}
 	repo, err := n.gitCloneFn(
 		ctx,
 		n.repoURL,
@@ -152,9 +156,9 @@ func (n *newestFromBranchSelector) Select(ctx context.Context) (
 			InsecureSkipTLSVerify: n.insecureSkipTLSVerify,
 		},
 		&git.CloneOptions{
-			Branch:       n.branch,
-			SingleBranch: true,
-			Blobless:     n.blobless,
+			Refs:     []string{cloneRef},
+			Blobless: n.blobless,
+			Checkout: cloneRef,
 		},
 	)
 	if err != nil {

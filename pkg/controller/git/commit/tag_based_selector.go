@@ -179,8 +179,8 @@ func (t *tagBasedSelector) clone(ctx context.Context) (git.Repo, error) {
 	logger := logging.LoggerFromContext(ctx)
 	logger.Debug("cloning repository")
 	cloneOpts := &git.CloneOptions{
-		SingleBranch: true,
-		Blobless:     t.blobless,
+		Refs:     []string{headRef},
+		Blobless: t.blobless,
 	}
 	repo, err := t.gitCloneFn(
 		ctx,

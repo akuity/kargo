@@ -2,11 +2,27 @@ package git
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"maps"
+	"os"
+	"path/filepath"
 	"strings"
 
 	libExec "github.com/akuity/kargo/pkg/exec"
 	"github.com/akuity/kargo/pkg/logging"
+)
+
+const (
+	// initialDeepenStep is the number of commits requested on the first
+	// deepening fetch when a shallow clone lacks history it needs, such as the
+	// history needed to integrate remote changes or a commit requested when
+	// cloning. Subsequent iterations double this value.
+	initialDeepenStep = 16
+
+	// maxDeepenIterations caps the number of exponential deepening fetches
+	// attempted before giving up and failing closed.
+	maxDeepenIterations = 6
 )
 
 // IntegrationOptions represents options for integrating remote changes into
@@ -31,8 +47,15 @@ func (w *workTree) IntegrateRemoteChanges(
 	if integrationPolicy == "" {
 		integrationPolicy = PushIntegrationPolicyNone
 	}
-	if integrationPolicy == PushIntegrationPolicyNone {
+	switch integrationPolicy {
+	case PushIntegrationPolicyNone:
 		return nil
+	case PushIntegrationPolicyAlwaysRebase,
+		PushIntegrationPolicyAlwaysMerge,
+		PushIntegrationPolicyRebaseOrMerge,
+		PushIntegrationPolicyRebaseOrFail:
+	default:
+		return fmt.Errorf("unknown push integration policy: %q", integrationPolicy)
 	}
 
 	targetBranch := opts.TargetBranch
@@ -55,51 +78,264 @@ func (w *workTree) IntegrateRemoteChanges(
 		"integrationPolicy", integrationPolicy,
 	)
 
+	complete, err := w.fetchForIntegration(ctx, targetBranch)
+	if err != nil {
+		return fmt.Errorf(
+			"error fetching remote branch %q for integration: %w",
+			targetBranch, err,
+		)
+	}
+	if !complete {
+		// Without the history that local and remote changes have in common, a
+		// rebase could fold commits Kargo cannot see into one, and a merge could
+		// fail or use the wrong merge base. This is true under every policy.
+		logger.Trace("shallow clone history is insufficient for integration")
+		return ErrShallowHistoryIncomplete
+	}
+
+	remoteRef := remoteBranchRefPrefix + targetBranch
+
 	switch integrationPolicy {
 	case PushIntegrationPolicyAlwaysRebase:
+		var mayReplayShared bool
+		mayReplayShared, err = w.mayReplaySharedCommits(ctx, remoteRef)
+		if err != nil {
+			return fmt.Errorf("error checking commits to replay: %w", err)
+		}
+		if mayReplayShared {
+			logger.Trace("shallow clone history is insufficient for rebasing")
+			return ErrShallowHistoryIncomplete
+		}
 		logger.Trace("integrating remote changes via rebase (always)")
-		return w.pullRebase(ctx, targetBranch)
+		return w.rebase(ctx, remoteRef)
 	case PushIntegrationPolicyAlwaysMerge:
 		logger.Trace("integrating remote changes via merge (always)")
-		return w.pullMerge(ctx, targetBranch)
-	case PushIntegrationPolicyRebaseOrMerge, PushIntegrationPolicyRebaseOrFail:
-		safe, err := w.canSafelyRebase(ctx, targetBranch)
-		if err != nil {
-			return fmt.Errorf("error checking rebase safety: %w", err)
-		}
-		if safe {
-			logger.Trace("integrating remote changes via rebase")
-			return w.pullRebase(ctx, targetBranch)
-		}
-		if integrationPolicy == PushIntegrationPolicyRebaseOrFail {
-			logger.Trace(
-				"rebase is unsafe and policy prohibits merge fallback",
-			)
-			return ErrRebaseUnsafe
-		}
-		logger.Trace("integrating remote changes via merge (rebase unsafe)")
-		return w.pullMerge(ctx, targetBranch)
-	default:
-		return fmt.Errorf("unknown push integration policy: %q", integrationPolicy)
+		return w.merge(ctx, targetBranch)
 	}
+
+	// If we get to here, the policy is RebaseOrMerge or RebaseOrFail
+	safe, err := w.canSafelyRebase(ctx, remoteRef)
+	if err != nil {
+		return fmt.Errorf("error checking rebase safety: %w", err)
+	}
+	if safe {
+		logger.Trace("integrating remote changes via rebase")
+		return w.rebase(ctx, remoteRef)
+	}
+	if integrationPolicy == PushIntegrationPolicyRebaseOrFail {
+		// If shallow history is why rebasing is unsafe, say so, since cloning
+		// with greater depth would fix it
+		var mayReplayShared bool
+		mayReplayShared, err = w.mayReplaySharedCommits(ctx, remoteRef)
+		if err != nil {
+			return fmt.Errorf("error checking commits to replay: %w", err)
+		}
+		if mayReplayShared {
+			logger.Trace("shallow clone history is insufficient for rebasing")
+			return ErrShallowHistoryIncomplete
+		}
+		logger.Trace("rebase is unsafe and policy prohibits merge fallback")
+		return ErrRebaseUnsafe
+	}
+	logger.Trace("integrating remote changes via merge (rebase unsafe)")
+	return w.merge(ctx, targetBranch)
 }
 
-// pullRebase performs a git pull --rebase against the specified remote branch.
-func (w *workTree) pullRebase(ctx context.Context, targetBranch string) error {
-	cmd := w.buildGitCommand(ctx, "pull", "--rebase", "origin", targetBranch)
+// fetchForIntegration fetches targetBranch into refs/remotes/origin/<targetBranch>
+//
+// For shallow repositories, incrementally deepens history until no shallow
+// boundary lies within the symmetric difference HEAD...origin/<targetBranch>.
+//
+// Returns true if history is complete for integration.
+func (w *workTree) fetchForIntegration(
+	ctx context.Context,
+	targetBranch string,
+) (bool, error) {
+	shallow, err := w.isShallow(ctx)
+	if err != nil {
+		return false, err
+	}
+	if !shallow {
+		if err = w.Fetch(ctx, &FetchOptions{Branch: targetBranch}); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	// Fetching without --depth lets Git reuse existing shallow clone.
+	fetchOpts := &FetchOptions{Branch: targetBranch}
+	hasLocalRef, err := w.hasAnyRef(
+		ctx,
+		branchRefPrefix+targetBranch,
+		remoteBranchRefPrefix+targetBranch,
+	)
+	if err != nil {
+		return false, err
+	}
+	if !hasLocalRef {
+		// Fetching a branch never fetched before without a depth could pull in
+		// its entire history, so fetch only its tip. But if that commit is
+		// already present, fetching it at depth 1 would make it a shallow
+		// boundary and hide the history beneath it, so don't.
+		var tip string
+		if tip, err = w.remoteBranchTip(ctx, targetBranch); err != nil {
+			return false, err
+		}
+		var missing []string
+		if missing, err = w.missingCommits(ctx, []string{tip}); err != nil {
+			return false, err
+		}
+		if len(missing) > 0 {
+			fetchOpts.Depth = 1
+		}
+	}
+	if err = w.Fetch(ctx, fetchOpts); err != nil {
+		return false, err
+	}
+
+	return w.ensureCompleteIntegrationHistory(ctx, targetBranch)
+}
+
+// remoteBranchTip returns the ID of the commit at the tip of the specified
+// branch in the remote repository.
+//
+// Equivalent to:
+//
+//	git ls-remote <url> refs/heads/<branch>
+func (w *workTree) remoteBranchTip(
+	ctx context.Context,
+	branch string,
+) (string, error) {
+	ref := branchRefPrefix + branch
+	res, err := libExec.Exec(w.buildGitCommand(ctx, "ls-remote", w.url, ref))
+	if err != nil {
+		return "", fmt.Errorf(
+			"error finding tip of branch %q in remote repo %q: %w",
+			branch, w.url, err,
+		)
+	}
+	refs, err := parseLsRemoteOutput(res)
+	if err != nil {
+		return "", err
+	}
+	for _, remoteRef := range refs {
+		if remoteRef.Name == ref {
+			return remoteRef.ID, nil
+		}
+	}
+	return "", fmt.Errorf(
+		"branch %q does not exist in remote repo %q", branch, w.url,
+	)
+}
+
+// ensureCompleteIntegrationHistory incrementally deepens a shallow repository
+// until no shallow boundary commit appears in HEAD...origin/<targetBranch>.
+//
+// This ensures every ancestor hidden behind a shallow boundary is common to both
+// HEAD and origin/<targetBranch>. Git can still misjudge commits it can see. See
+// mayReplaySharedCommits and checkMergeBases.
+//
+// Returns false if deepening stops making progress or hits the bound.
+func (w *workTree) ensureCompleteIntegrationHistory(
+	ctx context.Context,
+	targetBranch string,
+) (bool, error) {
+	remoteRef := remoteBranchRefPrefix + targetBranch
+
+	shallow, err := w.shallowCommits(ctx)
+	if err != nil {
+		return false, err
+	}
+	if len(shallow) == 0 {
+		return true, nil
+	}
+	diff, err := w.symmetricDiff(ctx, remoteRef)
+	if err != nil {
+		return false, err
+	}
+	if !setsOverlap(diff, shallow) {
+		return true, nil
+	}
+
+	deepenRefs := []string{branchRefPrefix + targetBranch}
+	currentBranch, err := w.CurrentBranch(ctx)
+	if err != nil {
+		return false, err
+	}
+	if currentBranch != "" && currentBranch != targetBranch {
+		var exists bool
+		exists, err = w.RemoteBranchExists(ctx, currentBranch)
+		if err != nil {
+			return false, err
+		}
+		if exists {
+			deepenRefs = append(deepenRefs, branchRefPrefix+currentBranch)
+		}
+	}
+
+	step := uint(initialDeepenStep)
+	for range maxDeepenIterations {
+		if err = w.deepen(ctx, step, deepenRefs...); err != nil {
+			return false, err
+		}
+
+		var newShallow map[string]struct{}
+		newShallow, err = w.shallowCommits(ctx)
+		if err != nil {
+			return false, err
+		}
+		if len(newShallow) == 0 {
+			return true, nil
+		}
+		diff, err = w.symmetricDiff(ctx, remoteRef)
+		if err != nil {
+			return false, err
+		}
+		if !setsOverlap(diff, newShallow) {
+			return true, nil
+		}
+		if maps.Equal(newShallow, shallow) {
+			// Deepening made no progress (e.g. the shallow commit is no longer
+			// reachable from the remote refs after a force push).
+			return false, nil
+		}
+		shallow = newShallow
+		step *= 2
+	}
+
+	return false, nil
+}
+
+// rebase rebases the current branch onto the specified ref with --fork-point.
+func (w *workTree) rebase(ctx context.Context, ref string) error {
+	cmd := w.buildGitCommand(ctx, "rebase", "--fork-point", ref)
 	if _, err := libExec.Exec(cmd); err != nil {
 		if isRebasing, rbErr := w.IsRebasing(ctx); rbErr == nil && isRebasing {
 			return ErrMergeConflict
 		}
-		return fmt.Errorf("error pulling and rebasing branch: %w", err)
+		return fmt.Errorf("error rebasing branch onto %q: %w", ref, err)
 	}
 	return nil
 }
 
-// pullMerge performs a git pull (merge) against the specified remote branch.
-func (w *workTree) pullMerge(ctx context.Context, targetBranch string) error {
-	cmd := w.buildGitCommand(ctx, "pull", "--no-rebase", "origin", targetBranch)
-	if _, err := libExec.Exec(cmd); err != nil {
+// merge merges the specified remote branch, which must already be fetched,
+// into the current branch. The merge commit gets the message that git pull
+// would give it.
+func (w *workTree) merge(ctx context.Context, targetBranch string) error {
+	ref := remoteBranchRefPrefix + targetBranch
+	if err := w.checkMergeBases(ctx, ref); err != nil {
+		return err
+	}
+	args := []string{"merge", "--no-edit"}
+	msg, err := w.pullMergeMessage(ctx, targetBranch)
+	if err != nil {
+		return err
+	}
+	if msg != "" {
+		args = append(args, "-m", msg)
+	}
+	args = append(args, ref)
+	if _, err = libExec.Exec(w.buildGitCommand(ctx, args...)); err != nil {
 		// Check for merge conflicts — MERGE_HEAD exists when a merge is
 		// in progress and waiting for conflict resolution.
 		if _, statErr := libExec.Exec(w.buildGitCommand(
@@ -107,14 +343,95 @@ func (w *workTree) pullMerge(ctx context.Context, targetBranch string) error {
 		)); statErr == nil {
 			return ErrMergeConflict
 		}
-		return fmt.Errorf("error pulling and merging branch: %w", err)
+		return fmt.Errorf("error merging %q into branch: %w", ref, err)
 	}
 	return nil
 }
 
+// checkMergeBases returns ErrShallowHistoryIncomplete if the repository is
+// shallow and HEAD and the specified ref have more than one merge base. To
+// merge, git first reconciles multiple merge bases using the history beneath
+// them, which a shallow clone may lack.
+//
+// Equivalent to:
+//
+//	git merge-base --all HEAD <ref>
+func (w *workTree) checkMergeBases(ctx context.Context, ref string) error {
+	shallow, err := w.isShallow(ctx)
+	if err != nil {
+		return err
+	}
+	if !shallow {
+		return nil
+	}
+	res, err := libExec.Exec(w.buildGitCommand(
+		ctx, "merge-base", "--all", "HEAD", ref,
+	))
+	if err != nil {
+		var exitErr *libExec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode == 1 {
+			// There is no merge base, so there is nothing to reconcile
+			return nil
+		}
+		return fmt.Errorf("error finding merge bases of HEAD and %q: %w", ref, err)
+	}
+	if len(strings.Fields(string(res))) > 1 {
+		return ErrShallowHistoryIncomplete
+	}
+	return nil
+}
+
+// pullMergeMessage returns the message that git pull would give a merge of the
+// specified remote branch, using the description of that branch that git
+// recorded in FETCH_HEAD when it was last fetched. It returns an empty string
+// if FETCH_HEAD records no fetch of that branch.
+//
+// Equivalent to:
+//
+//	grep "branch '<targetBranch>' of " $(git rev-parse --git-path FETCH_HEAD) |
+//	  git fmt-merge-msg
+func (w *workTree) pullMergeMessage(
+	ctx context.Context,
+	targetBranch string,
+) (string, error) {
+	res, err := libExec.Exec(w.buildGitCommand(
+		ctx, "rev-parse", "--git-path", "FETCH_HEAD",
+	))
+	if err != nil {
+		return "", fmt.Errorf("error locating FETCH_HEAD: %w", err)
+	}
+	fetchHeadPath := strings.TrimSpace(string(res))
+	if !filepath.IsAbs(fetchHeadPath) {
+		fetchHeadPath = filepath.Join(w.dir, fetchHeadPath)
+	}
+	// #nosec G304 -- Path is resolved by Git from the repository's own gitdir.
+	data, err := os.ReadFile(filepath.Clean(fetchHeadPath))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("error reading FETCH_HEAD: %w", err)
+	}
+	description := fmt.Sprintf("branch '%s' of ", targetBranch)
+	for line := range strings.Lines(string(data)) {
+		// Each line is "<commit ID>\t[not-for-merge]\t<description>"
+		fields := strings.SplitN(strings.TrimSuffix(line, "\n"), "\t", 3)
+		if len(fields) != 3 || !strings.HasPrefix(fields[2], description) {
+			continue
+		}
+		cmd := w.buildGitCommand(ctx, "fmt-merge-msg")
+		cmd.Stdin = strings.NewReader(fields[0] + "\t\t" + fields[2] + "\n")
+		if res, err = libExec.Exec(cmd); err != nil {
+			return "", fmt.Errorf("error formatting merge message: %w", err)
+		}
+		return strings.TrimSpace(string(res)), nil
+	}
+	return "", nil
+}
+
 // canSafelyRebase determines whether it is safe to rebase the local commits
-// on top of the specified remote branch without misrepresenting commit
-// signature trust. The decision matrix:
+// on top of the specified already-fetched remote ref without misrepresenting
+// commit signature trust. The decision matrix:
 //
 //   - Signed with trusted key + signing configured: safe (Kargo can re-sign)
 //   - Signed with trusted key + signing not configured: unsafe (would strip
@@ -122,11 +439,14 @@ func (w *workTree) pullMerge(ctx context.Context, targetBranch string) error {
 //   - Signed with untrusted key: always unsafe (Kargo can't vouch for it)
 //   - Unsigned + signing configured: unsafe (would fabricate a signature)
 //   - Unsigned + signing not configured: safe (stays unsigned)
+//
+// Rebasing is also unsafe in a shallow repository whenever git may not know
+// exactly which commits a rebase would replay.
 func (w *workTree) canSafelyRebase(
 	ctx context.Context,
-	targetBranch string,
+	remoteRef string,
 ) (bool, error) {
-	commits, err := w.commitsToReplay(ctx, targetBranch)
+	commits, err := w.commitsToReplay(ctx, remoteRef)
 	if err != nil {
 		return false, fmt.Errorf(
 			"error determining commits to replay: %w", err,
@@ -135,6 +455,37 @@ func (w *workTree) canSafelyRebase(
 	if len(commits) == 0 {
 		return true, nil
 	}
+	mayReplayShared, err := w.mayReplaySharedCommits(ctx, remoteRef)
+	if err != nil {
+		return false, fmt.Errorf("error checking commits to replay: %w", err)
+	}
+	if mayReplayShared {
+		return false, nil
+	}
+	shallow, err := w.shallowCommits(ctx)
+	if err != nil {
+		return false, fmt.Errorf(
+			"error reading shallow boundaries: %w", err,
+		)
+	}
+
+	if len(shallow) > 0 {
+		var diff map[string]struct{}
+		diff, err = w.symmetricDiff(ctx, remoteRef)
+		if err != nil {
+			return false, fmt.Errorf(
+				"error checking shallow history completeness: %w", err,
+			)
+		}
+
+		// Never approve a rebase if a shallow boundary lies within the symmetric
+		// difference between HEAD and remoteRef, since commitsToReplay could omit
+		// hidden ancestors or misclassify shared ones.
+		if setsOverlap(diff, shallow) {
+			return false, nil
+		}
+	}
+
 	signing, err := w.isSigningConfigured(ctx)
 	if err != nil {
 		return false, fmt.Errorf(
@@ -156,26 +507,47 @@ func (w *workTree) canSafelyRebase(
 	return true, nil
 }
 
-// commitsToReplay returns the SHAs of commits that would be replayed during
-// a rebase of the current branch on top of the specified remote branch.
-func (w *workTree) commitsToReplay(
+// forkPoint returns the fork-point commit between remoteRef's reflog and HEAD,
+// or an empty string if no fork point can be determined.
+//
+// Equivalent to:
+//
+//	git merge-base --fork-point <remoteRef> HEAD
+func (w *workTree) forkPoint(
 	ctx context.Context,
-	targetBranch string,
-) ([]string, error) {
-	remoteRef := fmt.Sprintf("origin/%s", targetBranch)
-	// Always fetch the target branch to ensure the remote tracking ref
-	// exists and has full, up-to-date history for the git log range below.
-	if err := w.Fetch(ctx, &FetchOptions{Branch: targetBranch}); err != nil {
-		return nil, fmt.Errorf(
-			"error fetching remote branch %q: %w", targetBranch, err,
+	remoteRef string,
+) (string, error) {
+	res, err := libExec.Exec(w.buildGitCommand(
+		ctx, "merge-base", "--fork-point", remoteRef, "HEAD",
+	))
+	if err != nil {
+		var exitErr *libExec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode == 1 {
+			return "", nil
+		}
+		return "", fmt.Errorf(
+			"error finding fork point for %q: %w", remoteRef, err,
 		)
 	}
-	res, err := libExec.Exec(w.buildGitCommand(
-		ctx,
-		"log",
-		"--format=%H",
-		fmt.Sprintf("%s..HEAD", remoteRef),
-	))
+	return strings.TrimSpace(string(res)), nil
+}
+
+// commitsToReplay returns the SHAs of commits that would be replayed during
+// a rebase of the current branch on top of the specified already-fetched
+// remote ref, with fork-point detection.
+func (w *workTree) commitsToReplay(
+	ctx context.Context,
+	remoteRef string,
+) ([]string, error) {
+	revs, err := w.replayRange(ctx, remoteRef)
+	if err != nil {
+		return nil, err
+	}
+	args := append([]string{"log", "--format=%H"}, revs...)
+	// The next argument makes it clear to git that the preceding arguments are
+	// revisions and not paths
+	args = append(args, "--")
+	res, err := libExec.Exec(w.buildGitCommand(ctx, args...))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error listing commits to replay: %w", err,
@@ -186,6 +558,138 @@ func (w *workTree) commitsToReplay(
 		return nil, nil
 	}
 	return strings.Split(output, "\n"), nil
+}
+
+// mayReplaySharedCommits returns true if a rebase of the current branch onto
+// the specified already-fetched remote ref would replay a merge commit while
+// remoteRef reaches a shallow boundary. Through one side of such a merge, HEAD
+// can reach a commit that remoteRef reaches only through that boundary, which
+// hides the commit from it. Git then believes remoteRef lacks the commit, and a
+// rebase would replay it even though remoteRef has it. Without a merge to
+// replay, this cannot happen, provided no shallow boundary lies within
+// HEAD...remoteRef. Nor can it happen if remoteRef reaches no shallow boundary,
+// since its history is then complete.
+//
+// In a shallow repository, true if both of these print something:
+//
+//	git rev-list --merges -n 1 HEAD ^<remoteRef> [^<fork point>] --
+//	git rev-list <remoteRef> -- | grep -Fxf $(git rev-parse --git-path shallow)
+func (w *workTree) mayReplaySharedCommits(
+	ctx context.Context,
+	remoteRef string,
+) (bool, error) {
+	shallow, err := w.shallowCommits(ctx)
+	if err != nil {
+		return false, err
+	}
+	if len(shallow) == 0 {
+		return false, nil
+	}
+	revs, err := w.replayRange(ctx, remoteRef)
+	if err != nil {
+		return false, err
+	}
+	args := append([]string{"rev-list", "--merges", "-n", "1"}, revs...)
+	// The next argument makes it clear to git that the preceding arguments are
+	// revisions and not paths
+	args = append(args, "--")
+	res, err := libExec.Exec(w.buildGitCommand(ctx, args...))
+	if err != nil {
+		return false, fmt.Errorf(
+			"error listing merge commits to replay: %w", err,
+		)
+	}
+	if strings.TrimSpace(string(res)) == "" {
+		return false, nil
+	}
+	reachable, err := w.reachableCommits(ctx, remoteRef)
+	if err != nil {
+		return false, err
+	}
+	return setsOverlap(reachable, shallow), nil
+}
+
+// replayRange returns the revisions selecting the commits that a rebase of the
+// current branch onto the specified already-fetched remote ref would replay,
+// with fork-point detection.
+func (w *workTree) replayRange(
+	ctx context.Context,
+	remoteRef string,
+) ([]string, error) {
+	fp, err := w.forkPoint(ctx, remoteRef)
+	if err != nil {
+		return nil, err
+	}
+	revs := []string{"HEAD", "^" + remoteRef}
+	if fp != "" {
+		revs = append(revs, "^"+fp)
+	}
+	return revs, nil
+}
+
+// symmetricDiff returns the set of commit SHAs in the symmetric difference
+// between HEAD and remoteRef.
+//
+// Equivalent to:
+//
+//	git rev-list HEAD...<remoteRef> --
+func (w *workTree) symmetricDiff(
+	ctx context.Context,
+	remoteRef string,
+) (map[string]struct{}, error) {
+	res, err := libExec.Exec(w.buildGitCommand(
+		ctx, "rev-list", fmt.Sprintf("HEAD...%s", remoteRef), "--",
+	))
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error listing symmetric difference HEAD...%s: %w", remoteRef, err,
+		)
+	}
+	commits := make(map[string]struct{})
+	for line := range strings.SplitSeq(string(res), "\n") {
+		if sha := strings.TrimSpace(line); sha != "" {
+			commits[sha] = struct{}{}
+		}
+	}
+	return commits, nil
+}
+
+// reachableCommits returns the set of commit SHAs reachable from the specified
+// ref.
+//
+// Equivalent to:
+//
+//	git rev-list <ref> --
+func (w *workTree) reachableCommits(
+	ctx context.Context,
+	ref string,
+) (map[string]struct{}, error) {
+	res, err := libExec.Exec(w.buildGitCommand(ctx, "rev-list", ref, "--"))
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error listing commits reachable from %q: %w", ref, err,
+		)
+	}
+	commits := make(map[string]struct{})
+	for line := range strings.SplitSeq(string(res), "\n") {
+		if sha := strings.TrimSpace(line); sha != "" {
+			commits[sha] = struct{}{}
+		}
+	}
+	return commits, nil
+}
+
+// setsOverlap returns true if a and b have at least one key in common.
+func setsOverlap[K comparable](a, b map[K]struct{}) bool {
+	if len(a) > len(b) {
+		a, b = b, a
+	}
+	for k := range a {
+		if _, ok := b[k]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 // isRebaseSafeForCommit is a pure function implementing the rebase safety

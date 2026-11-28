@@ -185,7 +185,7 @@ func TestCloneRemovesHomeDirOnFailure(t *testing.T) {
 					t.Context(),
 					testRepoURL,
 					&ClientOptions{Credentials: &testRepoCreds},
-					&CloneOptions{BaseDir: baseDir, Branch: "does-not-exist"},
+					&CloneOptions{BaseDir: baseDir, Checkout: "refs/heads/does-not-exist"},
 				)
 				return err
 			},

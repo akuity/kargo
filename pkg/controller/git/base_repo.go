@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -500,6 +501,157 @@ func (b *baseRepo) HomeDir() string {
 	return b.homeDir
 }
 
+// hasAnyRef returns true if at least one of the given fully qualified refs
+// exists in the local repository.
+//
+// Equivalent to:
+//
+//	git show-ref --verify --quiet <ref>
+func (b *baseRepo) hasAnyRef(ctx context.Context, refs ...string) (bool, error) {
+	for _, ref := range refs {
+		_, err := libExec.Exec(b.buildGitCommand(
+			ctx, "show-ref", "--verify", "--quiet", ref,
+		))
+		if err == nil {
+			return true, nil
+		}
+		var exitErr *libExec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode == 1 {
+			continue
+		}
+		return false, fmt.Errorf("error checking ref %q: %w", ref, err)
+	}
+	return false, nil
+}
+
+// isShallow returns true if the repository is a shallow clone.
+//
+// Equivalent to:
+//
+//	git rev-parse --is-shallow-repository
+func (b *baseRepo) isShallow(ctx context.Context) (bool, error) {
+	res, err := libExec.Exec(b.buildGitCommand(
+		ctx, "rev-parse", "--is-shallow-repository",
+	))
+	if err != nil {
+		return false, fmt.Errorf(
+			"error checking if repository is shallow: %w", err,
+		)
+	}
+	return strings.TrimSpace(string(res)) == "true", nil
+}
+
+// shallowCommits returns the set of commit SHAs recorded in the repository's
+// shallow file, or nil if the repository is not shallow.
+//
+// Equivalent to:
+//
+//	cat $(git rev-parse --git-path shallow)
+func (b *baseRepo) shallowCommits(
+	ctx context.Context,
+) (map[string]struct{}, error) {
+	res, err := libExec.Exec(b.buildGitCommand(
+		ctx, "rev-parse", "--git-path", "shallow",
+	))
+	if err != nil {
+		return nil, fmt.Errorf("error locating shallow file: %w", err)
+	}
+	shallowPath := strings.TrimSpace(string(res))
+	if !filepath.IsAbs(shallowPath) {
+		shallowPath = filepath.Join(b.dir, shallowPath)
+	}
+	// #nosec G304 -- Path is resolved by Git from the repository's own gitdir.
+	data, err := os.ReadFile(filepath.Clean(shallowPath))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf(
+			"error reading shallow file %q: %w", shallowPath, err,
+		)
+	}
+	commits := make(map[string]struct{})
+	for line := range strings.SplitSeq(string(data), "\n") {
+		sha := strings.TrimSpace(line)
+		if sha != "" {
+			commits[sha] = struct{}{}
+		}
+	}
+	return commits, nil
+}
+
+// missingCommits returns those of the specified commit IDs that do not exist
+// as commit objects in the local repository. It does not trigger the lazy
+// fetches a partial clone would otherwise make for missing objects.
+//
+// Equivalent to:
+//
+//	GIT_NO_LAZY_FETCH=1 git cat-file --batch-check="%(objectname) %(objecttype)"
+func (b *baseRepo) missingCommits(
+	ctx context.Context,
+	commitIDs []string,
+) ([]string, error) {
+	if len(commitIDs) == 0 {
+		return nil, nil
+	}
+	var stdin strings.Builder
+	for _, id := range commitIDs {
+		stdin.WriteString(id)
+		stdin.WriteByte('\n')
+	}
+	cmd := b.buildGitCommand(
+		ctx,
+		"cat-file", "--batch-check=%(objectname) %(objecttype)",
+	)
+	cmd.Env = append(cmd.Env, "GIT_NO_LAZY_FETCH=1")
+	cmd.Stdin = strings.NewReader(stdin.String())
+	out, err := libExec.Exec(cmd)
+	if err != nil {
+		return nil, fmt.Errorf("error checking local commit presence: %w", err)
+	}
+	// git prints one line per ID: "<ID> <object type>" if the object exists, or
+	// "<ID> missing" if it does not.
+	var missing []string
+	for line := range strings.Lines(string(out)) {
+		id, objectType, _ := strings.Cut(strings.TrimSpace(line), " ")
+		if objectType != "commit" {
+			missing = append(missing, id)
+		}
+	}
+	return missing, nil
+}
+
+// deepen deepens a shallow repository by the specified number of commits along
+// the given remote refs or refspecs. Any remote-tracking branch that a
+// configured fetch refspec covers is updated to the remote's current tip as
+// well. It is a no-op if depth is 0 or the repository is not shallow.
+func (b *baseRepo) deepen(
+	ctx context.Context,
+	depth uint,
+	refs ...string,
+) error {
+	if depth == 0 {
+		return nil
+	}
+	shallow, err := b.isShallow(ctx)
+	if err != nil {
+		return err
+	}
+	if !shallow {
+		return nil
+	}
+	args := append(
+		[]string{"fetch", "--deepen", fmt.Sprint(depth), "origin"},
+		refs...,
+	)
+	if _, err = libExec.Exec(b.buildGitCommand(ctx, args...)); err != nil {
+		return fmt.Errorf(
+			"error deepening repo %q by %d commits: %w", b.url, depth, err,
+		)
+	}
+	return nil
+}
+
 func (b *baseRepo) RemoteBranchExists(
 	ctx context.Context,
 	branch string,
@@ -530,6 +682,79 @@ func (b *baseRepo) RemoteBranchExists(
 
 func (b *baseRepo) URL() string {
 	return b.url
+}
+
+// trackBranches adds any fully qualified branch refs among the specified refs
+// to the "origin" remote's configured fetch refspecs, unless a configured
+// refspec already covers them. "refs/heads/*" stands for all branches. Git
+// treats a remote-tracking branch as one only if a configured refspec covers
+// it, so without this, a branch fetched with an explicit refspec could not be
+// checked out by name, and later fetches would not update it.
+//
+// Equivalent to:
+//
+//	git remote set-branches --add origin <branch>...
+func (b *baseRepo) trackBranches(ctx context.Context, refs []string) error {
+	refspecs, err := b.fetchRefspecs(ctx)
+	if err != nil {
+		return err
+	}
+	var branches []string
+	for _, ref := range refs {
+		branch, ok := strings.CutPrefix(ref, branchRefPrefix)
+		if ok && !isTracked(refspecs, branch) && !slices.Contains(branches, branch) {
+			branches = append(branches, branch)
+		}
+	}
+	if len(branches) == 0 {
+		return nil
+	}
+	args := append([]string{"remote", "set-branches", "--add", "origin"}, branches...)
+	if _, err = libExec.Exec(b.buildGitCommand(ctx, args...)); err != nil {
+		return fmt.Errorf(
+			"error tracking branches %v of repo %q: %w",
+			branches, b.url, err,
+		)
+	}
+	return nil
+}
+
+// fetchRefspecs returns the "origin" remote's configured fetch refspecs.
+//
+// Equivalent to:
+//
+//	git config --get-all remote.origin.fetch
+func (b *baseRepo) fetchRefspecs(ctx context.Context) ([]string, error) {
+	out, err := libExec.Exec(b.buildGitCommand(
+		ctx,
+		"config", "--get-all", "remote.origin.fetch",
+	))
+	if err != nil {
+		var exitErr *libExec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode == 1 {
+			// None are configured
+			return nil, nil
+		}
+		return nil, fmt.Errorf(
+			"error reading fetch refspecs of repo %q: %w", b.url, err,
+		)
+	}
+	return strings.Fields(string(out)), nil
+}
+
+// isTracked returns true if any of the specified fetch refspecs stores the
+// specified branch as the corresponding remote-tracking branch of the "origin"
+// remote.
+func isTracked(refspecs []string, branch string) bool {
+	allBranches := branchRefPrefix + "*:" + remoteBranchRefPrefix + "*"
+	thisBranch := branchRefPrefix + branch + ":" + remoteBranchRefPrefix + branch
+	for _, refspec := range refspecs {
+		switch strings.TrimPrefix(refspec, "+") {
+		case allBranches, thisBranch:
+			return true
+		}
+	}
+	return false
 }
 
 // setUltimateTrust sets ultimate trust (level 6) on a GPG key so that
