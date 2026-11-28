@@ -1632,6 +1632,35 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 			},
 		},
 		{
+			name: "desired revision does not match operation state of source with differently written repoURL",
+			modifyApplication: func(app *argocd.Application) {
+				app.Spec.Source = &argocd.ApplicationSource{
+					RepoURL: "https://github.com/universe/42.git",
+				}
+				app.Status.OperationState = &argocd.OperationState{
+					Phase: argocd.OperationSucceeded,
+					Operation: argocd.Operation{
+						InitiatedBy: argocd.OperationInitiator{
+							Username: applicationOperationInitiator,
+						},
+						Info: []*argocd.Info{{
+							Name:  promotionInfoKey,
+							Value: testPromotionID,
+						}},
+					},
+					SyncResult: &argocd.SyncOperationResult{
+						Revision: "other-fake-revision",
+					},
+				}
+			},
+			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
+				require.ErrorContains(t, err, "sync result revisions")
+				require.ErrorContains(t, err, "do not match desired revisions")
+				assert.Empty(t, phase)
+				assert.True(t, mustUpdate)
+			},
+		},
+		{
 			name: "operation completed",
 			modifyApplication: func(app *argocd.Application) {
 				app.Spec.Source = &argocd.ApplicationSource{

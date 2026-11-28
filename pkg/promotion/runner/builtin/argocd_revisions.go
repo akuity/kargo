@@ -2,6 +2,7 @@ package builtin
 
 import (
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/urls"
 	"github.com/akuity/kargo/pkg/x/promotion/stepconfig"
 )
 
@@ -39,14 +40,23 @@ func (a *argocdUpdater) getDesiredRevisions(
 }
 
 // findSourceUpdate finds and returns the ArgoCDSourceUpdate that targets the
-// given source. If no such update exists, it returns nil.
+// given source. If no such update exists, it returns nil. Updates are matched
+// to sources the same way applyArgoCDSourceUpdate matches them.
 func (a *argocdUpdater) findSourceUpdate(
 	update *stepconfig.ArgoCDAppUpdate,
 	src argocd.ApplicationSource,
 ) *stepconfig.ArgoCDAppSourceUpdate {
 	for i := range update.Sources {
 		sourceUpdate := &update.Sources[i]
-		if sourceUpdate.RepoURL == src.RepoURL && sourceUpdate.Chart == src.Chart {
+		if src.Chart != "" || sourceUpdate.Chart != "" {
+			if sourceUpdate.RepoURL == src.RepoURL && sourceUpdate.Chart == src.Chart {
+				return sourceUpdate
+			}
+			continue
+		}
+		// We're dealing with a git repo, so we should normalize the repo URLs
+		// before comparing them.
+		if urls.NormalizeGit(sourceUpdate.RepoURL) == urls.NormalizeGit(src.RepoURL) {
 			return sourceUpdate
 		}
 	}
