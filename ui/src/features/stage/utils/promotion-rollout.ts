@@ -207,22 +207,6 @@ export const rolloutRound = (latest?: LatestRollouts): Round | undefined => {
   return rollout && rolloutToRound(rollout);
 };
 
-// rolloutRounds resolves that round for each of the Stages that fan out
-// through rollouts, keyed by Stage name. A Stage that has recorded a rollout
-// the list does not hold yet is among them, with no round to show for now;
-// any other Stage is left out, for its PromotionRequests to speak for.
-export const rolloutRounds = (
-  stages: Stage[],
-  byStage: Record<string, LatestRollouts>
-): Record<string, Round | undefined> =>
-  Object.fromEntries(
-    stages
-      .filter((stage) => stage.metadata?.name)
-      .map((stage) => [stage.metadata?.name || '', stage] as const)
-      .filter(([stageName, stage]) => stageUsesRollouts(stage, byStage[stageName]))
-      .map(([stageName]) => [stageName, rolloutRound(byStage[stageName])])
-  );
-
 // isStagePromoting reports whether a Stage says it is promoting. For a Stage
 // that fans out through rollouts this condition is the Stage's only word on a
 // rollout in flight.

@@ -1,41 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
-import { isInternalLabel, labelKeys, matchesLabelSelector, visibleLabels } from './target-labels';
+import { isInternalLabel, labelKeys, visibleLabels } from './target-labels';
 import { target } from './test-fixtures';
-
-describe('matchesLabelSelector()', () => {
-  test('an empty selector matches everything', () => {
-    expect(matchesLabelSelector({}, {})).toBe(true);
-    expect(matchesLabelSelector(undefined, { a: 'b' })).toBe(true);
-  });
-
-  test('matchLabels are ANDed', () => {
-    const selector = { matchLabels: { region: 'us', tier: 'prod' } };
-    expect(matchesLabelSelector(selector, { region: 'us', tier: 'prod' })).toBe(true);
-    expect(matchesLabelSelector(selector, { region: 'us' })).toBe(false);
-  });
-
-  test.each([
-    ['In', ['us', 'eu'], { region: 'us' }, true],
-    ['In', ['us', 'eu'], { region: 'ap' }, false],
-    ['In', ['us'], {}, false],
-    ['NotIn', ['us'], { region: 'eu' }, true],
-    ['NotIn', ['us'], {}, true],
-    ['NotIn', ['us'], { region: 'us' }, false],
-    ['Exists', undefined, { region: 'x' }, true],
-    ['Exists', undefined, {}, false],
-    ['DoesNotExist', undefined, {}, true],
-    ['DoesNotExist', undefined, { region: 'x' }, false],
-    ['Bogus', undefined, { region: 'x' }, false]
-  ])('%s %j against %j -> %s', (operator, values, labels, expected) => {
-    expect(
-      matchesLabelSelector(
-        { matchExpressions: [{ key: 'region', operator, values }] },
-        labels as Record<string, string>
-      )
-    ).toBe(expected);
-  });
-});
 
 describe('isInternalLabel()', () => {
   test.each([

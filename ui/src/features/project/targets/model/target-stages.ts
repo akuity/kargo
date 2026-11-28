@@ -1,16 +1,5 @@
 import { isStageTargetAware } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
-import { Stage, Target } from '@ui/gen/api/v2/models';
-
-import { matchesLabelSelector } from './target-labels';
-
-// stageGovernsTarget mirrors the controller's rule: a Stage governs a Target
-// when the Target matches any of the Stage's selectors. A classic Stage governs
-// none, and so does a target-aware Stage whose selector list is empty.
-export const stageGovernsTarget = (stage: Stage, target: Target): boolean =>
-  isStageTargetAware(stage) &&
-  (stage.spec?.targets?.selectors || []).some((selector) =>
-    matchesLabelSelector(selector, target.metadata?.labels || {})
-  );
+import { Stage } from '@ui/gen/api/v2/models';
 
 export const byName = <T extends { metadata?: { name?: string } }>(lhs: T, rhs: T) =>
   (lhs.metadata?.name || '').localeCompare(rhs.metadata?.name || '');
